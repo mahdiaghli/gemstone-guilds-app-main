@@ -3,8 +3,9 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGame } from '@/hooks/useGame';
 import { useAudio } from '@/hooks/useAudio';
+import { cn } from '@/lib/utils';
 import { GemType, TokenType, Card, GEM_TYPES, TOKEN_TYPES, GEM_INFO, LEVEL_COLORS } from '@/lib/gameData';
-import { canPlayerAffordCard, getPlayerScore, getTotalTokens } from '@/lib/gameLogic';
+import { canPlayerAffordCard, getPlayerScore, getTotalTokens, getPlayerBonuses } from '@/lib/gameLogic';
 import { getAIAction, AIDifficulty } from '@/lib/aiPlayer';
 import { audioManager } from '@/lib/audioManager';
 import { useLanguage } from '@/hooks/useLanguage';
@@ -50,48 +51,59 @@ export default function Game() {
     }
   }, [state, phase, endTurn]);
 
-  // AI turn
+  // AI turn - automatic execution with proper state tracking
   useEffect(() => {
     if (state.gameOver) return;
     if (phase !== 'idle') return;
     if (!isAIPlayer(state.currentPlayerIndex)) return;
 
-    setPhase('aiThinking');
+    let isMounted = true;
     
-    // سریع جواب بدن بدون خسته شدن کاربر - Fast response based on difficulty
-    let delayMs = 400;
-    if (aiDifficulty === 'easy') {
-      delayMs = 200 + Math.random() * 150; // 200-350ms
-    } else if (aiDifficulty === 'medium') {
-      delayMs = 300 + Math.random() * 150; // 300-450ms
-    } else if (aiDifficulty === 'hard') {
-      delayMs = 350 + Math.random() * 150; // 350-500ms
-    }
-    
-    const timer = setTimeout(() => {
-      const action = getAIAction(state, aiDifficulty);
-      switch (action.type) {
-        case 'purchaseCard':
-          purchaseCard(action.cardId);
-          endTurn();
-          break;
-        case 'takeTokens':
-          takeTokens(action.gems);
-          endTurn();
-          break;
-        case 'reserveCard':
-          reserveCard(action.cardId);
-          endTurn();
-          break;
-        case 'reserveDeck':
-          reserveCard(0, action.level);
-          endTurn();
-          break;
+    const executeAI = async () => {
+      // Simulate thinking time based on difficulty
+      let delayMs = 400;
+      if (aiDifficulty === 'easy') {
+        delayMs = 150 + Math.random() * 100; // 150-250ms
+      } else if (aiDifficulty === 'medium') {
+        delayMs = 200 + Math.random() * 100; // 200-300ms
+      } else if (aiDifficulty === 'hard') {
+        delayMs = 250 + Math.random() * 100; // 250-350ms
       }
-      setPhase('idle');
-    }, delayMs);
-    return () => clearTimeout(timer);
-  }, [state.currentPlayerIndex, phase, state.gameOver, isAIPlayer, state, aiDifficulty, purchaseCard, takeTokens, reserveCard, endTurn]);
+      
+      await new Promise(resolve => setTimeout(resolve, delayMs));
+      
+      if (!isMounted) return;
+      
+      setPhase('aiThinking');
+      
+      // Execute AI action immediately after thinking display
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      if (!isMounted) return;
+      
+      const action = getAIAction(state, aiDifficulty);
+      
+      if (action.type === 'purchaseCard') {
+        purchaseCard(action.cardId);
+      } else if (action.type === 'takeTokens') {
+        takeTokens(action.gems);
+      } else if (action.type === 'reserveCard') {
+        reserveCard(action.cardId);
+      } else if (action.type === 'reserveDeck') {
+        reserveCard(0, action.level);
+      }
+      
+      if (isMounted) {
+        endTurn();
+      }
+    };
+
+    executeAI();
+    
+    return () => {
+      isMounted = false;
+    };
+  }, [state.currentPlayerIndex, state.gameOver, isAIPlayer, state, aiDifficulty, purchaseCard, takeTokens, reserveCard, endTurn]);
 
   const handleGemClick = useCallback((gem: GemType) => {
     if (phase !== 'idle' && phase !== 'selectingTokens') return;
@@ -346,56 +358,106 @@ export default function Game() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 flex items-center justify-center bg-background/80 backdrop-blur-sm z-50"
+            className="fixed inset-0 flex items-center justify-center bg-background/85 backdrop-blur-sm z-50 p-4"
             onClick={handleCancel}
           >
             <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-card border border-border rounded-xl p-6 shadow-2xl max-w-xs w-full mx-4"
+              initial={{ scale: 0.9, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: 20 }}
+              transition={{ type: 'spring', damping: 20, stiffness: 300 }}
+              className="bg-gradient-to-b from-card to-card/80 border-2 border-primary/30 rounded-2xl p-8 shadow-2xl max-w-sm w-full"
               onClick={e => e.stopPropagation()}
             >
-              <div className="flex justify-center mb-4">
-                <div className="transform scale-150">
+              {/* Card Display - Larger and cleaner */}
+              <motion.div 
+                className="flex justify-center mb-6"
+                initial={{ scale: 0.8 }}
+                animate={{ scale: 1 }}
+                transition={{ delay: 0.1 }}
+              >
+                <div className="transform scale-[200%] origin-top">
                   <CardDisplay card={selectedCard} affordable={canPlayerAffordCard(currentPlayer, selectedCard)} />
                 </div>
-              </div>
+              </motion.div>
 
-              {/* Cost breakdown */}
-              <div className="flex justify-center gap-3 mb-4">
-                {GEM_TYPES.map(gem => {
-                  const cost = selectedCard.cost[gem];
-                  if (!cost) return null;
-                  return (
-                    <div key={gem} className="text-center">
-                      <div
-                        className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold mx-auto"
-                        style={{ backgroundColor: GEM_INFO[gem].darkColor, color: '#fff' }}
+              {/* Card Info */}
+              <motion.div 
+                className="text-center mb-6 space-y-2"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.15 }}
+              >
+                <div className="inline-block px-4 py-1 rounded-full bg-primary/10 border border-primary/20">
+                  <span className="text-sm font-cinzel text-primary tracking-wider">
+                    {selectedCard.points > 0 ? `${selectedCard.points} ${t('pts')}` : 'No Points'}
+                  </span>
+                </div>
+              </motion.div>
+
+              {/* Cost breakdown - prettier */}
+              <motion.div 
+                className="bg-card/50 rounded-xl p-4 mb-6 border border-border/50"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.2 }}
+              >
+                <p className="text-xs text-muted-foreground text-center mb-3 font-cinzel tracking-wider">Cost</p>
+                <div className="flex justify-center flex-wrap gap-2">
+                  {GEM_TYPES.map(gem => {
+                    const cost = selectedCard.cost[gem];
+                    if (!cost) return null;
+                    const have = currentPlayer.tokens[gem] + getPlayerBonuses(currentPlayer)[gem];
+                    const canAfford = have >= cost;
+                    return (
+                      <motion.div 
+                        key={gem} 
+                        className="flex flex-col items-center"
+                        whileHover={{ scale: 1.1 }}
                       >
-                        {cost}
-                      </div>
-                      <span className="text-[9px] text-muted-foreground">{GEM_INFO[gem].name}</span>
-                    </div>
-                  );
-                })}
-              </div>
+                        <div
+                          className={cn(
+                            'w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold transition-all',
+                            canAfford ? 'ring-2 ring-primary/50' : 'opacity-60'
+                          )}
+                          style={{ backgroundColor: GEM_INFO[gem].darkColor, color: '#fff' }}
+                        >
+                          {cost}
+                        </div>
+                        <span className="text-[8px] text-muted-foreground mt-1">{GEM_INFO[gem].name}</span>
+                      </motion.div>
+                    );
+                  })}
+                </div>
+              </motion.div>
 
-              <div className="flex flex-col gap-2">
+              {/* Action Buttons */}
+              <motion.div 
+                className="flex flex-col gap-2 space-y-2"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.25 }}
+              >
                 {canPlayerAffordCard(currentPlayer, selectedCard) && (
-                  <Button variant="game" onClick={handleBuyCard} className="w-full">
-                    {t('purchase')}
-                  </Button>
+                  <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                    <Button variant="game" onClick={handleBuyCard} className="w-full font-cinzel">
+                      ✨ {t('purchase')}
+                    </Button>
+                  </motion.div>
                 )}
                 {!isReserved && currentPlayer.reservedCards.length < 3 && (
-                  <Button variant="game-secondary" onClick={handleReserveCard} className="w-full">
-                    {t('reserve')}
-                  </Button>
+                  <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                    <Button variant="game-secondary" onClick={handleReserveCard} className="w-full font-cinzel">
+                      📌 {t('reserve')}
+                    </Button>
+                  </motion.div>
                 )}
-                <Button variant="ghost" onClick={handleCancel} className="w-full text-muted-foreground">
-                  {t('cancel')}
-                </Button>
-              </div>
+                <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                  <Button variant="ghost" onClick={handleCancel} className="w-full text-muted-foreground font-cinzel">
+                    ✕ {t('cancel')}
+                  </Button>
+                </motion.div>
+              </motion.div>
             </motion.div>
           </motion.div>
         )}

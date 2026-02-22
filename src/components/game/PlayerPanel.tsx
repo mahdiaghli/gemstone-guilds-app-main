@@ -1,6 +1,7 @@
 import { cn } from '@/lib/utils';
 import { Player, Card, GEM_TYPES, TOKEN_TYPES, GEM_INFO } from '@/lib/gameData';
 import { getPlayerBonuses, getPlayerScore, canPlayerAffordCard } from '@/lib/gameLogic';
+import { useLanguage } from '@/hooks/useLanguage';
 import CardDisplay from './CardDisplay';
 
 interface PlayerPanelProps {
@@ -13,6 +14,7 @@ interface PlayerPanelProps {
 export default function PlayerPanel({ player, isActive, isAI, onReservedCardClick }: PlayerPanelProps) {
   const bonuses = getPlayerBonuses(player);
   const score = getPlayerScore(player);
+  const { t } = useLanguage();
 
   return (
     <div className={cn(
@@ -27,7 +29,7 @@ export default function PlayerPanel({ player, isActive, isAI, onReservedCardClic
           'font-cinzel text-xs tracking-wider',
           isActive ? 'text-primary' : 'text-muted-foreground',
         )}>
-          {isAI ? '🤖 ' : ''}بازیکن {player.id + 1}
+          {isAI ? '🤖 ' : ''}{t('player')} {player.id + 1}
         </span>
         <span className="font-cinzel text-sm font-bold text-primary">{score}</span>
       </div>
@@ -106,7 +108,7 @@ export default function PlayerPanel({ player, isActive, isAI, onReservedCardClic
             </div>
           ) : (
             <span className="text-[10px] text-muted-foreground">
-              {player.reservedCards.length} رزرو شده
+              {player.reservedCards.length} {t('reserved')}
             </span>
           )}
         </div>
