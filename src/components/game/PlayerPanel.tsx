@@ -3,6 +3,7 @@ import { Player, Card, GEM_TYPES, TOKEN_TYPES, GEM_INFO } from '@/lib/gameData';
 import { getPlayerBonuses, getPlayerScore, canPlayerAffordCard } from '@/lib/gameLogic';
 import { useLanguage } from '@/hooks/useLanguage';
 import CardDisplay from './CardDisplay';
+import NobleDisplay from './NobleDisplay';
 
 interface PlayerPanelProps {
   player: Player;
@@ -118,7 +119,7 @@ export default function PlayerPanel({ player, isActive, isAI, onReservedCardClic
       {player.nobles.length > 0 && (
         <div className="flex gap-1 mt-1">
           {player.nobles.map(n => (
-            <span key={n.id} className="text-xs text-primary">👑</span>
+            <NobleDisplay key={n.id} noble={n} compact />
           ))}
         </div>
       )}

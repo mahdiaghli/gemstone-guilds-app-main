@@ -39,7 +39,7 @@ export default function Index() {
   const handleStart = () => {
     if (selectedMode === 'ai') navigate(`/game?players=${players}&mode=ai&difficulty=${difficulty}`);
     else if (selectedMode === 'local') navigate(`/game?players=${players}&mode=local`);
-    else if (selectedMode === 'online') navigate(`/game?players=2&mode=online`);
+    else if (selectedMode === 'online') navigate('/online-lobby');
   };
 
   return (

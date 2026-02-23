@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useGame } from '@/hooks/useGame';
 import { useAudio } from '@/hooks/useAudio';
 import { cn } from '@/lib/utils';
-import { GemType, TokenType, Card, GEM_TYPES, TOKEN_TYPES, GEM_INFO, LEVEL_COLORS } from '@/lib/gameData';
+import { GemType, TokenType, Card, GEM_TYPES, TOKEN_TYPES, GEM_INFO, LEVEL_COLORS, GameState } from '@/lib/gameData';
 import { canPlayerAffordCard, getPlayerScore, getTotalTokens, getPlayerBonuses } from '@/lib/gameLogic';
 import { getAIAction, AIDifficulty } from '@/lib/aiPlayer';
 import { audioManager } from '@/lib/audioManager';
@@ -22,10 +22,18 @@ const backCardsByLevel = { 1: backcard1Img, 2: backcard2Img, 3: backcard3Img };
 
 type Phase = 'idle' | 'selectingTokens' | 'mustReturnTokens' | 'cardAction' | 'aiThinking';
 
-export default function Game() {
+interface GameProps {
+  mode?: 'local' | 'ai' | 'online';
+  roomId?: string;
+  playerId?: string;
+  onGameStateChange?: (state: GameState) => void;
+  onGameEnd?: () => void;
+}
+
+export default function Game(props: GameProps = {}) {
   const [searchParams] = useSearchParams();
   const playerCount = Math.min(4, Math.max(2, parseInt(searchParams.get('players') || '2')));
-  const gameMode = searchParams.get('mode') || 'local';
+  const gameMode = props.mode || searchParams.get('mode') || 'local';
   const aiDifficulty = (searchParams.get('difficulty') || 'medium') as AIDifficulty;
   const navigate = useNavigate();
 

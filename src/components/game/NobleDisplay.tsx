@@ -31,10 +31,10 @@ export default function NobleDisplay({ noble, compact }: NobleDisplayProps) {
         backgroundPosition: 'center',
       }}
     >
-      {/* Crown / Points - top */}
+      {/* Crown / Points - top - MORE PROMINENT */}
       <span className={cn(
-        'font-cinzel font-bold text-primary drop-shadow-lg',
-        compact ? 'text-[10px]' : 'text-xs',
+        'font-cinzel font-bold text-primary drop-shadow-lg bg-black/40 px-1.5 py-0.5 rounded',
+        compact ? 'text-xs' : 'text-sm md:text-base',
       )}>
         👑 {noble.points}
       </span>

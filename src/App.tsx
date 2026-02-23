@@ -8,6 +8,8 @@ import LanguageToggle from "@/components/game/LanguageToggle";
 import Index from "./pages/Index";
 import Game from "./pages/Game";
 import Tutorial from "./pages/Tutorial";
+import OnlineLobby from "./pages/OnlineLobby";
+import OnlineGame from "./pages/OnlineGame";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -24,6 +26,8 @@ const App = () => (
             <Route path="/" element={<Index />} />
             <Route path="/game" element={<Game />} />
             <Route path="/tutorial" element={<Tutorial />} />
+            <Route path="/online-lobby" element={<OnlineLobby />} />
+            <Route path="/online-game/:roomId" element={<OnlineGame />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
