@@ -95,6 +95,15 @@ const translations = {
   enableAudio: { fa: 'فعال کردن', en: 'Enable' },
   disableAudio: { fa: 'غیرفعال کردن', en: 'Disable' },
 
+  // Gem Names / نام سنگ‌های قیمتی
+  cost: { fa: 'قیمت', en: 'Cost' },
+  ruby: { fa: 'یاقوت', en: 'Ruby' },
+  sapphire: { fa: 'یاقوت کبود', en: 'Sapphire' },
+  emerald: { fa: 'زمرد', en: 'Emerald' },
+  diamond: { fa: 'الماس', en: 'Diamond' },
+  onyx: { fa: 'عقیق سیاه', en: 'Onyx' },
+  gold: { fa: 'طلا (جوکر)', en: 'Gold (Wild)' },
+
   // Online Chat / چت آنلاین
   chat: { fa: 'چت', en: 'Chat' },
   sendMessage: { fa: 'ارسال پیام', en: 'Send Message' },

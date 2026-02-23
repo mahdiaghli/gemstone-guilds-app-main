@@ -14,6 +14,11 @@ import GemToken from '@/components/game/GemToken';
 import CardDisplay from '@/components/game/CardDisplay';
 import NobleDisplay from '@/components/game/NobleDisplay';
 import PlayerPanel from '@/components/game/PlayerPanel';
+import backcard1Img from '@/assets/backcard1.png';
+import backcard2Img from '@/assets/backcard2.png';
+import backcard3Img from '@/assets/backcard3.png';
+
+const backCardsByLevel = { 1: backcard1Img, 2: backcard2Img, 3: backcard3Img };
 
 type Phase = 'idle' | 'selectingTokens' | 'mustReturnTokens' | 'cardAction' | 'aiThinking';
 
@@ -95,6 +100,7 @@ export default function Game() {
       
       if (isMounted) {
         endTurn();
+        setPhase('idle');
       }
     };
 
@@ -272,15 +278,24 @@ export default function Game() {
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               onClick={() => handleReserveDeck(level)}
-              className="w-[4.5rem] h-24 md:w-20 md:h-28 rounded-lg border-2 flex flex-col items-center justify-center shrink-0 transition-colors hover:border-primary/40"
-              style={{ borderColor: LEVEL_COLORS[level] + '60', backgroundColor: LEVEL_COLORS[level] + '08' }}
+              className="w-[4.5rem] h-24 md:w-20 md:h-28 rounded-lg border-2 flex flex-col items-center justify-center shrink-0 transition-colors hover:border-primary/40 relative overflow-hidden"
+              style={{ borderColor: LEVEL_COLORS[level] + '60' }}
             >
-              <span className="font-cinzel text-lg font-bold" style={{ color: LEVEL_COLORS[level] }}>
-                {level}
-              </span>
-              <span className="text-[10px] text-muted-foreground mt-0.5">
-                {state.decks[level].length}
-              </span>
+              {/* Card back image as deck */}
+              <div
+                className="absolute inset-0"
+                style={{
+                  backgroundImage: `url('${backCardsByLevel[level]}')`,
+                  backgroundSize: 'cover',
+                  backgroundPosition: 'center',
+                }}
+              />
+              {/* Count overlay - no level number */}
+              <div className="relative z-10 flex flex-col items-center justify-center p-2 bg-background/70 rounded-md">
+                <span className="text-[10px] text-muted-foreground font-bold">
+                  {state.decks[level].length}
+                </span>
+              </div>
             </motion.button>
 
             {/* Visible cards */}
@@ -402,13 +417,20 @@ export default function Game() {
                 animate={{ opacity: 1 }}
                 transition={{ delay: 0.2 }}
               >
-                <p className="text-xs text-muted-foreground text-center mb-3 font-cinzel tracking-wider">Cost</p>
+                <p className="text-xs text-muted-foreground text-center mb-3 font-cinzel tracking-wider">{t('cost')}</p>
                 <div className="flex justify-center flex-wrap gap-2">
                   {GEM_TYPES.map(gem => {
                     const cost = selectedCard.cost[gem];
                     if (!cost) return null;
                     const have = currentPlayer.tokens[gem] + getPlayerBonuses(currentPlayer)[gem];
                     const canAfford = have >= cost;
+                    const gemNameMap: Record<string, string> = {
+                      diamond: 'diamond',
+                      sapphire: 'sapphire',
+                      emerald: 'emerald',
+                      ruby: 'ruby',
+                      onyx: 'onyx',
+                    };
                     return (
                       <motion.div 
                         key={gem} 
@@ -417,14 +439,14 @@ export default function Game() {
                       >
                         <div
                           className={cn(
-                            'w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold transition-all',
-                            canAfford ? 'ring-2 ring-primary/50' : 'opacity-60'
+                            'w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold transition-all ring-2',
+                            canAfford ? 'ring-primary/60 shadow-md shadow-primary/30' : 'ring-muted-foreground/30 opacity-50'
                           )}
                           style={{ backgroundColor: GEM_INFO[gem].darkColor, color: '#fff' }}
                         >
                           {cost}
                         </div>
-                        <span className="text-[8px] text-muted-foreground mt-1">{GEM_INFO[gem].name}</span>
+                        <span className="text-[8px] text-muted-foreground mt-1">{t(gemNameMap[gem] as any)}</span>
                       </motion.div>
                     );
                   })}
