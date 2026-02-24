@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { MessageCircle, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useLanguage } from '@/hooks/useLanguage';
 
 interface ChatMessage {
   id: string;
@@ -22,6 +23,7 @@ interface ChatProps {
 }
 
 export default function Chat({ socket, roomId, playerId, playerName }: ChatProps) {
+  const { lang } = useLanguage();
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [newMessage, setNewMessage] = useState('');
@@ -93,7 +95,9 @@ export default function Chat({ socket, roomId, playerId, playerName }: ChatProps
         <div className="w-80 rounded-lg border border-border bg-card shadow-lg flex flex-col max-h-96">
           {/* Header */}
           <div className="flex justify-between items-center p-3 border-b border-border">
-            <h3 className="font-semibold text-sm">Game Chat</h3>
+            <h3 className="font-semibold text-sm">
+              {lang === 'fa' ? 'چت بازی' : 'Game Chat'}
+            </h3>
             <Button
               variant="ghost"
               size="icon"
@@ -128,7 +132,7 @@ export default function Chat({ socket, roomId, playerId, playerName }: ChatProps
           {/* Input */}
           <div className="p-3 border-t border-border flex gap-2">
             <Input
-              placeholder="Type message..."
+              placeholder={lang === 'fa' ? 'پیام بنویسید...' : 'Type message...'}
               value={newMessage}
               onChange={e => setNewMessage(e.target.value)}
               onKeyPress={e => e.key === 'Enter' && sendMessage()}
@@ -140,7 +144,7 @@ export default function Chat({ socket, roomId, playerId, playerName }: ChatProps
               disabled={!newMessage.trim()}
               className="h-8"
             >
-              Send
+              {lang === 'fa' ? 'ارسال' : 'Send'}
             </Button>
           </div>
         </div>

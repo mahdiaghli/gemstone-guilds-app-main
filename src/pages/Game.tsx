@@ -32,6 +32,8 @@ interface GameProps {
   roomId?: string;
   playerId?: string;
   playerName?: string;
+  roomPlayers?: Record<string, any>; // Online players with their names
+  playerNamesList?: string[]; // Array of player names in order [0, 1, 2, ...]
   socket?: Socket | null;
   serverGameState?: GameState | null;
   onGameStateChange?: (state: GameState) => void;
@@ -71,8 +73,19 @@ export default function Game(props: GameProps = {}) {
   const [selectedGems, setSelectedGems] = useState<GemType[]>([]);
   const [tempPoolDisplay, setTempPoolDisplay] = useState<Record<TokenType, number> | null>(null);
   const [selectedCard, setSelectedCard] = useState<Card | null>(null);
+  const [turnWarning, setTurnWarning] = useState('');
 
   const currentPlayer = state.players[state.currentPlayerIndex];
+
+  // Check if current player is local player (for online games)
+  const isCurrentPlayerMe = useCallback(() => {
+    if (gameMode !== 'online') return true; // In local/AI modes, always allow
+    
+    // In online mode, check if this is my turn based on current player index
+    // We assume player 0 is the human player in online games
+    const isMyTurn = state.currentPlayerIndex === 0;
+    return isMyTurn;
+  }, [gameMode, state.currentPlayerIndex]);
 
   // Sync game state when it changes (for online games)
   useEffect(() => {
@@ -177,6 +190,13 @@ export default function Game(props: GameProps = {}) {
   }, [state.currentPlayerIndex, state.gameOver, isAIPlayer, state, aiDifficulty, purchaseCard, takeTokens, reserveCard, endTurn]);
 
   const handleGemClick = useCallback((gem: GemType) => {
+    // Check if it's current player's turn (for online games)
+    if (gameMode === 'online' && !isCurrentPlayerMe()) {
+      setTurnWarning('❌ It\'s not your turn | نوبت شما نیست');
+      setTimeout(() => setTurnWarning(''), 3000);
+      return;
+    }
+
     if (phase !== 'idle' && phase !== 'selectingTokens') return;
     if (state.tokenPool[gem] <= 0 && !selectedGems.includes(gem)) return;
 
@@ -185,17 +205,15 @@ export default function Game(props: GameProps = {}) {
     
     if (count === 0) {
       if (selectedGems.length === 2 && selectedGems[0] === selectedGems[1]) {
-        newSelected = selectedGems; // Can't add to pair
+        newSelected = selectedGems;
       } else if (selectedGems.length >= 3) {
-        newSelected = selectedGems; // Can't exceed 3
+        newSelected = selectedGems;
       } else {
         newSelected = [...selectedGems, gem];
       }
     } else if (count === 1 && selectedGems.length === 1 && state.tokenPool[gem] >= 4) {
-      // Allow picking 2 of the same gem if supply >= 4
       newSelected = [gem, gem];
     } else {
-      // Remove this gem selection
       newSelected = selectedGems.filter(g => g !== gem);
     }
 
@@ -209,17 +227,19 @@ export default function Game(props: GameProps = {}) {
       }
       setTempPoolDisplay(tempPool);
     } else {
-      setTempPoolDisplay(null); // Reset to normal view
+      setTempPoolDisplay(null);
     }
-  }, [phase, state.tokenPool, selectedGems]);
+  }, [phase, state.tokenPool, selectedGems, gameMode, isCurrentPlayerMe]);
 
   const handleConfirmTokens = useCallback(() => {
     const currentTotal = getTotalTokens(currentPlayer);
     const adding = selectedGems.length;
     audioManager.playSound('takeTokens');
+    const gemsList = selectedGems.join(', ');
+    console.log(`🪙 [TOKEN] Player ${state.currentPlayerIndex} taking ${selectedGems.length} tokens | سکه‌های انتخاب‌شده: ${gemsList}`);
     takeTokens(selectedGems);
     setSelectedGems([]);
-    setTempPoolDisplay(null); // Clear temp display
+    setTempPoolDisplay(null);
 
     if (currentTotal + adding > 10) {
       setPhase('mustReturnTokens');
@@ -227,7 +247,15 @@ export default function Game(props: GameProps = {}) {
       endTurn();
       setPhase('idle');
     }
-  }, [selectedGems, currentPlayer, takeTokens, endTurn]);
+
+    // Sync to online players
+    if (gameMode === 'online' && props.onGameStateChange) {
+      setTimeout(() => {
+        console.log(`📡 [SYNC] Syncing token action to server | ارسال اقدام توکن`);
+        props.onGameStateChange(localGameState);
+      }, 100);
+    }
+  }, [selectedGems, currentPlayer, takeTokens, endTurn, gameMode, props, localGameState, state.currentPlayerIndex]);
 
   const handleCancelTokens = useCallback(() => {
     setSelectedGems([]);
@@ -236,25 +264,42 @@ export default function Game(props: GameProps = {}) {
   }, []);
 
   const handleCardClick = useCallback((card: Card) => {
+    // Check if it's current player's turn (for online games)
+    if (gameMode === 'online' && !isCurrentPlayerMe()) {
+      setTurnWarning('❌ It\'s not your turn | نوبت شما نیست');
+      setTimeout(() => setTurnWarning(''), 3000);
+      return;
+    }
+
     if (phase !== 'idle') return;
     setSelectedCard(card);
     setPhase('cardAction');
-  }, [phase]);
+  }, [phase, gameMode, isCurrentPlayerMe]);
 
   const handleBuyCard = useCallback(() => {
     if (!selectedCard) return;
     audioManager.playSound('buyCard');
+    console.log(`💳 [CARD] Player ${state.currentPlayerIndex} purchasing card ${selectedCard.id} | خرید کارت`);
     purchaseCard(selectedCard.id);
     setSelectedCard(null);
     endTurn();
     setPhase('idle');
-  }, [selectedCard, purchaseCard, endTurn]);
+
+    // Sync to online players
+    if (gameMode === 'online' && props.onGameStateChange) {
+      setTimeout(() => {
+        console.log(`📡 [SYNC] Syncing card purchase to server | ارسال خرید کارت`);
+        props.onGameStateChange(localGameState);
+      }, 100);
+    }
+  }, [selectedCard, purchaseCard, endTurn, gameMode, props, localGameState, state.currentPlayerIndex]);
 
   const handleReserveCard = useCallback(() => {
     if (!selectedCard) return;
     const currentTotal = getTotalTokens(currentPlayer);
     const getsGold = state.tokenPool.gold > 0;
     audioManager.playSound('reserveCard');
+    console.log(`🔖 [CARD] Player ${state.currentPlayerIndex} reserving card ${selectedCard.id} | رزرو کارت`);
     reserveCard(selectedCard.id);
     setSelectedCard(null);
 
@@ -264,7 +309,12 @@ export default function Game(props: GameProps = {}) {
       endTurn();
       setPhase('idle');
     }
-  }, [selectedCard, currentPlayer, state.tokenPool.gold, reserveCard, endTurn]);
+
+    // Sync to other online players
+    if (gameMode === 'online' && props.onGameStateChange) {
+      setTimeout(() => props.onGameStateChange(localGameState), 100);
+    }
+  }, [selectedCard, currentPlayer, state.tokenPool.gold, reserveCard, endTurn, gameMode, props, localGameState]);
 
   const handleReserveDeck = useCallback((level: 1 | 2 | 3) => {
     if (phase !== 'idle') return;
@@ -279,11 +329,21 @@ export default function Game(props: GameProps = {}) {
       endTurn();
       setPhase('idle');
     }
-  }, [phase, currentPlayer, state, reserveCard, endTurn]);
+
+    // Sync to other online players
+    if (gameMode === 'online' && props.onGameStateChange) {
+      setTimeout(() => props.onGameStateChange(localGameState), 100);
+    }
+  }, [phase, currentPlayer, state, reserveCard, endTurn, gameMode, props, localGameState]);
 
   const handleReturnToken = useCallback((tokenType: TokenType) => {
     returnToken(state.currentPlayerIndex, tokenType);
-  }, [state.currentPlayerIndex, returnToken]);
+
+    // Sync to other online players
+    if (gameMode === 'online' && props.onGameStateChange) {
+      setTimeout(() => props.onGameStateChange(localGameState), 100);
+    }
+  }, [state.currentPlayerIndex, returnToken, gameMode, props, localGameState]);
 
   const handleCancel = useCallback(() => {
     setSelectedGems([]);
@@ -309,6 +369,13 @@ export default function Game(props: GameProps = {}) {
               <motion.span animate={{ opacity: [0.4, 1, 0.4] }} transition={{ duration: 1.5, repeat: Infinity }}>
                 {t('aiThinking')}
               </motion.span>
+            ) : gameMode === 'online' ? (
+              <>
+                <span className={isCurrentPlayerMe() ? 'text-green-500 font-bold' : 'text-amber-500'}>
+                  {isCurrentPlayerMe() ? '✅ Your Turn' : '⏳ Waiting'}
+                </span>
+                {' | '}{currentPlayer.id === 0 ? props.playerName : `Player ${state.currentPlayerIndex + 1}`}
+              </>
             ) : (
               <>{t('player')} {state.currentPlayerIndex + 1}{isAIPlayer(state.currentPlayerIndex) ? ' 🤖' : ''}</>
             )}
@@ -363,6 +430,22 @@ export default function Game(props: GameProps = {}) {
                 )
               ))}
             </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Turn Warning Banner */}
+      <AnimatePresence>
+        {turnWarning && (
+          <motion.div
+            initial={{ opacity: 0, height: 0, y: -10 }}
+            animate={{ opacity: 1, height: 'auto', y: 0 }}
+            exit={{ opacity: 0, height: 0, y: -10 }}
+            className="bg-yellow-400/20 border border-yellow-500/40 rounded-lg p-3 mb-3 text-center"
+          >
+            <p className="text-sm text-yellow-700 dark:text-yellow-300 font-semibold">
+              {turnWarning}
+            </p>
           </motion.div>
         )}
       </AnimatePresence>
@@ -468,6 +551,7 @@ export default function Game(props: GameProps = {}) {
           <PlayerPanel
             key={player.id}
             player={player}
+            playerName={props.playerNamesList?.[player.id] || player.name}
             isActive={player.id === state.currentPlayerIndex}
             isAI={isAIPlayer(player.id)}
             onReservedCardClick={player.id === state.currentPlayerIndex && !isAIPlayer(player.id) ? handleCardClick : undefined}

@@ -4,6 +4,24 @@ import { GameState } from '@/lib/gameData';
 
 const SOCKET_SERVER_URL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:3001';
 
+// 🎯 Create unique player ID for this browser tab (sessionStorage)
+// هر تب از مرورگر یک ID منحصربه فرد دارد | Each browser tab gets unique ID
+function createTabPlayerId(): string {
+  const key = 'splendor_tab_player_id';
+  let id = sessionStorage.getItem(key);
+  
+  if (!id) {
+    // Fallback: Date.now() + random (no uuid needed)
+    id = `${Date.now()}-${Math.floor(Math.random() * 1e6)}`;
+    sessionStorage.setItem(key, id);
+    console.log(`✅ [TAB-ID] New tab ID created | ID تب جدید ایجاد شد: ${id}`);
+  } else {
+    console.log(`✅ [TAB-ID] Using existing tab ID | استفاده از ID تب موجود: ${id}`);
+  }
+  
+  return id;
+}
+
 interface OnlinePlayer {
   id: string;
   name: string;
@@ -20,12 +38,17 @@ export function useOnlineGame(roomId: string, playerId: string, playerName: stri
   const [error, setError] = useState<string | null>(null);
   const socketRef = useRef<Socket | null>(null);
   const joinedRef = useRef(false);
+  const tabPlayerIdRef = useRef<string>('');
 
   // Initialize socket connection
   useEffect(() => {
     if (!roomId || !playerId || !playerName || joinedRef.current) return;
 
     try {
+      // Get or create unique tab player ID
+      const tabPlayerId = createTabPlayerId();
+      tabPlayerIdRef.current = tabPlayerId;
+
       // Connect to socket server
       const socket = io(SOCKET_SERVER_URL, {
         reconnection: true,
@@ -37,18 +60,20 @@ export function useOnlineGame(roomId: string, playerId: string, playerName: stri
       socketRef.current = socket;
 
       socket.on('connect', () => {
-        console.log('Connected to socket server');
+        console.log(`🔌 [SOCKET] Connected to server | متصل به سرور: ${socket.id}`);
+        console.log(`👤 [PLAYER] Tab ID: ${tabPlayerId}, Player ID: ${playerId}, Name: ${playerName}`);
         setError(null);
         setLoading(false);
       });
 
       socket.on('connect_error', (err) => {
-        console.error('Socket connection error:', err);
+        console.error(`❌ [ERROR] Socket connection failed | خرابی اتصال: ${err}`);
         setError('Failed to connect to server');
       });
 
       socket.on('players-updated', (data) => {
         const { players, roomStatus } = data;
+        console.log(`👥 [PLAYERS] Updated in room ${roomId} | بازیکنان بروزرسانی: ${players.length}`);
         // Convert array to object keyed by player ID
         const playersObj = players.reduce(
           (acc: Record<string, OnlinePlayer>, p: OnlinePlayer) => {
@@ -64,21 +89,24 @@ export function useOnlineGame(roomId: string, playerId: string, playerName: stri
 
       socket.on('game-started', (data) => {
         const { gameState } = data;
+        console.log(`🎮 [GAME] Started in room ${roomId} | بازی شروع شد`);
         setGameState(gameState);
         setRoomStatus('playing');
       });
 
       socket.on('game-state-updated', (data) => {
+        console.log(`📡 [SYNC] Game state updated from server | وضعیت بازی بروزرسانی شد`);
         setGameState(data);
       });
 
       socket.on('game-ended', () => {
+        console.log(`🏁 [GAME] Ended in room ${roomId} | بازی پایان یافت`);
         setRoomStatus('waiting');
         setGameState(null);
       });
 
       socket.on('disconnect', () => {
-        console.log('Disconnected from server');
+        console.log(`🔌 [SOCKET] Disconnected from server | قطع شده از سرور`);
         setError('Disconnected from server');
       });
 
@@ -88,7 +116,7 @@ export function useOnlineGame(roomId: string, playerId: string, playerName: stri
         }
       };
     } catch (err) {
-      console.error('Socket initialization error:', err);
+      console.error(`❌ [ERROR] Failed to initialize socket | خرابی در اتصال: ${err}`);
       setError('Failed to initialize connection');
       setLoading(false);
     }
@@ -100,17 +128,23 @@ export function useOnlineGame(roomId: string, playerId: string, playerName: stri
       if (!socketRef.current || joinedRef.current) return;
 
       try {
+        const tabPlayerId = tabPlayerIdRef.current || createTabPlayerId();
+        
+        console.log(`➡️  [JOIN-ROOM] Emitting join event | درخواست پیوستن به اتاق`);
+        console.log(`   Room: ${roomId}, Tab-ID: ${tabPlayerId}, Player: ${playerId}, Name: ${playerName}`);
+        
         socketRef.current.emit('join-room', {
           roomId,
-          playerId,
+          playerId: tabPlayerId, // 🎯 Use tab-specific ID
           playerName,
           playerCount,
-          isHost: true, // Will be determined by client
+          isHost: true,
         });
 
         joinedRef.current = true;
+        console.log(`✅ [JOIN-ROOM] Successfully emitted | با موفقیت ارسال شد`);
       } catch (err) {
-        console.error('Error joining room:', err);
+        console.error(`❌ [ERROR] Failed to join room | خرابی در پیوستن: ${err}`);
         setError('Failed to join room');
       }
     },
@@ -121,19 +155,23 @@ export function useOnlineGame(roomId: string, playerId: string, playerName: stri
   const leaveRoom = useCallback(() => {
     if (!socketRef.current) return;
 
+    const tabPlayerId = tabPlayerIdRef.current || createTabPlayerId();
+    console.log(`⬅️  [LEAVE-ROOM] Leaving room ${roomId} | ترک اتاق`);
+    
     socketRef.current.emit('leave-room', {
       roomId,
-      playerId,
+      playerId: tabPlayerId,
     });
 
     joinedRef.current = false;
-  }, [roomId, playerId]);
+  }, [roomId]);
 
   // Start game
   const startGame = useCallback(
     (initialGameState: GameState) => {
       if (!socketRef.current) return;
 
+      console.log(`🚀 [START-GAME] Starting game in room ${roomId} | شروع بازی`);
       socketRef.current.emit('start-game', {
         roomId,
         gameState: initialGameState,
@@ -147,25 +185,30 @@ export function useOnlineGame(roomId: string, playerId: string, playerName: stri
     (newState: GameState) => {
       if (!socketRef.current) return;
 
+      const tabPlayerId = tabPlayerIdRef.current || createTabPlayerId();
+      console.log(`📤 [SYNC] Syncing game state | بروزرسانی وضعیت بازی`);
+      
       // Update local state immediately for responsiveness
       setGameState(newState);
       
       // Broadcast to all players in the room
       socketRef.current.emit('game-action', {
         roomId,
-        playerId,
+        playerId: tabPlayerId,
         gameState: newState,
         timestamp: Date.now(),
       });
     },
-    [roomId, playerId]
+    [roomId]
   );
 
   // Broadcast card purchase to all players
   const broadcastCardPurchase = useCallback(
     (cardId: number, playerIndex: number) => {
       if (!socketRef.current) return;
-      socketRef.current.emit('card-purchased', { roomId, cardId, playerIndex });
+      const tabPlayerId = tabPlayerIdRef.current || createTabPlayerId();
+      console.log(`💳 [CARD] Player ${playerIndex} purchasing card ${cardId} | خریداری کارت`);
+      socketRef.current.emit('card-purchased', { roomId, cardId, playerIndex, playerId: tabPlayerId });
     },
     [roomId]
   );
@@ -174,7 +217,9 @@ export function useOnlineGame(roomId: string, playerId: string, playerName: stri
   const broadcastTokenAction = useCallback(
     (gems: string[], playerIndex: number) => {
       if (!socketRef.current) return;
-      socketRef.current.emit('tokens-taken', { roomId, gems, playerIndex });
+      const tabPlayerId = tabPlayerIdRef.current || createTabPlayerId();
+      console.log(`🪙 [TOKEN] Player ${playerIndex} taking ${gems.length} tokens | گرفتن سکه‌ها`);
+      socketRef.current.emit('tokens-taken', { roomId, gems, playerIndex, playerId: tabPlayerId });
     },
     [roomId]
   );
@@ -183,6 +228,7 @@ export function useOnlineGame(roomId: string, playerId: string, playerName: stri
   const finishGame = useCallback(() => {
     if (!socketRef.current) return;
 
+    console.log(`🏁 [FINISH] Ending game in room ${roomId} | پایان بازی`);
     socketRef.current.emit('end-game', {
       roomId,
     });

@@ -204,12 +204,17 @@ export default function OnlineGame() {
   }
 
   // Game is in progress
+  // Build array of player names in the order they appear in roomPlayers
+  const playerNamesList = Object.values(roomPlayers).map(p => p.name);
+
   return (
     <Game
       mode="online"
       roomId={roomId}
       playerId={playerId}
       playerName={playerName}
+      roomPlayers={roomPlayers}
+      playerNamesList={playerNamesList}
       socket={socket}
       serverGameState={managedGameState}
       onGameStateChange={updateGameState}

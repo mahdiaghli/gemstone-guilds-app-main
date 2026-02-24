@@ -20,6 +20,7 @@ export interface Noble {
 
 export interface Player {
   id: number;
+  name?: string; // Optional: player name from lobby (for online games)
   tokens: Record<TokenType, number>;
   cards: Card[];
   reservedCards: Card[];

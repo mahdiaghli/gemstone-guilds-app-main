@@ -39,12 +39,13 @@ function getRoomPlayersArray(roomId) {
 }
 
 io.on('connection', (socket) => {
-  console.log(`✅ Player connected: ${socket.id}`);
+  console.log(`✅ [CONNECTION] Player connected | بازیکن متصل شد: ${socket.id}`);
 
   // Join room
   socket.on('join-room', (data) => {
     const { roomId, playerId, playerName, playerCount, isHost } = data;
-    console.log(`👤 Player ${playerName} (${playerId}) joining room ${roomId}`);
+    console.log(`👤 [JOIN-ROOM] ${playerName} (Tab-ID: ${playerId}) joining room ${roomId}`);
+    console.log(`   Socket ID: ${socket.id} | نام: ${playerName}`);
 
     const room = getOrCreateRoom(roomId);
     
@@ -60,6 +61,7 @@ io.on('connection', (socket) => {
     // Update max players if host is setting it
     if (isHost && playerCount) {
       room.maxPlayers = playerCount;
+      console.log(`   Max Players set to: ${playerCount}`);
     }
 
     // Join socket to room namespace
@@ -71,13 +73,13 @@ io.on('connection', (socket) => {
       roomStatus: room.status,
     });
 
-    console.log(`📊 Room ${roomId} now has ${room.players.size} players`);
+    console.log(`📊 [PLAYERS] Room ${roomId} now has ${room.players.size} players | تعداد بازیکنان: ${room.players.size}`);
   });
 
   // Leave room
   socket.on('leave-room', (data) => {
     const { roomId, playerId } = data;
-    console.log(`👋 Player ${playerId} leaving room ${roomId}`);
+    console.log(`👋 [LEAVE-ROOM] Player ${playerId} leaving room ${roomId} | بازیکن ترک اتاق`);
 
     const room = rooms.get(roomId);
     if (room) {
@@ -86,13 +88,14 @@ io.on('connection', (socket) => {
       if (room.players.size === 0) {
         // Delete room if empty
         rooms.delete(roomId);
-        console.log(`🗑️ Room ${roomId} deleted (empty)`);
+        console.log(`🗑️  [CLEANUP] Room ${roomId} deleted (empty) | اتاق حذف شد`);
       } else {
         // Broadcast updated player list
         io.to(roomId).emit('players-updated', {
           players: getRoomPlayersArray(roomId),
           roomStatus: room.status,
         });
+        console.log(`📊 [PLAYERS] Room ${roomId} now has ${room.players.size} players | تعداد باقی‌مانده: ${room.players.size}`);
       }
     }
 
@@ -102,7 +105,7 @@ io.on('connection', (socket) => {
   // Start game
   socket.on('start-game', (data) => {
     const { roomId, gameState } = data;
-    console.log(`🎮 Starting game in room ${roomId}`);
+    console.log(`🎮 [START-GAME] Starting game in room ${roomId} | شروع بازی`);
 
     const room = rooms.get(roomId);
     if (room && room.players.size >= 2) {
@@ -114,6 +117,9 @@ io.on('connection', (socket) => {
         gameState,
         playersInGame: getRoomPlayersArray(roomId),
       });
+      console.log(`✅ [START-GAME] Game started with ${room.players.size} players | بازی آغاز شد`);
+    } else {
+      console.log(`❌ [START-GAME] Not enough players (${room?.players.size || 0}/2)`);
     }
   });
 
@@ -125,7 +131,7 @@ io.on('connection', (socket) => {
       room.gameState = gameState;
       // Broadcast updated game state to ALL players in room (including sender)
       io.to(roomId).emit('game-state-updated', gameState);
-      console.log(`🔄 Game state synced in room ${roomId}`);
+      console.log(`📡 [SYNC] Game state synced in room ${roomId} | وضعیت بروزرسانی شد`);
     }
   });
 
@@ -137,13 +143,13 @@ io.on('connection', (socket) => {
       room.gameState = gameState;
       // Broadcast to all players in room
       io.to(roomId).emit('game-state-updated', gameState);
-      console.log(`⚡ Game action from ${playerId} in room ${roomId}`);
+      console.log(`⚡ [ACTION] Game action from ${playerId} in room ${roomId} | عملیات بازی`);
     }
   });
 
   // Card purchase action
   socket.on('card-purchased', (data) => {
-    const { roomId, cardId, playerIndex, gameState } = data;
+    const { roomId, cardId, playerIndex, playerId, gameState } = data;
     const room = rooms.get(roomId);
     if (room && gameState) {
       room.gameState = gameState;
@@ -152,13 +158,13 @@ io.on('connection', (socket) => {
         playerIndex,
         gameState,
       });
-      console.log(`💳 Card ${cardId} purchased by player ${playerIndex} in room ${roomId}`);
+      console.log(`💳 [CARD] Card ${cardId} purchased by player ${playerIndex} (${playerId}) | خریداری کارت`);
     }
   });
 
   // Token action
   socket.on('tokens-taken', (data) => {
-    const { roomId, gems, playerIndex, gameState } = data;
+    const { roomId, gems, playerIndex, playerId, gameState } = data;
     const room = rooms.get(roomId);
     if (room && gameState) {
       room.gameState = gameState;
@@ -167,7 +173,7 @@ io.on('connection', (socket) => {
         playerIndex,
         gameState,
       });
-      console.log(`💰 Tokens ${gems.join(',')} taken by player ${playerIndex} in room ${roomId}`);
+      console.log(`🪙 [TOKEN] Tokens ${gems.join(',')} taken by player ${playerIndex} (${playerId}) | گرفتن سکه‌ها`);
     }
   });
 
@@ -178,7 +184,7 @@ io.on('connection', (socket) => {
     if (room) {
       // Broadcast message to all in room
       io.to(roomId).emit('chat-message', message);
-      console.log(`💬 Chat in room ${roomId}: ${message.playerName}: ${message.message}`);
+      console.log(`💬 [CHAT] Room ${roomId} - ${message.playerName}: ${message.message}`);
     }
   });
 
@@ -192,14 +198,15 @@ io.on('connection', (socket) => {
         playerId,
         enabled,
       });
-      console.log(`🎤 Microphone ${enabled ? 'ON' : 'OFF'} for ${playerId} in room ${roomId}`);
+      const status = enabled ? 'ON 🎤' : 'OFF 🔇';
+      console.log(`🎤 [MIC] Microphone ${status} for ${playerId} in room ${roomId} | میکروفون ${enabled ? 'روشن' : 'خاموش'}`);
     }
   });
 
   // End game
   socket.on('end-game', (data) => {
     const { roomId } = data;
-    console.log(`🏁 Ending game in room ${roomId}`);
+    console.log(`🏁 [END-GAME] Ending game in room ${roomId} | پایان بازی`);
 
     const room = rooms.get(roomId);
     if (room) {
@@ -209,15 +216,17 @@ io.on('connection', (socket) => {
       io.to(roomId).emit('game-ended', {
         playersInRoom: getRoomPlayersArray(roomId),
       });
+      console.log(`✅ [END-GAME] Game ended | بازی پایان یافت`);
     }
   });
 
   socket.on('disconnect', () => {
-    console.log(`❌ Player disconnected: ${socket.id}`);
+    console.log(`❌ [DISCONNECT] Player disconnected | قطع شده: ${socket.id}`);
   });
 });
 
 const PORT = process.env.PORT || 3001;
 httpServer.listen(PORT, () => {
-  console.log(`\n🎮 Splendor Server running on http://localhost:${PORT}\n`);
+  console.log(`\n🎮 [SERVER] Splendor Server running on http://localhost:${PORT}`);
+  console.log(`📡 [SERVER] سرور Splendor در حال کار است\n`);
 });

@@ -7,12 +7,13 @@ import NobleDisplay from './NobleDisplay';
 
 interface PlayerPanelProps {
   player: Player;
+  playerName?: string; // Optional: custom name from online game
   isActive: boolean;
   isAI?: boolean;
   onReservedCardClick?: (card: Card) => void;
 }
 
-export default function PlayerPanel({ player, isActive, isAI, onReservedCardClick }: PlayerPanelProps) {
+export default function PlayerPanel({ player, playerName, isActive, isAI, onReservedCardClick }: PlayerPanelProps) {
   const bonuses = getPlayerBonuses(player);
   const score = getPlayerScore(player);
   const { t } = useLanguage();
@@ -30,7 +31,7 @@ export default function PlayerPanel({ player, isActive, isAI, onReservedCardClic
           'font-cinzel text-xs tracking-wider',
           isActive ? 'text-primary' : 'text-muted-foreground',
         )}>
-          {isAI ? '🤖 ' : ''}{t('player')} {player.id + 1}
+          {isAI ? '🤖 ' : ''}{playerName || player.name || `${t('player')} ${player.id + 1}`}
         </span>
         <span className="font-cinzel text-sm font-bold text-primary">{score}</span>
       </div>
