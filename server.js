@@ -117,14 +117,82 @@ io.on('connection', (socket) => {
     }
   });
 
-  // Sync game state
+  // Sync game state - main action that broadcasts to all players
   socket.on('sync-game-state', (data) => {
     const { roomId, gameState } = data;
     const room = rooms.get(roomId);
     if (room) {
       room.gameState = gameState;
-      // Broadcast updated game state to all in room
-      socket.to(roomId).emit('game-state-updated', gameState);
+      // Broadcast updated game state to ALL players in room (including sender)
+      io.to(roomId).emit('game-state-updated', gameState);
+      console.log(`🔄 Game state synced in room ${roomId}`);
+    }
+  });
+
+  // Handle general game actions - broadcasts to all players
+  socket.on('game-action', (data) => {
+    const { roomId, playerId, gameState, timestamp } = data;
+    const room = rooms.get(roomId);
+    if (room) {
+      room.gameState = gameState;
+      // Broadcast to all players in room
+      io.to(roomId).emit('game-state-updated', gameState);
+      console.log(`⚡ Game action from ${playerId} in room ${roomId}`);
+    }
+  });
+
+  // Card purchase action
+  socket.on('card-purchased', (data) => {
+    const { roomId, cardId, playerIndex, gameState } = data;
+    const room = rooms.get(roomId);
+    if (room && gameState) {
+      room.gameState = gameState;
+      io.to(roomId).emit('card-purchase-action', {
+        cardId,
+        playerIndex,
+        gameState,
+      });
+      console.log(`💳 Card ${cardId} purchased by player ${playerIndex} in room ${roomId}`);
+    }
+  });
+
+  // Token action
+  socket.on('tokens-taken', (data) => {
+    const { roomId, gems, playerIndex, gameState } = data;
+    const room = rooms.get(roomId);
+    if (room && gameState) {
+      room.gameState = gameState;
+      io.to(roomId).emit('tokens-action', {
+        gems,
+        playerIndex,
+        gameState,
+      });
+      console.log(`💰 Tokens ${gems.join(',')} taken by player ${playerIndex} in room ${roomId}`);
+    }
+  });
+
+  // Chat message
+  socket.on('send-chat-message', (data) => {
+    const { roomId, message } = data;
+    const room = rooms.get(roomId);
+    if (room) {
+      // Broadcast message to all in room
+      io.to(roomId).emit('chat-message', message);
+      console.log(`💬 Chat in room ${roomId}: ${message.playerName}: ${message.message}`);
+    }
+  });
+
+  // Microphone toggle
+  socket.on('microphone-toggled', (data) => {
+    const { roomId, playerId, enabled } = data;
+    const room = rooms.get(roomId);
+    if (room) {
+      // Broadcast microphone status to all in room
+      io.to(roomId).emit('player-microphone-toggled', {
+        playerId,
+        enabled,
+      });
+      console.log(`🎤 Microphone ${enabled ? 'ON' : 'OFF'} for ${playerId} in room ${roomId}`);
     }
   });
 

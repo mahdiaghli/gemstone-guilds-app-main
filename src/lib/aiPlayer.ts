@@ -327,14 +327,44 @@ function getAIActionHard(state: GameState): AIAction {
 }
 
 export function getAIAction(state: GameState, difficulty: AIDifficulty = 'medium'): AIAction {
-  // سریع پاسخ بدن - Fast response
+  // Ensure AI always performs at least one action
+  let action: AIAction;
+  
   switch (difficulty) {
     case 'easy':
-      return getAIActionEasy(state);
+      action = getAIActionEasy(state);
+      break;
     case 'hard':
-      return getAIActionHard(state);
+      action = getAIActionHard(state);
+      break;
     case 'medium':
     default:
-      return getAIActionMedium(state);
+      action = getAIActionMedium(state);
   }
+
+  // Fallback: if somehow no action was determined, always take at least 1 gem token
+  // or reserve a card or reserve from deck
+  if (!action) {
+    const player = state.players[state.currentPlayerIndex];
+    
+    // Try to take any available token
+    const available = GEM_TYPES.filter(g => state.tokenPool[g] > 0);
+    if (available.length > 0) {
+      return { type: 'takeTokens', gems: [available[0]] };
+    }
+    
+    // Try to reserve a visible card
+    for (const level of [1, 2, 3] as const) {
+      for (const card of state.visibleCards[level]) {
+        if (card && player.reservedCards.length < 3) {
+          return { type: 'reserveCard', cardId: card.id };
+        }
+      }
+    }
+    
+    // Try to reserve from deck
+    return { type: 'reserveDeck', level: 1 };
+  }
+
+  return action;
 }

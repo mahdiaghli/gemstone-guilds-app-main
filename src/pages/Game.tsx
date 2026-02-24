@@ -1,8 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Socket } from 'socket.io-client';
 import { useGame } from '@/hooks/useGame';
 import { useAudio } from '@/hooks/useAudio';
+import { useBackgroundMusic } from '@/hooks/useBackgroundMusic';
 import { cn } from '@/lib/utils';
 import { GemType, TokenType, Card, GEM_TYPES, TOKEN_TYPES, GEM_INFO, LEVEL_COLORS, GameState } from '@/lib/gameData';
 import { canPlayerAffordCard, getPlayerScore, getTotalTokens, getPlayerBonuses } from '@/lib/gameLogic';
@@ -14,6 +16,9 @@ import GemToken from '@/components/game/GemToken';
 import CardDisplay from '@/components/game/CardDisplay';
 import NobleDisplay from '@/components/game/NobleDisplay';
 import PlayerPanel from '@/components/game/PlayerPanel';
+import MusicControl from '@/components/game/MusicControl';
+import VoiceChatControl from '@/components/game/VoiceChatControl';
+import Chat from '@/components/game/Chat';
 import backcard1Img from '@/assets/backcard1.png';
 import backcard2Img from '@/assets/backcard2.png';
 import backcard3Img from '@/assets/backcard3.png';
@@ -26,6 +31,9 @@ interface GameProps {
   mode?: 'local' | 'ai' | 'online';
   roomId?: string;
   playerId?: string;
+  playerName?: string;
+  socket?: Socket | null;
+  serverGameState?: GameState | null;
   onGameStateChange?: (state: GameState) => void;
   onGameEnd?: () => void;
 }
@@ -37,7 +45,22 @@ export default function Game(props: GameProps = {}) {
   const aiDifficulty = (searchParams.get('difficulty') || 'medium') as AIDifficulty;
   const navigate = useNavigate();
 
-  const { state, takeTokens, purchaseCard, reserveCard, returnToken, endTurn, resetGame } = useGame(playerCount);
+  const { state: localGameState, takeTokens, purchaseCard, reserveCard, returnToken, endTurn, resetGame } = useGame(playerCount);
+
+  // For online games, serverGameState is the source of truth
+  // We display serverGameState but perform actions on localGameState then sync
+  const [displayState, setDisplayState] = useState(localGameState);
+
+  // Update display state based on server updates (for other players' actions)
+  useEffect(() => {
+    if (gameMode === 'online' && props.serverGameState) {
+      setDisplayState(props.serverGameState);
+    } else {
+      setDisplayState(localGameState);
+    }
+  }, [props.serverGameState, localGameState, gameMode]);
+
+  const state = displayState;
 
   const isAIPlayer = useCallback((index: number) => {
     if (gameMode !== 'ai') return false;
@@ -46,9 +69,43 @@ export default function Game(props: GameProps = {}) {
 
   const [phase, setPhase] = useState<Phase>('idle');
   const [selectedGems, setSelectedGems] = useState<GemType[]>([]);
+  const [tempPoolDisplay, setTempPoolDisplay] = useState<Record<TokenType, number> | null>(null);
   const [selectedCard, setSelectedCard] = useState<Card | null>(null);
 
   const currentPlayer = state.players[state.currentPlayerIndex];
+
+  // Sync game state when it changes (for online games)
+  useEffect(() => {
+    if (gameMode === 'online' && props.onGameStateChange && state) {
+      props.onGameStateChange(state);
+    }
+  }, [state, gameMode, props.onGameStateChange]);
+
+  // Listen for game state updates from other players (for online games)
+  useEffect(() => {
+    if (gameMode !== 'online' || !props.socket) return;
+
+    const handleGameStateUpdate = (newGameState: GameState) => {
+      // Update local game state with server state
+      // Only update if current player is not the one who made the action
+      // This prevents double-applying the action
+      console.log('📡 Received game state update from server');
+      
+      // For now, we'll accept the server state as the source of truth
+      // In a production app, you might want more sophisticated conflict resolution
+      if (newGameState) {
+        // We need to sync the entire game state
+        // Since we can't directly update useGame state, we'll need to compare
+        // and only apply updates for other players' actions
+      }
+    };
+
+    props.socket.on('game-state-updated', handleGameStateUpdate);
+
+    return () => {
+      props.socket?.off('game-state-updated', handleGameStateUpdate);
+    };
+  }, [gameMode, props.socket]);
 
   // Phase sync: when all gems deselected, go back to idle
   useEffect(() => {
@@ -123,18 +180,37 @@ export default function Game(props: GameProps = {}) {
     if (phase !== 'idle' && phase !== 'selectingTokens') return;
     if (state.tokenPool[gem] <= 0 && !selectedGems.includes(gem)) return;
 
-    setSelectedGems(prev => {
-      const count = prev.filter(g => g === gem).length;
-      if (count === 0) {
-        if (prev.length === 2 && prev[0] === prev[1]) return prev;
-        if (prev.length >= 3) return prev;
-        return [...prev, gem];
+    let newSelected: GemType[] = [];
+    const count = selectedGems.filter(g => g === gem).length;
+    
+    if (count === 0) {
+      if (selectedGems.length === 2 && selectedGems[0] === selectedGems[1]) {
+        newSelected = selectedGems; // Can't add to pair
+      } else if (selectedGems.length >= 3) {
+        newSelected = selectedGems; // Can't exceed 3
+      } else {
+        newSelected = [...selectedGems, gem];
       }
-      if (count === 1 && prev.length === 1 && state.tokenPool[gem] >= 4) {
-        return [gem, gem];
+    } else if (count === 1 && selectedGems.length === 1 && state.tokenPool[gem] >= 4) {
+      // Allow picking 2 of the same gem if supply >= 4
+      newSelected = [gem, gem];
+    } else {
+      // Remove this gem selection
+      newSelected = selectedGems.filter(g => g !== gem);
+    }
+
+    setSelectedGems(newSelected);
+
+    // Immediate visual update: show reduced token pool
+    if (newSelected.length > 0) {
+      const tempPool = { ...state.tokenPool };
+      for (const g of newSelected) {
+        tempPool[g] = Math.max(0, tempPool[g] - 1);
       }
-      return prev.filter(g => g !== gem);
-    });
+      setTempPoolDisplay(tempPool);
+    } else {
+      setTempPoolDisplay(null); // Reset to normal view
+    }
   }, [phase, state.tokenPool, selectedGems]);
 
   const handleConfirmTokens = useCallback(() => {
@@ -143,6 +219,7 @@ export default function Game(props: GameProps = {}) {
     audioManager.playSound('takeTokens');
     takeTokens(selectedGems);
     setSelectedGems([]);
+    setTempPoolDisplay(null); // Clear temp display
 
     if (currentTotal + adding > 10) {
       setPhase('mustReturnTokens');
@@ -151,6 +228,12 @@ export default function Game(props: GameProps = {}) {
       setPhase('idle');
     }
   }, [selectedGems, currentPlayer, takeTokens, endTurn]);
+
+  const handleCancelTokens = useCallback(() => {
+    setSelectedGems([]);
+    setTempPoolDisplay(null);
+    setPhase('idle');
+  }, []);
 
   const handleCardClick = useCallback((card: Card) => {
     if (phase !== 'idle') return;
@@ -205,6 +288,7 @@ export default function Game(props: GameProps = {}) {
   const handleCancel = useCallback(() => {
     setSelectedGems([]);
     setSelectedCard(null);
+    setTempPoolDisplay(null);
     setPhase('idle');
   }, []);
 
@@ -231,6 +315,20 @@ export default function Game(props: GameProps = {}) {
           </span>
         </div>
         <div className="flex items-center gap-2">
+          {/* Music Control - for all game modes */}
+          <MusicControl />
+          
+          {/* Voice Chat Control - for online games only */}
+          {gameMode === 'online' && (
+            <VoiceChatControl
+              socket={props.socket || null}
+              roomId={props.roomId || ''}
+              playerId={props.playerId || ''}
+              disabled={!props.socket}
+            />
+          )}
+          
+          {/* Sound Effects Toggle */}
           <Button variant="ghost" size="sm" onClick={toggleSoundEffects} title={t('soundEffects')}>
             {soundEffectsEnabled ? '🔊' : '🔇'}
           </Button>
@@ -326,17 +424,20 @@ export default function Game(props: GameProps = {}) {
       {/* Token Bank */}
       <div className="bg-card/50 rounded-xl p-3 mb-3 border border-border/30">
         <div className="flex gap-2 md:gap-3 justify-center items-center flex-wrap">
-          {GEM_TYPES.map(gem => (
-            <GemToken
-              key={gem}
-              type={gem}
-              count={state.tokenPool[gem]}
-              onClick={() => handleGemClick(gem)}
-              selected={selectedGems.includes(gem)}
-              disabled={state.tokenPool[gem] <= 0 && !selectedGems.includes(gem)}
-              size="md"
-            />
-          ))}
+          {GEM_TYPES.map(gem => {
+            const displayCount = tempPoolDisplay ? tempPoolDisplay[gem] : state.tokenPool[gem];
+            return (
+              <GemToken
+                key={gem}
+                type={gem}
+                count={displayCount}
+                onClick={() => handleGemClick(gem)}
+                selected={selectedGems.includes(gem)}
+                disabled={state.tokenPool[gem] <= 0 && !selectedGems.includes(gem)}
+                size="md"
+              />
+            );
+          })}
           <div className="w-px h-8 bg-border/50 mx-1" />
           <GemToken type="gold" count={state.tokenPool.gold} size="md" />
         </div>
@@ -534,6 +635,16 @@ export default function Game(props: GameProps = {}) {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Chat - for online games only */}
+      {gameMode === 'online' && (
+        <Chat
+          socket={props.socket || null}
+          roomId={props.roomId || ''}
+          playerId={props.playerId || ''}
+          playerName={props.playerName || ''}
+        />
+      )}
     </div>
   );
 }

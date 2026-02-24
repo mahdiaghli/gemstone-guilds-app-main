@@ -39,7 +39,7 @@ export default function CardDisplay({ card, onClick, affordable, compact, showBa
       whileHover={onClick ? { y: -4, scale: 1.02 } : undefined}
       onClick={onClick}
       className={cn(
-        'rounded-lg border relative overflow-hidden card-shine transition-all',
+        'rounded-lg border-2 relative overflow-hidden card-shine transition-all',
         'bg-card border-border',
         affordable && 'border-primary ring-2 ring-primary/60 shadow-lg shadow-primary/40 scale-105',
         onClick && 'cursor-pointer',
@@ -53,23 +53,24 @@ export default function CardDisplay({ card, onClick, affordable, compact, showBa
     >
       {/* Points + Gem bonus overlay */}
       <div className="absolute inset-0 flex flex-col items-start justify-between p-1 md:p-1.5">
-        <div className="flex justify-between items-start w-full">
+        <div className="flex justify-between items-start w-full gap-1">
           {card.points > 0 ? (
             <span className={cn(
-              'font-cinzel font-bold text-foreground drop-shadow-lg bg-black/30 px-1.5 rounded',
+              'font-cinzel font-bold text-foreground drop-shadow-lg bg-black/40 px-1.5 rounded-md',
               compact ? 'text-xs' : 'text-sm md:text-base',
             )}>
               {card.points}
             </span>
           ) : <span />}
+          {/* Enlarged Gem Bonus Icon */}
           <div
             className={cn(
-              'rounded-full ring-2 ring-white/50',
-              compact ? 'w-3.5 h-3.5' : 'w-4 h-4 md:w-5 md:h-5',
+              'rounded-full ring-3 ring-white/70 shadow-lg drop-shadow-lg',
+              compact ? 'w-5 h-5' : 'w-6 h-6 md:w-7 md:h-7',
             )}
             style={{
               backgroundColor: gemInfo.color,
-              boxShadow: `0 0 6px ${gemInfo.color}`,
+              boxShadow: `0 0 12px ${gemInfo.color}, inset 0 0 6px rgba(255,255,255,0.5)`,
             }}
           />
         </div>

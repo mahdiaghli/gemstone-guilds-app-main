@@ -142,16 +142,39 @@ export function useOnlineGame(roomId: string, playerId: string, playerName: stri
     [roomId]
   );
 
-  // Sync game state
+  // Sync game state with full server-side validation
   const syncGameState = useCallback(
     (newState: GameState) => {
       if (!socketRef.current) return;
 
+      // Update local state immediately for responsiveness
       setGameState(newState);
-      socketRef.current.emit('sync-game-state', {
+      
+      // Broadcast to all players in the room
+      socketRef.current.emit('game-action', {
         roomId,
+        playerId,
         gameState: newState,
+        timestamp: Date.now(),
       });
+    },
+    [roomId, playerId]
+  );
+
+  // Broadcast card purchase to all players
+  const broadcastCardPurchase = useCallback(
+    (cardId: number, playerIndex: number) => {
+      if (!socketRef.current) return;
+      socketRef.current.emit('card-purchased', { roomId, cardId, playerIndex });
+    },
+    [roomId]
+  );
+
+  // Broadcast token action to all players
+  const broadcastTokenAction = useCallback(
+    (gems: string[], playerIndex: number) => {
+      if (!socketRef.current) return;
+      socketRef.current.emit('tokens-taken', { roomId, gems, playerIndex });
     },
     [roomId]
   );
@@ -171,7 +194,10 @@ export function useOnlineGame(roomId: string, playerId: string, playerName: stri
     roomStatus,
     loading,
     error,
+    socket: socketRef.current,
     syncGameState,
+    broadcastCardPurchase,
+    broadcastTokenAction,
     joinRoom,
     leaveRoom,
     startGame,

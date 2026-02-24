@@ -1,10 +1,13 @@
 import { useEffect, useState } from 'react';
 import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { useOnlineGame } from '@/hooks/useOnlineGame';
+import { useOnlineGame } from '@/hooks/useOnlineGame_v2';
+import { useOnlineGameState } from '@/hooks/useOnlineGameState';
 import { useGame } from '@/hooks/useGame';
 import { useLanguage } from '@/hooks/useLanguage';
+import { GameState } from '@/lib/gameData';
 import { Button } from '@/components/ui/button';
+import { Socket } from 'socket.io-client';
 import Game from './Game';
 
 export default function OnlineGame() {
@@ -26,6 +29,7 @@ export default function OnlineGame() {
     roomStatus,
     loading,
     error,
+    socket,
     syncGameState,
     joinRoom,
     leaveRoom,
@@ -34,6 +38,16 @@ export default function OnlineGame() {
   } = useOnlineGame(roomId || '', playerId, playerName);
 
   const { state: localGameState, ...gameActions } = useGame(2);
+
+  // Use online game state management for proper multiplayer sync
+  const { gameState: managedGameState, updateGameState } = useOnlineGameState(
+    socket,
+    roomId || '',
+    playerId,
+    gameState
+  );
+
+  const [useServerGameState, setUseServerGameState] = useState(false);
 
   // Load player info from localStorage
   useEffect(() => {
@@ -195,7 +209,10 @@ export default function OnlineGame() {
       mode="online"
       roomId={roomId}
       playerId={playerId}
-      onGameStateChange={syncGameState}
+      playerName={playerName}
+      socket={socket}
+      serverGameState={managedGameState}
+      onGameStateChange={updateGameState}
       onGameEnd={finishGame}
     />
   );
