@@ -33,6 +33,7 @@ export default function OnlineGame() {
     roomStatus,
     loading,
     error,
+    playerIndexMap,
     socket,
     syncGameState,
     joinRoom,
@@ -41,7 +42,10 @@ export default function OnlineGame() {
     finishGame,
   } = useOnlineGame(roomId || '', playerId, playerName);
 
-  const { state: localGameState, ...gameActions } = useGame(2);
+  // Initialize game with correct player count
+  // Count room players to determine actual player count
+  const actualPlayerCount = Object.keys(roomPlayers).length || playerCount;
+  const { state: localGameState, ...gameActions } = useGame(actualPlayerCount);
 
   // Track last synced state to prevent infinite loops
   const lastSyncedGameStateRef = useCallback((newState: GameState) => {
@@ -286,8 +290,10 @@ export default function OnlineGame() {
   // Build array of player names in the order they appear in roomPlayers
   const playerNamesList = Object.values(roomPlayers).map(p => p.name);
   
-  // Find this player's index in the game
-  const playerIndex = Object.values(roomPlayers).findIndex(p => p.id === playerId);
+  // Find this player's index using the server-provided mapping (or fallback)
+  const playerIndex = playerIndexMap && socket 
+    ? (playerIndexMap[socket.id] ?? Object.values(roomPlayers).findIndex(p => p.id === playerId))
+    : Object.values(roomPlayers).findIndex(p => p.id === playerId);
 
   return (
     <Game

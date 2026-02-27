@@ -22,6 +22,7 @@ export default function Index() {
   const [selectedMode, setSelectedMode] = useState<GameMode>(null);
   const [players, setPlayers] = useState(2);
   const [difficulty, setDifficulty] = useState<AIDifficulty>('medium');
+  const [onlineMode, setOnlineMode] = useState<'manual' | 'matchmaking' | null>(null);
   const navigate = useNavigate();
   const { t, dir } = useLanguage();
   const { logs, clearLogs } = useLogPanel();
@@ -41,7 +42,11 @@ export default function Index() {
   const handleStart = () => {
     if (selectedMode === 'ai') navigate(`/game?players=${players}&mode=ai&difficulty=${difficulty}`);
     else if (selectedMode === 'local') navigate(`/game?players=${players}&mode=local`);
-    else if (selectedMode === 'online') navigate('/online-lobby');
+    else if (selectedMode === 'online' && onlineMode === 'manual') navigate('/online-lobby');
+    else if (selectedMode === 'online' && onlineMode === 'matchmaking') {
+      sessionStorage.setItem('matchmaking-players', players.toString());
+      navigate('/online-matchmaking');
+    }
   };
 
   return (
@@ -78,7 +83,7 @@ export default function Index() {
         </motion.div>
 
         <AnimatePresence>
-          {(selectedMode === 'ai' || selectedMode === 'local') && (
+          {(selectedMode === 'ai' || selectedMode === 'local' || selectedMode === 'online') && (
             <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="mb-6">
               <p className="text-xs text-muted-foreground font-cinzel tracking-widest mb-3">{t('playerCount')}</p>
               <div className="flex gap-3 justify-center mb-4">
@@ -115,10 +120,39 @@ export default function Index() {
         </AnimatePresence>
 
         <AnimatePresence>
+          {selectedMode === 'online' && (
+            <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="mb-6">
+              <p className="text-xs text-muted-foreground font-cinzel tracking-widest mb-3">Mode</p>
+              <div className="space-y-2">
+                <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} onClick={() => setOnlineMode('manual')}
+                  className={cn('w-full flex items-center gap-3 p-3 rounded-lg border-2 transition-all', dir === 'rtl' ? 'flex-row-reverse text-right' : 'text-left',
+                    onlineMode === 'manual' ? 'border-primary bg-primary/10 shadow-lg shadow-primary/20' : 'border-border/50 bg-card/50 hover:border-primary/30')}>
+                  <span className="text-xl">🔐</span>
+                  <div className="flex-1">
+                    <p className={cn('font-cinzel text-sm tracking-wider', onlineMode === 'manual' ? 'text-primary' : 'text-foreground')}>Manual Room</p>
+                    <p className="text-xs text-muted-foreground font-body">Create or join with code</p>
+                  </div>
+                </motion.button>
+
+                <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} onClick={() => setOnlineMode('matchmaking')}
+                  className={cn('w-full flex items-center gap-3 p-3 rounded-lg border-2 transition-all', dir === 'rtl' ? 'flex-row-reverse text-right' : 'text-left',
+                    onlineMode === 'matchmaking' ? 'border-primary bg-primary/10 shadow-lg shadow-primary/20' : 'border-border/50 bg-card/50 hover:border-primary/30')}>
+                  <span className="text-xl">🌐</span>
+                  <div className="flex-1">
+                    <p className={cn('font-cinzel text-sm tracking-wider', onlineMode === 'matchmaking' ? 'text-primary' : 'text-foreground')}>Find Match</p>
+                    <p className="text-xs text-muted-foreground font-body">Auto-match with players</p>
+                  </div>
+                </motion.button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        <AnimatePresence>
           {selectedMode && (
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
               <Button variant="hero" onClick={handleStart} className="w-full mb-4">
-                {selectedMode === 'online' ? t('enterLobby') : t('startGame')}
+                {selectedMode === 'online' && onlineMode === 'matchmaking' ? '🔍 Find Match' : selectedMode === 'online' ? t('enterLobby') : t('startGame')}
               </Button>
             </motion.div>
           )}

@@ -38,6 +38,7 @@ export function useOnlineGame(roomId: string, playerId: string, playerName: stri
   const [roomStatus, setRoomStatus] = useState<'waiting' | 'playing' | 'finished'>('waiting');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [playerIndexMap, setPlayerIndexMap] = useState<Record<string, number>>({}); // Socket ID to game index
   const socketRef = useRef<Socket | null>(null);
   const joinedRef = useRef(false);
   const tabPlayerIdRef = useRef<string>('');
@@ -119,9 +120,13 @@ export function useOnlineGame(roomId: string, playerId: string, playerName: stri
       });
 
       socket.on('game-started', (data) => {
-        const { gameState } = data;
+        const { gameState, playerIndexMap } = data;
         console.log(`🎮 [GAME] Started in room ${roomId} | بازی شروع شد`);
         lastGameStateRef.current = JSON.stringify(gameState);
+        if (playerIndexMap) {
+          setPlayerIndexMap(playerIndexMap);
+          console.log(`📊 [INDEX-MAP] Player index map: ${JSON.stringify(playerIndexMap)}`);
+        }
         setGameState(gameState);
         setRoomStatus('playing');
       });
@@ -302,6 +307,7 @@ export function useOnlineGame(roomId: string, playerId: string, playerName: stri
     roomStatus,
     loading,
     error,
+    playerIndexMap,
     socket: socketRef.current,
     syncGameState,
     broadcastCardPurchase,
