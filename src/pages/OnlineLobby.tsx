@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
+import { LogPanel, useLogPanel } from '@/components/LogPanel';
 import { useLanguage } from '@/hooks/useLanguage';
 
 // Simple UUID v4 generator
@@ -16,6 +17,7 @@ const generateUUID = () => {
 export default function OnlineLobby() {
   const navigate = useNavigate();
   const { t, dir } = useLanguage();
+  const { logs, clearLogs } = useLogPanel();
   const [playerName, setPlayerName] = useState('');
   const [roomCode, setRoomCode] = useState('');
   const [generatedRoom, setGeneratedRoom] = useState('');
@@ -229,6 +231,9 @@ export default function OnlineLobby() {
           ← {t('menu')}
         </Button>
       </motion.div>
+
+      {/* Log Panel */}
+      <LogPanel logs={logs} onClear={clearLogs} />
     </div>
   );
 }

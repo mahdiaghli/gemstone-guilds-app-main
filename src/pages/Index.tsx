@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { LogPanel, useLogPanel } from '@/components/LogPanel';
 import { useLanguage } from '@/hooks/useLanguage';
 import heroImage from '@/assets/hero-gems.jpg';
 import { AIDifficulty } from '@/lib/aiPlayer';
@@ -23,6 +24,7 @@ export default function Index() {
   const [difficulty, setDifficulty] = useState<AIDifficulty>('medium');
   const navigate = useNavigate();
   const { t, dir } = useLanguage();
+  const { logs, clearLogs } = useLogPanel();
 
   const menuItems = [
     { id: 'ai' as const, icon: '🤖', title: t('playWithAI'), subtitle: t('playWithAIDesc') },
@@ -132,6 +134,9 @@ export default function Index() {
       <motion.p className="absolute bottom-6 text-[11px] text-muted-foreground/40 font-body tracking-wider" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.5 }}>
         {t('attribution')}
       </motion.p>
+
+      {/* Log Panel */}
+      <LogPanel logs={logs} onClear={clearLogs} />
     </div>
   );
 }

@@ -8,7 +8,23 @@ const httpServer = createServer((req, res) => {
 
 const io = new Server(httpServer, {
   cors: {
-    origin: ['http://localhost:8082', 'http://localhost:8081', 'http://localhost:8080', 'http://127.0.0.1:8082', 'http://127.0.0.1:5173'],
+    origin: function (origin, callback) {
+      // ✅ اجازه دسترسی به localhost، 127.0.0.1، و IP‌های محلی
+      // ✅ Allow localhost, 127.0.0.1, and local network IPs
+      const allowedPatterns = [
+        /^http:\/\/localhost/,
+        /^http:\/\/127\.0\.0\.1/,
+        /^http:\/\/192\.168\./,
+        /^http:\/\/10\./,
+        /^http:\/\/172\.(1[6-9]|2[0-9]|3[0-1])\./,
+      ];
+      
+      if (!origin || allowedPatterns.some(pattern => pattern.test(origin))) {
+        callback(null, true);
+      } else {
+        callback(new Error('برای دسترسی اجازه نیست | Not allowed by CORS'));
+      }
+    },
     methods: ['GET', 'POST'],
   },
 });

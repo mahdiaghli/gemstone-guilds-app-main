@@ -1,13 +1,12 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useOnlineGame } from '@/hooks/useOnlineGame_v2';
-import { useOnlineGameState } from '@/hooks/useOnlineGameState';
 import { useGame } from '@/hooks/useGame';
 import { useLanguage } from '@/hooks/useLanguage';
 import { GameState } from '@/lib/gameData';
 import { Button } from '@/components/ui/button';
-import { Socket } from 'socket.io-client';
+import { LogPanel, useLogPanel } from '@/components/LogPanel';
 import Game from './Game';
 
 export default function OnlineGame() {
@@ -15,13 +14,18 @@ export default function OnlineGame() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const playerId = searchParams.get('player') || '';
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
+
+  // Log Panel
+  const { logs, clearLogs } = useLogPanel();
 
   const [playerName, setPlayerName] = useState('');
+  const [tempName, setTempName] = useState('');
   const [isHost, setIsHost] = useState(false);
   const [playerCount, setPlayerCount] = useState(2);
   const [gameStarted, setGameStarted] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+  const [showNameDialog, setShowNameDialog] = useState(false);
 
   const {
     gameState,
@@ -39,13 +43,19 @@ export default function OnlineGame() {
 
   const { state: localGameState, ...gameActions } = useGame(2);
 
-  // Use online game state management for proper multiplayer sync
-  const { gameState: managedGameState, updateGameState } = useOnlineGameState(
-    socket,
-    roomId || '',
-    playerId,
-    gameState
-  );
+  // Track last synced state to prevent infinite loops
+  const lastSyncedGameStateRef = useCallback((newState: GameState) => {
+    if (!socket) return;
+    
+    // Emit to server to broadcast to other players
+    socket.emit('sync-game-state', {
+      roomId,
+      gameState: newState,
+      playerId,
+      timestamp: Date.now(),
+    });
+    console.log('\ud83d\udce4 [SYNC] Syncing game state to server | بروزرسانی وضعیت بازی به سرور');
+  }, [socket, roomId, playerId]);
 
   const [useServerGameState, setUseServerGameState] = useState(false);
 
@@ -59,8 +69,24 @@ export default function OnlineGame() {
       if (data.playerCount) {
         setPlayerCount(data.playerCount);
       }
+    } else {
+      // If not host (guest joining), show name dialog
+      if (!isHost) {
+        setShowNameDialog(true);
+      }
     }
   }, []);
+
+  // Handle setting player name from dialog
+  const handleSetPlayerName = () => {
+    if (!tempName.trim()) {
+      setErrorMsg(lang === 'fa' ? 'نام بازیکن نمی‌تواند خالی باشد' : 'Player name cannot be empty');
+      return;
+    }
+    setPlayerName(tempName.trim());
+    setShowNameDialog(false);
+    setErrorMsg('');
+  };
 
   // Join room when player name is available
   useEffect(() => {
@@ -107,11 +133,61 @@ export default function OnlineGame() {
     navigate('/');
   };
 
-  if (loading) {
+  if (loading && !showNameDialog) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 2 }}>
           <div className="text-4xl">🎮</div>
+        </motion.div>
+        {/* Log Panel */}
+        <LogPanel logs={logs} onClear={clearLogs} />
+      </div>
+    );
+  }
+
+  // Show name dialog for guests
+  if (showNameDialog) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="bg-card border-2 border-primary rounded-xl p-6 max-w-sm w-full text-center"
+        >
+          <h2 className="text-2xl font-cinzel font-bold mb-4 text-primary">
+            {lang === 'fa' ? '👤 نام خود را وارد کنید' : '👤 Enter Your Name'}
+          </h2>
+          <p className="text-muted-foreground mb-4 text-sm">
+            {lang === 'fa' ? 'نام خود را برای اتاق وارد کنید' : 'Enter your name to join this room'}
+          </p>
+          <input
+            type="text"
+            placeholder={lang === 'fa' ? 'نام بازیکن...' : 'Player name...'}
+            value={tempName}
+            onChange={(e) => setTempName(e.target.value)}
+            onKeyPress={(e) => e.key === 'Enter' && handleSetPlayerName()}
+            className="w-full px-4 py-2 rounded-lg bg-background border border-primary/30 text-foreground mb-4 focus:outline-none focus:border-primary"
+            autoFocus
+          />
+          {errorMsg && (
+            <p className="text-destructive text-sm mb-4">{errorMsg}</p>
+          )}
+          <div className="flex gap-3">
+            <Button
+              onClick={handleSetPlayerName}
+              variant="game"
+              className="flex-1"
+            >
+              {lang === 'fa' ? '✅ تأیید' : '✅ Confirm'}
+            </Button>
+            <Button
+              onClick={() => navigate('/')}
+              variant="ghost"
+              className="flex-1"
+            >
+              {lang === 'fa' ? '❌ بازگشت' : '❌ Back'}
+            </Button>
+          </div>
         </motion.div>
       </div>
     );
@@ -199,6 +275,9 @@ export default function OnlineGame() {
             </motion.div>
           )}
         </motion.div>
+
+        {/* Log Panel */}
+        <LogPanel logs={logs} onClear={clearLogs} />
       </div>
     );
   }
@@ -206,6 +285,9 @@ export default function OnlineGame() {
   // Game is in progress
   // Build array of player names in the order they appear in roomPlayers
   const playerNamesList = Object.values(roomPlayers).map(p => p.name);
+  
+  // Find this player's index in the game
+  const playerIndex = Object.values(roomPlayers).findIndex(p => p.id === playerId);
 
   return (
     <Game
@@ -213,11 +295,12 @@ export default function OnlineGame() {
       roomId={roomId}
       playerId={playerId}
       playerName={playerName}
+      playerIndex={playerIndex}
       roomPlayers={roomPlayers}
       playerNamesList={playerNamesList}
       socket={socket}
-      serverGameState={managedGameState}
-      onGameStateChange={updateGameState}
+      serverGameState={gameState}
+      onGameStateChange={lastSyncedGameStateRef}
       onGameEnd={finishGame}
     />
   );

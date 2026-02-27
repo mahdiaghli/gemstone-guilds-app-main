@@ -2,7 +2,9 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { GameState } from '@/lib/gameData';
 
-const SOCKET_SERVER_URL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:3001';
+// 🌐 Server URL - Use laptop IP for mobile connection
+// Environment variable takes priority, fallback to localhost for laptop testing
+const SOCKET_SERVER_URL = import.meta.env.VITE_SOCKET_URL || 'http://192.168.254.3:3001';
 
 // 🎯 Create unique player ID for this browser tab (sessionStorage)
 // هر تب از مرورگر یک ID منحصربه فرد دارد | Each browser tab gets unique ID
@@ -39,12 +41,21 @@ export function useOnlineGame(roomId: string, playerId: string, playerName: stri
   const socketRef = useRef<Socket | null>(null);
   const joinedRef = useRef(false);
   const tabPlayerIdRef = useRef<string>('');
+  const lastGameStateRef = useRef<string>(''); // Track last state to prevent duplicate updates
 
   // Initialize socket connection
+  // Allow connection even without playerName initially - will prompt for name
   useEffect(() => {
-    if (!roomId || !playerId || !playerName || joinedRef.current) return;
+    if (!roomId || !playerId || joinedRef.current) return;
 
     try {
+      console.log(`\n${'='.repeat(60)}`);
+      console.log(`🔌 [INIT] Starting Socket.IO Connection...`);
+      console.log(`📍 Server URL: ${SOCKET_SERVER_URL}`);
+      console.log(`📱 Browser: ${navigator.userAgent.substring(0, 50)}`);
+      console.log(`🆔 Room: ${roomId} | Player: ${playerId}`);
+      console.log(`${'='.repeat(60)}\n`);
+
       // Get or create unique tab player ID
       const tabPlayerId = createTabPlayerId();
       tabPlayerIdRef.current = tabPlayerId;
@@ -53,22 +64,40 @@ export function useOnlineGame(roomId: string, playerId: string, playerName: stri
       const socket = io(SOCKET_SERVER_URL, {
         reconnection: true,
         reconnectionDelay: 1000,
-        reconnectionDelayMax: 5000,
-        reconnectionAttempts: 5,
+        reconnectionDelayMax: 10000,
+        reconnectionAttempts: 20,
+        transports: ['websocket', 'polling'],
+        randomizationFactor: 0.5,
+        timeout: 10000,
       });
 
       socketRef.current = socket;
 
       socket.on('connect', () => {
-        console.log(`🔌 [SOCKET] Connected to server | متصل به سرور: ${socket.id}`);
-        console.log(`👤 [PLAYER] Tab ID: ${tabPlayerId}, Player ID: ${playerId}, Name: ${playerName}`);
+        console.log(`\n✅ [CONNECTED] Socket successfully connected!`);
+        console.log(`🔌 Socket ID: ${socket.id}`);
+        console.log(`📡 Transport: ${socket.io.engine.transport.name}`);
+        console.log(`⏰ Time: ${new Date().toLocaleTimeString()}\n`);
         setError(null);
-        setLoading(false);
+        // Only set loading to false after connection AND we have a player name
+        if (playerName) {
+          setLoading(false);
+        }
       });
 
-      socket.on('connect_error', (err) => {
-        console.error(`❌ [ERROR] Socket connection failed | خرابی اتصال: ${err}`);
-        setError('Failed to connect to server');
+      socket.on('connect_error', (err: any) => {
+        console.error(`\n❌ [CONNECTION ERROR]`);
+        console.error(`📍 Server: ${SOCKET_SERVER_URL}`);
+        console.error(`❌ Error: ${err.message || err}`);
+        console.error(`📱 Type: ${err?.type || 'unknown'}`);
+        console.error(`📡 Data: ${err?.data ? JSON.stringify(err.data) : 'none'}`);
+        console.error(`⏰ Time: ${new Date().toLocaleTimeString()}\n`);
+        setError('Failed to connect to server. Check if server is running.');
+      });
+
+      socket.on('error', (err) => {
+        console.error(`\n🔥 [SOCKET ERROR]`);
+        console.error(`❌ Error: ${err}\n`);
       });
 
       socket.on('players-updated', (data) => {
@@ -85,38 +114,71 @@ export function useOnlineGame(roomId: string, playerId: string, playerName: stri
         setRoomPlayers(playersObj);
         setRoomStatus(roomStatus || 'waiting');
         setError(null);
+        // Set loading to false when players are updated
+        setLoading(false);
       });
 
       socket.on('game-started', (data) => {
         const { gameState } = data;
         console.log(`🎮 [GAME] Started in room ${roomId} | بازی شروع شد`);
+        lastGameStateRef.current = JSON.stringify(gameState);
         setGameState(gameState);
         setRoomStatus('playing');
       });
 
       socket.on('game-state-updated', (data) => {
-        console.log(`📡 [SYNC] Game state updated from server | وضعیت بازی بروزرسانی شد`);
-        setGameState(data);
+        const newStateStr = JSON.stringify(data);
+        // Only update if state actually changed to prevent infinite loops
+        if (newStateStr !== lastGameStateRef.current) {
+          lastGameStateRef.current = newStateStr;
+          console.log(`📡 [SYNC] Game state updated from server | وضعیت بازی بروزرسانی شد`);
+          setGameState(data);
+        }
       });
 
       socket.on('game-ended', () => {
         console.log(`🏁 [GAME] Ended in room ${roomId} | بازی پایان یافت`);
+        lastGameStateRef.current = '';
         setRoomStatus('waiting');
         setGameState(null);
       });
 
-      socket.on('disconnect', () => {
-        console.log(`🔌 [SOCKET] Disconnected from server | قطع شده از سرور`);
-        setError('Disconnected from server');
+      socket.on('disconnect', (reason: string) => {
+        console.log(`\n⚠️  [DISCONNECTED] Socket connection lost`);
+        console.log(`📍 Reason: ${reason || 'unknown'}`);
+        console.log(`⏰ Time: ${new Date().toLocaleTimeString()}`);
+        console.log(`🔄 Attempting to reconnect...\n`);
+        setError('Disconnected from server. Reconnecting...');
+      });
+
+      socket.on('reconnect', () => {
+        console.log(`\n✅ [RECONNECTED] Successfully reconnected!`);
+        console.log(`🔌 New Socket ID: ${socket.id}`);
+        console.log(`📍 Server: ${SOCKET_SERVER_URL}\n`);
+        setError(null);
+      });
+
+      socket.on('reconnect_attempt', (attempt) => {
+        console.log(`🔄 [RECONNECT-ATTEMPT] Attempt ${attempt} to reconnect...`);
+      });
+
+      socket.on('reconnect_error', (error) => {
+        console.error(`⚠️  [RECONNECT-ERROR] Failed to reconnect`);
+        console.error(`❌ Error: ${error.message || error}\n`);
       });
 
       return () => {
         if (socket) {
+          console.log(`\n🧹 [CLEANUP] Disconnecting socket...`);
           socket.disconnect();
         }
       };
     } catch (err) {
-      console.error(`❌ [ERROR] Failed to initialize socket | خرابی در اتصال: ${err}`);
+      console.error(`\n${'='.repeat(60)}`);
+      console.error(`🔥 [FATAL ERROR] Socket initialization failed`);
+      console.error(`📍 Server URL: ${SOCKET_SERVER_URL}`);
+      console.error(`❌ Error: ${err}`);
+      console.error(`${'='.repeat(60)}\n`);
       setError('Failed to initialize connection');
       setLoading(false);
     }
@@ -125,7 +187,7 @@ export function useOnlineGame(roomId: string, playerId: string, playerName: stri
   // Join room
   const joinRoom = useCallback(
     (playerCount: number = 4) => {
-      if (!socketRef.current || joinedRef.current) return;
+      if (!socketRef.current || !playerName || joinedRef.current) return;
 
       try {
         const tabPlayerId = tabPlayerIdRef.current || createTabPlayerId();
@@ -138,7 +200,7 @@ export function useOnlineGame(roomId: string, playerId: string, playerName: stri
           playerId: tabPlayerId, // 🎯 Use tab-specific ID
           playerName,
           playerCount,
-          isHost: true,
+          isHost: false,
         });
 
         joinedRef.current = true;

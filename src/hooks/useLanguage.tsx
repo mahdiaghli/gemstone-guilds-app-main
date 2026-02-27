@@ -111,6 +111,48 @@ const translations = {
   microphone: { fa: 'میکروفون', en: 'Microphone' },
   enableMicrophone: { fa: 'روشن کردن میکروفون', en: 'Turn on Microphone' },
   disableMicrophone: { fa: 'خاموش کردن میکروفون', en: 'Turn off Microphone' },
+
+  // Online Game / بازی آنلاین
+  onlineGameTitle: { fa: 'بازی آنلاین | Online Game', en: 'Online Game | بازی آنلاین' },
+  createRoom: { fa: 'ایجاد اتاق', en: 'Create Room' },
+  joinRoom: { fa: 'پیوستن به اتاق', en: 'Join Room' },
+  roomId: { fa: 'شناسه اتاق', en: 'Room ID' },
+  enterRoomId: { fa: 'شناسه اتاق را وارد کنید...', en: 'Enter Room ID...' },
+  roomCreated: { fa: '✅ اتاق با موفقیت ایجاد شد!', en: '✅ Room created successfully!' },
+  roomJoined: { fa: '✅ به اتاق پیوستید!', en: '✅ Joined room!' },
+  waitingForPlayers: { fa: '⏳ در انتظار بازیکنان دیگر...', en: '⏳ Waiting for other players...' },
+  playerJoined: { fa: 'بازیکن پیوست:', en: 'Player joined:' },
+  playerLeft: { fa: 'بازیکن ترک کرد:', en: 'Player left:' },
+  startingGame: { fa: '🎮 شروع بازی...', en: '🎮 Starting game...' },
+  gameStarted: { fa: '🎮 بازی شروع شد!', en: '🎮 Game started!' },
+  yourTurn: { fa: '🎯 نوبت شما است!', en: '🎯 Your turn!' },
+  playerTurn: { fa: 'نوبت بازیکن:', en: "Player's turn:" },
+  connectionLost: { fa: '❌ ارتباط قطع شد!', en: '❌ Connection lost!' },
+  reconnecting: { fa: '🔄 درحال اتصال مجدد...', en: '🔄 Reconnecting...' },
+  connectionRestored: { fa: '✅ ارتباط برقرار شد!', en: '✅ Connection restored!' },
+  errorConnecting: { fa: '❌ خطا در اتصال به سرور', en: '❌ Error connecting to server' },
+  serverNotAvailable: { fa: '❌ سرور دستیاب نیست', en: '❌ Server not available' },
+  noRoomFound: { fa: '❌ اتاق یافت نشد', en: '❌ Room not found' },
+  roomFull: { fa: '❌ اتاق پر است', en: '❌ Room is full' },
+  invalidRoomId: { fa: '❌ شناسه اتاق نامعتبر است', en: '❌ Invalid Room ID' },
+  leaveRoom: { fa: 'ترک اتاق', en: 'Leave Room' },
+  confirmLeave: { fa: 'آیا مطمئن هستید که می‌خواهید ترک کنید؟', en: 'Are you sure you want to leave?' },
+
+  // Lobby / لابی
+  lobbyTitle: { fa: 'لابی آنلاین', en: 'Online Lobby' },
+  players: { fa: 'بازیکنان', en: 'Players' },
+  maxPlayers: { fa: 'حداکثر بازیکنان', en: 'Max Players' },
+  status: { fa: 'وضعیت', en: 'Status' },
+  waiting: { fa: 'در انتظار', en: 'Waiting' },
+  playing: { fa: 'در حال بازی', en: 'Playing' },
+  finished: { fa: 'پایان یافته', en: 'Finished' },
+  
+  // Game Status / وضعیت بازی
+  hostDisconnected: { fa: '⚠️ میزبان ارتباط قطع کرد', en: '⚠️ Host disconnected' },
+  gameEnded: { fa: '🏁 بازی پایان یافت!', en: '🏁 Game ended!' },
+  finalScores: { fa: 'امتیازات نهایی:', en: 'Final Scores:' },
+  congratulations: { fa: '🎉 تبریک می‌گوییم! شما برنده شدید!', en: '🎉 Congratulations! You won!' },
+  betterLuck: { fa: '💪 دفعه بعد بهتر خواهد شد!', en: '💪 Better luck next time!' },
 } as const;
 
 export type TranslationKey = keyof typeof translations;

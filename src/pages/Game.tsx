@@ -1,16 +1,17 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Socket } from 'socket.io-client';
 import { useGame } from '@/hooks/useGame';
 import { useAudio } from '@/hooks/useAudio';
 import { useBackgroundMusic } from '@/hooks/useBackgroundMusic';
+import { useLanguage } from '@/hooks/useLanguage';
 import { cn } from '@/lib/utils';
 import { GemType, TokenType, Card, GEM_TYPES, TOKEN_TYPES, GEM_INFO, LEVEL_COLORS, GameState } from '@/lib/gameData';
 import { canPlayerAffordCard, getPlayerScore, getTotalTokens, getPlayerBonuses } from '@/lib/gameLogic';
 import { getAIAction, AIDifficulty } from '@/lib/aiPlayer';
 import { audioManager } from '@/lib/audioManager';
-import { useLanguage } from '@/hooks/useLanguage';
+// import { useLanguage } from '@/hooks/useLanguage';
 import { Button } from '@/components/ui/button';
 import GemToken from '@/components/game/GemToken';
 import CardDisplay from '@/components/game/CardDisplay';
@@ -19,6 +20,7 @@ import PlayerPanel from '@/components/game/PlayerPanel';
 import MusicControl from '@/components/game/MusicControl';
 import VoiceChatControl from '@/components/game/VoiceChatControl';
 import Chat from '@/components/game/Chat';
+import { LogPanel, useLogPanel } from '@/components/LogPanel';
 import backcard1Img from '@/assets/backcard1.png';
 import backcard2Img from '@/assets/backcard2.png';
 import backcard3Img from '@/assets/backcard3.png';
@@ -32,6 +34,7 @@ interface GameProps {
   roomId?: string;
   playerId?: string;
   playerName?: string;
+  playerIndex?: number; // This player's index in the game (0, 1, 2, or 3)
   roomPlayers?: Record<string, any>; // Online players with their names
   playerNamesList?: string[]; // Array of player names in order [0, 1, 2, ...]
   socket?: Socket | null;
@@ -46,18 +49,30 @@ export default function Game(props: GameProps = {}) {
   const gameMode = props.mode || searchParams.get('mode') || 'local';
   const aiDifficulty = (searchParams.get('difficulty') || 'medium') as AIDifficulty;
   const navigate = useNavigate();
+  const { lang } = useLanguage();
+
+  // Log Panel
+  const { logs, clearLogs } = useLogPanel();
 
   const { state: localGameState, takeTokens, purchaseCard, reserveCard, returnToken, endTurn, resetGame } = useGame(playerCount);
 
   // For online games, serverGameState is the source of truth
   // We display serverGameState but perform actions on localGameState then sync
   const [displayState, setDisplayState] = useState(localGameState);
+  const lastServerStateRef = useRef<GameState | null>(null);
 
   // Update display state based on server updates (for other players' actions)
+  // Only update if the server state actually changed to prevent infinite loops
   useEffect(() => {
     if (gameMode === 'online' && props.serverGameState) {
-      setDisplayState(props.serverGameState);
-    } else {
+      // Only update if server state has actually changed
+      const serverStateStr = JSON.stringify(props.serverGameState);
+      const lastStateStr = JSON.stringify(lastServerStateRef.current);
+      if (serverStateStr !== lastStateStr) {
+        lastServerStateRef.current = props.serverGameState;
+        setDisplayState(props.serverGameState);
+      }
+    } else if (gameMode !== 'online') {
       setDisplayState(localGameState);
     }
   }, [props.serverGameState, localGameState, gameMode]);
@@ -81,36 +96,42 @@ export default function Game(props: GameProps = {}) {
   const isCurrentPlayerMe = useCallback(() => {
     if (gameMode !== 'online') return true; // In local/AI modes, always allow
     
-    // In online mode, check if this is my turn based on current player index
-    // We assume player 0 is the human player in online games
-    const isMyTurn = state.currentPlayerIndex === 0;
-    return isMyTurn;
-  }, [gameMode, state.currentPlayerIndex]);
+    // In online mode, check if this is my turn based on my player index
+    if (props.playerIndex !== undefined) {
+      return state.currentPlayerIndex === props.playerIndex;
+    }
+    
+    // Fallback: assume player 0 if no playerIndex provided
+    return state.currentPlayerIndex === 0;
+  }, [gameMode, state.currentPlayerIndex, props.playerIndex]);
 
   // Sync game state when it changes (for online games)
+  // Only sync if this player made an action (not just receiving updates from others)
+  const lastSyncedStateRef = useRef<GameState | null>(null);
   useEffect(() => {
-    if (gameMode === 'online' && props.onGameStateChange && state) {
+    if (gameMode !== 'online' || !props.onGameStateChange) return;
+    
+    // Only sync if state actually changed and it's from our local game state
+    // (not from server updates)
+    const stateStr = JSON.stringify(state);
+    const lastStr = JSON.stringify(lastSyncedStateRef.current);
+    
+    if (stateStr !== lastStr && state === displayState) {
+      lastSyncedStateRef.current = state;
       props.onGameStateChange(state);
     }
-  }, [state, gameMode, props.onGameStateChange]);
+  }, [state, displayState, gameMode, props.onGameStateChange]);
 
   // Listen for game state updates from other players (for online games)
+  // Track handled updates to prevent duplicate processing
+  const handledUpdatesRef = useRef<Set<string>>(new Set());
   useEffect(() => {
     if (gameMode !== 'online' || !props.socket) return;
 
     const handleGameStateUpdate = (newGameState: GameState) => {
-      // Update local game state with server state
-      // Only update if current player is not the one who made the action
-      // This prevents double-applying the action
       console.log('📡 Received game state update from server');
-      
-      // For now, we'll accept the server state as the source of truth
-      // In a production app, you might want more sophisticated conflict resolution
-      if (newGameState) {
-        // We need to sync the entire game state
-        // Since we can't directly update useGame state, we'll need to compare
-        // and only apply updates for other players' actions
-      }
+      // The display state is already updated via props.serverGameState by the parent
+      // No need to do anything here - just acknowledge receipt
     };
 
     props.socket.on('game-state-updated', handleGameStateUpdate);
@@ -192,7 +213,10 @@ export default function Game(props: GameProps = {}) {
   const handleGemClick = useCallback((gem: GemType) => {
     // Check if it's current player's turn (for online games)
     if (gameMode === 'online' && !isCurrentPlayerMe()) {
-      setTurnWarning('❌ It\'s not your turn | نوبت شما نیست');
+      const currentPlayerName = props.playerNamesList?.[state.currentPlayerIndex] || 'Another Player';
+      const faMessage = `⏳ نوبت شما نیست | اکنون نوبت ${currentPlayerName} است`;
+      const enMessage = `⏳ Not your turn | Waiting for ${currentPlayerName}'s turn`;
+      setTurnWarning(lang === 'fa' ? faMessage : enMessage);
       setTimeout(() => setTurnWarning(''), 3000);
       return;
     }
@@ -229,7 +253,7 @@ export default function Game(props: GameProps = {}) {
     } else {
       setTempPoolDisplay(null);
     }
-  }, [phase, state.tokenPool, selectedGems, gameMode, isCurrentPlayerMe]);
+  }, [phase, state.tokenPool, selectedGems, gameMode, isCurrentPlayerMe, state.currentPlayerIndex, props.playerNamesList, lang]);
 
   const handleConfirmTokens = useCallback(() => {
     const currentTotal = getTotalTokens(currentPlayer);
@@ -266,7 +290,10 @@ export default function Game(props: GameProps = {}) {
   const handleCardClick = useCallback((card: Card) => {
     // Check if it's current player's turn (for online games)
     if (gameMode === 'online' && !isCurrentPlayerMe()) {
-      setTurnWarning('❌ It\'s not your turn | نوبت شما نیست');
+      const currentPlayerName = props.playerNamesList?.[state.currentPlayerIndex] || 'Another Player';
+      const faMessage = `⏳ نوبت شما نیست | اکنون نوبت ${currentPlayerName} است`;
+      const enMessage = `⏳ Not your turn | Waiting for ${currentPlayerName}'s turn`;
+      setTurnWarning(lang === 'fa' ? faMessage : enMessage);
       setTimeout(() => setTurnWarning(''), 3000);
       return;
     }
@@ -274,7 +301,7 @@ export default function Game(props: GameProps = {}) {
     if (phase !== 'idle') return;
     setSelectedCard(card);
     setPhase('cardAction');
-  }, [phase, gameMode, isCurrentPlayerMe]);
+  }, [phase, gameMode, isCurrentPlayerMe, state.currentPlayerIndex, props.playerNamesList, lang]);
 
   const handleBuyCard = useCallback(() => {
     if (!selectedCard) return;
@@ -729,6 +756,9 @@ export default function Game(props: GameProps = {}) {
           playerName={props.playerName || ''}
         />
       )}
+
+      {/* Log Panel */}
+      <LogPanel logs={logs} onClear={clearLogs} />
     </div>
   );
 }
