@@ -148,7 +148,6 @@ The Gemstone Guilds application aims to deliver an accessible, engaging multipla
 - Server validates all moves for fairness
 - Chat functionality available during games
 - Game entry fee: 5 coins per player (deducted before game starts)
-- Spectator mode allows watching ongoing games
 - Reconnection support if connection drops mid-game
 
 **Acceptance Criteria:**
