@@ -4,6 +4,7 @@ import { getPlayerBonuses, getPlayerScore, canPlayerAffordCard } from '@/lib/gam
 import { useLanguage } from '@/hooks/useLanguage';
 import CardDisplay from './CardDisplay';
 import NobleDisplay from './NobleDisplay';
+import panelBackground from '@/assets/background.png';
 
 interface PlayerPanelProps {
   player: Player;
@@ -20,11 +21,14 @@ export default function PlayerPanel({ player, playerName, isActive, isAI, onRese
 
   return (
     <div className={cn(
-      'rounded-lg bg-card border p-2 transition-all',
+      'rounded-lg border bg-cover bg-center p-2 transition-all min-w-0',
       isActive
         ? 'border-primary/60 ring-1 ring-primary/20 shadow-md shadow-primary/10'
         : 'border-border/50 opacity-70',
-    )}>
+    )}
+    style={{
+      backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.90), rgba(0, 0, 0, 0.90)), url(${panelBackground})`,
+    }}>
       {/* Header */}
       <div className="flex justify-between items-center mb-1.5">
         <span className={cn(
@@ -97,7 +101,7 @@ export default function PlayerPanel({ player, playerName, isActive, isAI, onRese
       {player.reservedCards.length > 0 && (
         <div className="mt-1.5 pt-1.5 border-t border-border/30">
           {isActive && !isAI ? (
-            <div className="flex gap-1">
+            <div className="flex gap-1 overflow-x-auto px-1 py-1">
               {player.reservedCards.map(card => (
                 <CardDisplay
                   key={card.id}

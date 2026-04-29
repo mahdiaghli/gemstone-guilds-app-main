@@ -45,7 +45,11 @@
 
     /* Game-specific tokens */
     --gem-glow: 0 0 20px;
-    --card-shine: linear-gradient(135deg, rgba(255,255,255,0.05) 0%, transparent 50%);
+    --card-shine: linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.05) 0%,
+      transparent 50%
+    );
   }
 }
 
@@ -56,43 +60,59 @@
 
   body {
     @apply bg-background text-foreground;
-    font-family: 'Cormorant Garamond', serif;
+    font-family: Georgia, "Times New Roman", serif;
   }
 
-  .font-cinzel {
-    font-family: 'Cinzel', serif;
+  /* .font-cinzel {
+    font-family: Georgia, "Times New Roman", serif;
   }
 
   .font-body {
-    font-family: 'Cormorant Garamond', serif;
+    font-family: Georgia, "Times New Roman", serif;
   }
 
   .font-persian {
-    font-family: 'Vazirmatn', sans-serif;
-  }
+    font-family: Tahoma, "Segoe UI", sans-serif;
+  } */
 
-  [dir="rtl"] body,
+  /* [dir="rtl"] body,
   [dir="rtl"] .font-body {
-    font-family: 'Vazirmatn', sans-serif;
-  }
+    font-family: Tahoma, "Segoe UI", sans-serif;
+  } */
 
-  [dir="rtl"] .font-cinzel {
-    font-family: 'Vazirmatn', sans-serif;
+  /* [dir="rtl"] .font-cinzel {
+    font-family: Tahoma, "Segoe UI", sans-serif;
     font-weight: 700;
+  }  */
+
+  [dir="ltr"] {
+    font-size: 17px;
   }
 }
 
 /* Gem glow effects */
-.gem-glow-diamond { box-shadow: 0 0 12px rgba(226,232,240,0.4); }
-.gem-glow-sapphire { box-shadow: 0 0 12px rgba(59,130,246,0.4); }
-.gem-glow-emerald { box-shadow: 0 0 12px rgba(34,197,94,0.4); }
-.gem-glow-ruby { box-shadow: 0 0 12px rgba(239,68,68,0.4); }
-.gem-glow-onyx { box-shadow: 0 0 12px rgba(148,163,184,0.3); }
-.gem-glow-gold { box-shadow: 0 0 16px rgba(234,179,8,0.5); }
+.gem-glow-diamond {
+  box-shadow: 0 0 12px rgba(226, 232, 240, 0.4);
+}
+.gem-glow-sapphire {
+  box-shadow: 0 0 12px rgba(59, 130, 246, 0.4);
+}
+.gem-glow-emerald {
+  box-shadow: 0 0 12px rgba(34, 197, 94, 0.4);
+}
+.gem-glow-ruby {
+  box-shadow: 0 0 12px rgba(239, 68, 68, 0.4);
+}
+.gem-glow-onyx {
+  box-shadow: 0 0 12px rgba(148, 163, 184, 0.3);
+}
+.gem-glow-gold {
+  box-shadow: 0 0 16px rgba(234, 179, 8, 0.5);
+}
 
 /* Card shine overlay */
 .card-shine::after {
-  content: '';
+  content: "";
   position: absolute;
   inset: 0;
   background: var(--card-shine);
@@ -102,7 +122,11 @@
 
 /* Felt table texture */
 .felt-surface {
-  background: radial-gradient(ellipse at center, hsl(228 30% 9%) 0%, hsl(228 30% 5%) 100%);
+  background: radial-gradient(
+    ellipse at center,
+    hsl(228 30% 9%) 0%,
+    hsl(228 30% 5%) 100%
+  );
 }
 
 /* Scrollbar styling */

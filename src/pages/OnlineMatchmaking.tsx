@@ -2,11 +2,13 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
-import { LogPanel, useLogPanel } from '@/components/LogPanel';
 import { useLanguage } from '@/hooks/useLanguage';
 import { io, Socket } from 'socket.io-client';
-
-const SOCKET_SERVER_URL = import.meta.env.VITE_SOCKET_URL || 'http://192.168.254.3:3001';
+import { useAuth } from '@/hooks/useAuth';
+import { SOCKET_SERVER_URL } from '@/lib/socketConfig';
+import PageTopBar from '@/components/game/PageTopBar';
+import { getGameById, getGameMenuPath } from '@/lib/gameCatalog';
+import { getPageBackground } from '@/lib/pageBackgrounds';
 
 // Log helper function
 const logToPanel = (level: 'log' | 'error' | 'warn', message: string, data?: any) => {
@@ -27,15 +29,47 @@ const generateUUID = () => {
 export default function OnlineMatchmaking() {
   const navigate = useNavigate();
   const { t, dir } = useLanguage();
-  const { logs, clearLogs } = useLogPanel();
+  const selectedGame = getGameById(sessionStorage.getItem("matchmaking-game"));
+  const menuPath = getGameMenuPath(sessionStorage.getItem("matchmaking-game"));
+  const pageBackground = getPageBackground(selectedGame.id, "find-match");
   const socketRef = useRef<Socket | null>(null);
-  const [playerName, setPlayerName] = useState('');
-  const [playerCount, setPlayerCount] = useState(2);
+  const { user } = useAuth();
+  const playerName = user?.username || '';
+  const [playerCount, setPlayerCount] = useState(() => {
+    const savedCount = sessionStorage.getItem('matchmaking-players');
+    return savedCount ? parseInt(savedCount) : 2;
+  });
   const [searching, setSearching] = useState(false);
   const [waitingCount, setWaitingCount] = useState(0);
   const [playerId] = useState(() => generateUUID());
   const [error, setError] = useState<string | null>(null);
+  const [turnTime] = useState(() => {
+    const savedTurnTime = sessionStorage.getItem('matchmaking-turnTime');
+    const parsed = savedTurnTime ? parseInt(savedTurnTime, 10) : 45;
+    return parsed === 15 || parsed === 30 || parsed === 45 || parsed === 60 ? parsed : 45;
+  });
   const autoStartRef = useRef(false); // Prevent duplicate starts
+  const playerNameRef = useRef(playerName);
+  const playerCountRef = useRef(playerCount);
+  const searchingRef = useRef(searching);
+
+  useEffect(() => {
+    playerNameRef.current = playerName;
+  }, [playerName]);
+
+  useEffect(() => {
+    playerCountRef.current = playerCount;
+  }, [playerCount]);
+
+  useEffect(() => {
+    searchingRef.current = searching;
+  }, [searching]);
+
+  const startSearch = () => {
+    if (autoStartRef.current) return;
+    autoStartRef.current = true;
+    handleStartSearchInternal();
+  };
 
   // Initialize socket connection
   useEffect(() => {
@@ -47,10 +81,13 @@ export default function OnlineMatchmaking() {
 
       const socket = io(SOCKET_SERVER_URL, {
         reconnection: true,
-        reconnectionDelay: 1000,
-        reconnectionDelayMax: 10000,
-        reconnectionAttempts: 20,
-        transports: ['websocket', 'polling'],
+        reconnectionDelay: 500,
+        reconnectionDelayMax: 3000,
+        reconnectionAttempts: 8,
+        transports: ['websocket'],
+        upgrade: false,
+        rememberUpgrade: true,
+        timeout: 4000,
       });
 
       socketRef.current = socket;
@@ -63,6 +100,10 @@ export default function OnlineMatchmaking() {
           transport: socket.io.engine.transport.name,
         });
         setError(null);
+        // Auto-start immediately once connected (no button press)
+        if (playerNameRef.current.trim() && !searchingRef.current) {
+          startSearch();
+        }
       });
 
       socket.on('connect_error', (err: any) => {
@@ -111,6 +152,7 @@ export default function OnlineMatchmaking() {
           position: `${currentPlayers}/${count}`,
         });
         setWaitingCount(currentPlayers);
+        setSearching(true);
       });
 
       socket.on('match-found', (data) => {
@@ -129,10 +171,12 @@ export default function OnlineMatchmaking() {
           playerName,
           isHost: false,
           playerCount,
+          turnTime,
+          gameId: selectedGame.id,
         }));
 
         // Navigate to game
-        navigate(`/online-game/${roomId}?player=${playerId}`);
+        navigate(`/online-game/${roomId}?player=${playerId}&game=${selectedGame.id}`);
       });
 
       socket.on('disconnect', (reason: string) => {
@@ -161,39 +205,18 @@ export default function OnlineMatchmaking() {
     }
   }, []);
 
-  // Load player count from sessionStorage
+  // If username becomes available after mount, start search if connected.
   useEffect(() => {
-    const savedCount = sessionStorage.getItem('matchmaking-players');
-    if (savedCount) {
-      setPlayerCount(parseInt(savedCount));
-    }
-    
-    // Try to load saved player name
-    const savedName = sessionStorage.getItem('splendor-player-name');
-    if (savedName) {
-      setPlayerName(savedName);
-      logToPanel('log', `✅ [AUTO-LOAD] Player name loaded: ${savedName}`);
-    }
-  }, []);
-
-  // Auto-start search if player name is loaded and we're ready
-  useEffect(() => {
-    if (!autoStartRef.current && playerName && socketRef.current?.connected && !searching) {
-      autoStartRef.current = true;
-      logToPanel('log', `🚀 [AUTO-START] Starting search automatically...`, {
-        playerName,
-        playerCount,
-      });
-      
-      // Trigger search after a short delay
-      setTimeout(() => {
-        handleStartSearchInternal();
-      }, 500);
+    if (playerName.trim() && socketRef.current?.connected && !searching) {
+      startSearch();
     }
   }, [playerName, searching]);
 
   const handleStartSearchInternal = () => {
-    if (!playerName.trim()) {
+    const currentName = playerNameRef.current.trim();
+    const currentCount = playerCountRef.current;
+
+    if (!currentName) {
       setError('Please enter your name');
       logToPanel('error', '❌ [ERROR] Player name is empty');
       return;
@@ -217,67 +240,73 @@ export default function OnlineMatchmaking() {
     setSearching(true);
     setError(null);
     
-    // Save player name for auto-load
-    sessionStorage.setItem('splendor-player-name', playerName);
-
     const msg = `🔍 [MATCHMAKING] Starting search`;
-    console.log(msg, { playerName, playerCount, playerId });
+    console.log(msg, { playerName: currentName, playerCount: currentCount, playerId, turnTime });
     logToPanel('log', msg, {
-      playerName,
-      playerCount,
+      playerName: currentName,
+      playerCount: currentCount,
       playerId,
+      turnTime,
       socketId: socketRef.current.id,
       timestamp: new Date().toLocaleTimeString(),
     });
     
     socketRef.current.emit('find-match', {
-      playerCount,
-      playerName,
+      playerCount: currentCount,
+      playerName: currentName,
       playerId,
+      turnTime,
+      gameId: selectedGame.id,
     });
 
     logToPanel('log', `📤 [EMIT] Sent find-match event to server`, {
-      playerCount,
-      playerName,
+      playerCount: currentCount,
+      playerName: currentName,
+      turnTime,
       timestamp: new Date().toLocaleTimeString(),
     });
-  };
-
-  const handleStartSearch = async () => {
-    handleStartSearchInternal();
   };
 
   const handleCancel = () => {
     if (socketRef.current && searching) {
       const msg = `❌ [CANCEL] Player cancelled search`;
       console.log(msg);
-      logToPanel('log', msg, { playerCount, playerId });
+      logToPanel('log', msg, { playerCount: playerCountRef.current, playerId });
       
       socketRef.current.emit('cancel-match', {
-        playerCount,
+        playerCount: playerCountRef.current,
         playerId,
       });
     }
     setSearching(false);
     setWaitingCount(0);
-    navigate('/');
+    navigate(menuPath);
   };
 
   return (
     <div
-      className="min-h-screen bg-gradient-to-br from-background via-card to-background flex items-center justify-center p-4"
+      className="relative min-h-screen overflow-hidden p-4 pt-24"
       dir={dir}
     >
+      <div
+        className="absolute inset-0 bg-cover bg-center"
+        style={{ backgroundImage: `url(${pageBackground})` }}
+      />
+      <div className="absolute inset-0 bg-gradient-to-br from-[#05040A]/84 via-[#14111F]/80 to-[#05040A]/88" />
+      <PageTopBar />
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="w-full max-w-md space-y-6"
+        className="relative mx-auto flex w-full max-w-md flex-col items-center justify-center space-y-6"
       >
         {/* Header */}
         <div className="text-center space-y-2">
           <h1 className="text-3xl md:text-4xl font-cinzel font-bold text-primary">
-            🌐 Find Match
+            {selectedGame.name}
           </h1>
+          <p className="text-primary/70 text-xs font-cinzel uppercase tracking-[0.35em]">
+            {t("findMatchTitle")}
+          </p>
           <p className="text-muted-foreground">
             {playerCount}-Player {t('onlinePlay')}
           </p>
@@ -285,21 +314,18 @@ export default function OnlineMatchmaking() {
 
         {!searching ? (
           <>
-            {/* Player Name Input */}
+            {/* Auto-start notice */}
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.1 }}
               className="space-y-2"
             >
-              <label className="block text-sm font-medium">Player Name</label>
-              <input
-                type="text"
-                placeholder="Enter your name..."
-                value={playerName}
-                onChange={(e) => setPlayerName(e.target.value)}
-                className="w-full px-4 py-2 rounded-lg border border-primary/20 bg-card focus:outline-none focus:ring-2 focus:ring-primary"
-              />
+              <div className="bg-card/50 border border-primary/20 rounded-xl p-4 text-center">
+                <p className="text-sm text-muted-foreground mb-2">{t("searchingAs")}</p>
+                <div className="text-2xl font-cinzel text-primary">{playerName}</div>
+                <p className="text-xs text-muted-foreground mt-2">{t("matchmakingStarts")}</p>
+              </div>
             </motion.div>
 
             {/* Player Count Display */}
@@ -309,7 +335,7 @@ export default function OnlineMatchmaking() {
               transition={{ delay: 0.2 }}
               className="bg-card/50 border border-primary/20 rounded-xl p-4 text-center"
             >
-              <p className="text-sm text-muted-foreground mb-2">Players Selected</p>
+              <p className="text-sm text-muted-foreground mb-2">{t("playersSelected")}</p>
               <div className="text-4xl font-cinzel text-primary">{playerCount}</div>
             </motion.div>
 
@@ -323,22 +349,6 @@ export default function OnlineMatchmaking() {
                 {error}
               </motion.div>
             )}
-
-            {/* Start Button */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.3 }}
-            >
-              <Button
-                onClick={handleStartSearch}
-                variant="hero"
-                disabled={!playerName.trim()}
-                className="w-full"
-              >
-                🔍 Search for Match
-              </Button>
-            </motion.div>
 
             {/* Back Button */}
             <Button
@@ -358,9 +368,9 @@ export default function OnlineMatchmaking() {
               className="flex flex-col items-center gap-6 py-8"
             >
               <div className="text-center space-y-4">
-                <h2 className="text-2xl font-cinzel text-primary">Searching...</h2>
+                <h2 className="text-2xl font-cinzel text-primary">{t("searchingLabel")}</h2>
                 <p className="text-muted-foreground text-sm">
-                  Waiting for {playerCount - 1} more player{playerCount === 3 ? 's' : ''}
+                  {t("waitingForMorePlayers")} {playerCount - 1} {t("morePlayerSuffix")}
                 </p>
               </div>
 
@@ -387,7 +397,7 @@ export default function OnlineMatchmaking() {
                 transition={{ delay: 0.5 }}
                 className="bg-card/50 border border-primary/20 rounded-lg p-4 w-full text-center"
               >
-                <p className="text-xs text-muted-foreground mb-1">Players Waiting</p>
+                <p className="text-xs text-muted-foreground mb-1">{t("playersWaiting")}</p>
                 <div className="text-2xl font-cinzel text-primary">{waitingCount}</div>
               </motion.div>
 
@@ -397,7 +407,7 @@ export default function OnlineMatchmaking() {
                 animate={{ opacity: 1 }}
                 className="bg-card/30 border border-primary/10 rounded-lg p-3 w-full text-center text-sm"
               >
-                <p className="text-muted-foreground">Searching as</p>
+                <p className="text-muted-foreground">{t("searchingAs")}</p>
                 <p className="font-cinzel text-primary">{playerName}</p>
               </motion.div>
             </motion.div>
@@ -413,7 +423,7 @@ export default function OnlineMatchmaking() {
                 variant="outline"
                 className="w-full"
               >
-                ✕ Cancel Search
+                {t("cancelSearch")}
               </Button>
             </motion.div>
           </>
@@ -421,7 +431,6 @@ export default function OnlineMatchmaking() {
       </motion.div>
 
       {/* Log Panel */}
-      <LogPanel logs={logs} onClear={clearLogs} />
     </div>
   );
 }

@@ -9,8 +9,14 @@ import {
   advanceTurn,
 } from '@/lib/gameLogic';
 
-export function useGame(playerCount: number) {
-  const [state, setState] = useState<GameState>(() => initializeGame(playerCount));
+function cloneGameState(state: GameState) {
+  return JSON.parse(JSON.stringify(state)) as GameState;
+}
+
+export function useGame(playerCount: number, initialState?: GameState) {
+  const [state, setState] = useState<GameState>(() =>
+    initialState ? cloneGameState(initialState) : initializeGame(playerCount),
+  );
 
   const takeTokens = useCallback((gems: GemType[]) => {
     setState(s => performTakeTokens(s, gems));
@@ -32,9 +38,19 @@ export function useGame(playerCount: number) {
     setState(s => advanceTurn(s));
   }, []);
 
-  const resetGame = useCallback(() => {
-    setState(initializeGame(playerCount));
-  }, [playerCount]);
+  const resetGame = useCallback((nextState?: GameState) => {
+    if (nextState) {
+      setState(cloneGameState(nextState));
+      return;
+    }
 
-  return { state, takeTokens, purchaseCard, reserveCard, returnToken, endTurn, resetGame };
+    if (initialState) {
+      setState(cloneGameState(initialState));
+      return;
+    }
+
+    setState(initializeGame(playerCount));
+  }, [initialState, playerCount]);
+
+  return { state, setState, takeTokens, purchaseCard, reserveCard, returnToken, endTurn, resetGame };
 }

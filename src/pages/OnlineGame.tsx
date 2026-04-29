@@ -1,31 +1,36 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { useOnlineGame } from '@/hooks/useOnlineGame_v2';
+import { useOnlineGame } from '@/hooks/useOnlineGame';
 import { useGame } from '@/hooks/useGame';
 import { useLanguage } from '@/hooks/useLanguage';
 import { GameState } from '@/lib/gameData';
 import { Button } from '@/components/ui/button';
-import { LogPanel, useLogPanel } from '@/components/LogPanel';
 import Game from './Game';
+import DeadMansDrawGame from './DeadMansDrawGame';
+import { useAuth } from '@/hooks/useAuth';
+import PageTopBar from '@/components/game/PageTopBar';
+import { getGameById, getGameMenuPath } from '@/lib/gameCatalog';
+import { initializeDeadMansDrawGame } from '@/lib/deadMansDraw';
 
 export default function OnlineGame() {
   const { roomId } = useParams<{ roomId: string }>();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const playerId = searchParams.get('player') || '';
-  const { t, lang } = useLanguage();
+  const { t } = useLanguage();
+  const selectedGame = getGameById(searchParams.get('game'));
+  const menuPath = getGameMenuPath(searchParams.get('game'));
+  const { user } = useAuth();
 
   // Log Panel
-  const { logs, clearLogs } = useLogPanel();
 
   const [playerName, setPlayerName] = useState('');
-  const [tempName, setTempName] = useState('');
   const [isHost, setIsHost] = useState(false);
   const [playerCount, setPlayerCount] = useState(2);
+  const [turnTime, setTurnTime] = useState(45);
   const [gameStarted, setGameStarted] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
-  const [showNameDialog, setShowNameDialog] = useState(false);
 
   const {
     gameState,
@@ -35,17 +40,18 @@ export default function OnlineGame() {
     error,
     playerIndexMap,
     socket,
-    syncGameState,
     joinRoom,
     leaveRoom,
     startGame,
-    finishGame,
   } = useOnlineGame(roomId || '', playerId, playerName);
 
   // Initialize game with correct player count
   // Count room players to determine actual player count
   const actualPlayerCount = Object.keys(roomPlayers).length || playerCount;
-  const { state: localGameState, ...gameActions } = useGame(actualPlayerCount);
+  const { state: localGameState } = useGame(actualPlayerCount);
+  const initialOnlineState = selectedGame.id === 'dead-mans-draw'
+    ? initializeDeadMansDrawGame(actualPlayerCount, true)
+    : localGameState;
 
   // Track last synced state to prevent infinite loops
   const lastSyncedGameStateRef = useCallback((newState: GameState) => {
@@ -61,8 +67,6 @@ export default function OnlineGame() {
     console.log('\ud83d\udce4 [SYNC] Syncing game state to server | بروزرسانی وضعیت بازی به سرور');
   }, [socket, roomId, playerId]);
 
-  const [useServerGameState, setUseServerGameState] = useState(false);
-
   // Load player info from localStorage
   useEffect(() => {
     const saved = localStorage.getItem('splendor-online-room');
@@ -73,35 +77,23 @@ export default function OnlineGame() {
       if (data.playerCount) {
         setPlayerCount(data.playerCount);
       }
+      if ([15, 30, 45, 60].includes(data.turnTime)) {
+        setTurnTime(data.turnTime);
+      }
     } else {
-      // If not host (guest joining), show name dialog
-      if (!isHost) {
-        setShowNameDialog(true);
+      // Fallback: use logged-in username
+      if (user?.username) {
+        setPlayerName(user.username);
       }
     }
-  }, []);
-
-  // Handle setting player name from dialog
-  const handleSetPlayerName = () => {
-    if (!tempName.trim()) {
-      setErrorMsg(lang === 'fa' ? 'نام بازیکن نمی‌تواند خالی باشد' : 'Player name cannot be empty');
-      return;
-    }
-    setPlayerName(tempName.trim());
-    setShowNameDialog(false);
-    setErrorMsg('');
-  };
+  }, [user?.username]);
 
   // Join room when player name is available
   useEffect(() => {
     if (playerName && roomId && !gameStarted) {
-      if (isHost) {
-        joinRoom(playerCount);
-      } else {
-        joinRoom();
-      }
+      joinRoom(playerCount, turnTime, isHost, selectedGame.id);
     }
-  }, [playerName, roomId, isHost, playerCount, gameStarted, joinRoom]);
+  }, [playerName, roomId, isHost, playerCount, turnTime, gameStarted, joinRoom, selectedGame.id]);
 
   // Start game if room status changes
   useEffect(() => {
@@ -110,103 +102,78 @@ export default function OnlineGame() {
     }
   }, [roomStatus, gameStarted]);
 
-  // Clean up when leaving
   useEffect(() => {
-    return () => {
-      if (gameStarted && roomStatus === 'playing') {
-        finishGame();
-      }
-    };
-  }, [gameStarted, roomStatus, finishGame]);
+    if (!roomId?.startsWith("MM-")) return;
+    if (gameStarted || roomStatus !== "waiting") return;
+    if (Object.keys(roomPlayers).length !== playerCount) return;
+    const socketIds = Object.values(roomPlayers)
+      .map((player: any) => player.socketId)
+      .filter(Boolean)
+      .sort();
+    if (!socket?.id || socketIds[0] !== socket.id) return;
+    startGame(initialOnlineState as any, turnTime);
+  }, [actualPlayerCount, gameStarted, initialOnlineState, playerCount, roomId, roomPlayers, roomStatus, socket?.id, startGame, turnTime]);
 
   const handleStartGame = async () => {
     if (!isHost) {
-      setErrorMsg('Only the room host can start the game');
+      setErrorMsg(t('onlyHostStart'));
       return;
     }
     const playerCount = Object.keys(roomPlayers).length;
     if (playerCount < 2) {
-      setErrorMsg('Need at least 2 players to start');
+      setErrorMsg(t('needAtLeastTwo'));
       return;
     }
-    startGame(localGameState);
+    startGame(initialOnlineState as any, turnTime);
   };
 
   const handleLeaveRoom = async () => {
     leaveRoom();
-    navigate('/');
+    navigate(menuPath);
   };
 
-  if (loading && !showNameDialog) {
+  const playerNamesList = useMemo(() => {
+    const playersArray = Object.values(roomPlayers);
+    if (playerIndexMap && socket) {
+      const names: string[] = [];
+      playersArray.forEach((player: any) => {
+        const idx = playerIndexMap[player.socketId];
+        if (typeof idx === 'number') {
+          names[idx] = player.name;
+        }
+      });
+      return names;
+    }
+    return playersArray.map((p: any) => p.name);
+  }, [roomPlayers, playerIndexMap, socket]);
+
+  const playerIndex = playerIndexMap && socket
+    ? (playerIndexMap[socket.id] ?? Object.values(roomPlayers).findIndex((p: any) => p.id === playerId))
+    : Object.values(roomPlayers).findIndex((p: any) => p.id === playerId);
+
+  if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
+        <PageTopBar />
         <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 2 }}>
           <div className="text-4xl">🎮</div>
         </motion.div>
         {/* Log Panel */}
-        <LogPanel logs={logs} onClear={clearLogs} />
-      </div>
-    );
-  }
-
-  // Show name dialog for guests
-  if (showNameDialog) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-4">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="bg-card border-2 border-primary rounded-xl p-6 max-w-sm w-full text-center"
-        >
-          <h2 className="text-2xl font-cinzel font-bold mb-4 text-primary">
-            {lang === 'fa' ? '👤 نام خود را وارد کنید' : '👤 Enter Your Name'}
-          </h2>
-          <p className="text-muted-foreground mb-4 text-sm">
-            {lang === 'fa' ? 'نام خود را برای اتاق وارد کنید' : 'Enter your name to join this room'}
-          </p>
-          <input
-            type="text"
-            placeholder={lang === 'fa' ? 'نام بازیکن...' : 'Player name...'}
-            value={tempName}
-            onChange={(e) => setTempName(e.target.value)}
-            onKeyPress={(e) => e.key === 'Enter' && handleSetPlayerName()}
-            className="w-full px-4 py-2 rounded-lg bg-background border border-primary/30 text-foreground mb-4 focus:outline-none focus:border-primary"
-            autoFocus
-          />
-          {errorMsg && (
-            <p className="text-destructive text-sm mb-4">{errorMsg}</p>
-          )}
-          <div className="flex gap-3">
-            <Button
-              onClick={handleSetPlayerName}
-              variant="game"
-              className="flex-1"
-            >
-              {lang === 'fa' ? '✅ تأیید' : '✅ Confirm'}
-            </Button>
-            <Button
-              onClick={() => navigate('/')}
-              variant="ghost"
-              className="flex-1"
-            >
-              {lang === 'fa' ? '❌ بازگشت' : '❌ Back'}
-            </Button>
-          </div>
-        </motion.div>
-      </div>
+        </div>
     );
   }
 
   if (error || errorMsg) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
+        <PageTopBar />
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
           className="bg-card border-2 border-destructive rounded-xl p-6 text-center max-w-sm"
         >
           <p className="text-destructive font-cinzel mb-4">{error || errorMsg}</p>
-          <Button onClick={() => navigate('/')}>{t('menu')}</Button>
+          <Button onClick={() => navigate(menuPath)}>{t('menu')}</Button>
         </motion.div>
       </div>
     );
@@ -215,7 +182,8 @@ export default function OnlineGame() {
   // Game hasn't started yet - show lobby
   if (!gameStarted && roomStatus === 'waiting') {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-background via-card to-background p-4">
+      <div className="min-h-screen bg-gradient-to-br from-background via-card to-background p-4 pt-24">
+        <PageTopBar />
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -223,8 +191,9 @@ export default function OnlineGame() {
         >
           {/* Header */}
           <div className="text-center">
-            <h1 className="text-3xl font-cinzel font-bold text-primary mb-2">Room: {roomId}</h1>
-            <p className="text-muted-foreground">Waiting for players...</p>
+            <h1 className="text-3xl font-cinzel font-bold text-primary mb-2">{selectedGame.name}</h1>
+            <p className="text-primary/70 text-xs font-cinzel uppercase tracking-[0.35em] mb-2">{t("roomPrefix")}: {roomId}</p>
+            <p className="text-muted-foreground">{t("waitingForPlayers")}</p>
           </div>
 
           {/* Players List */}
@@ -234,7 +203,7 @@ export default function OnlineGame() {
             transition={{ delay: 0.1 }}
             className="bg-card/50 border border-primary/20 rounded-xl p-6"
           >
-            <h2 className="font-cinzel text-lg text-primary mb-4">Players ({Object.keys(roomPlayers).length}/4)</h2>
+            <h2 className="font-cinzel text-lg text-primary mb-4">{t("players")} ({Object.keys(roomPlayers).length}/{playerCount})</h2>
             <div className="space-y-3">
               {Object.values(roomPlayers).map((player: any) => (
                 <motion.div
@@ -249,8 +218,8 @@ export default function OnlineGame() {
                       style={{ backgroundColor: player.connected ? '#22c55e' : '#ef4444' }}
                     />
                     <span className="font-medium">{player.name}</span>
-                    {player.id === playerId && <span className="text-xs text-primary">(You)</span>}
-                    {player.id !== playerId && isHost && <span className="text-xs text-muted-foreground">(Guest)</span>}
+                    {player.id === playerId && <span className="text-xs text-primary">({t("you")})</span>}
+                    {player.id !== playerId && isHost && <span className="text-xs text-muted-foreground">({t("guest")})</span>}
                   </div>
                 </motion.div>
               ))}
@@ -261,11 +230,11 @@ export default function OnlineGame() {
           <div className="flex gap-3">
             {isHost && Object.keys(roomPlayers).length >= 2 && (
               <Button onClick={handleStartGame} variant="game" className="flex-1">
-                🎮 Start Game
+                {t("startGame")}
               </Button>
             )}
             <Button onClick={handleLeaveRoom} variant="ghost" className="flex-1">
-              Leave
+              {t("leaveRoom")}
             </Button>
           </div>
 
@@ -275,25 +244,33 @@ export default function OnlineGame() {
               transition={{ repeat: Infinity, duration: 1.5 }}
               className="text-center text-amber-500 text-sm"
             >
-              Waiting for {2 - Object.keys(roomPlayers).length} more player(s)...
+              {t("waitingForMorePlayers")} {Math.max(0, playerCount - Object.keys(roomPlayers).length)} {t("morePlayerSuffix")}
             </motion.div>
           )}
         </motion.div>
 
         {/* Log Panel */}
-        <LogPanel logs={logs} onClear={clearLogs} />
-      </div>
+        </div>
     );
   }
 
-  // Game is in progress
-  // Build array of player names in the order they appear in roomPlayers
-  const playerNamesList = Object.values(roomPlayers).map(p => p.name);
-  
-  // Find this player's index using the server-provided mapping (or fallback)
-  const playerIndex = playerIndexMap && socket 
-    ? (playerIndexMap[socket.id] ?? Object.values(roomPlayers).findIndex(p => p.id === playerId))
-    : Object.values(roomPlayers).findIndex(p => p.id === playerId);
+  if (selectedGame.id === "dead-mans-draw") {
+    return (
+      <DeadMansDrawGame
+        mode="online"
+        roomId={roomId}
+        playerId={playerId}
+        playerName={playerName}
+        playerIndex={playerIndex}
+        roomPlayers={roomPlayers}
+        playerNamesList={playerNamesList}
+        socket={socket}
+        serverGameState={gameState as any}
+        onGameStateChange={lastSyncedGameStateRef as any}
+        onGameEnd={leaveRoom}
+      />
+    );
+  }
 
   return (
     <Game
@@ -307,7 +284,7 @@ export default function OnlineGame() {
       socket={socket}
       serverGameState={gameState}
       onGameStateChange={lastSyncedGameStateRef}
-      onGameEnd={finishGame}
+      onGameEnd={leaveRoom}
     />
   );
 }

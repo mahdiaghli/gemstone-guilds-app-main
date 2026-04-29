@@ -1,0 +1,194 @@
+import type { TranslationKey } from "@/hooks/useLanguage";
+import { awardCoins } from "@/lib/progression";
+import { readPlayerExtras, updatePlayerExtras } from "@/lib/playerExtras";
+import merchantImage from "@/assets/merchant.png";
+import merchantGirlImage from "@/assets/merchant girl.png";
+import merchantTwoImage from "@/assets/merchant2.png";
+import merchantGirlTwoImage from "@/assets/merchant girl2.png";
+import merchantThreeImage from "@/assets/merchant3.png";
+import merchantGirlThreeImage from "@/assets/merchant girl3.png";
+
+export interface ShopOffer {
+  id: string;
+  titleKey: TranslationKey;
+  amount: number;
+  amountKey: TranslationKey;
+  price: number;
+  discount: number;
+  rewardType: "coins" | "gems" | "avatar" | "sticker";
+}
+
+export interface ShopSection {
+  id: "coins" | "diamonds" | "stickers" | "avatars";
+  bannerTitleKey: TranslationKey;
+  bannerDescKey: TranslationKey;
+  offers: ShopOffer[];
+}
+
+export const SHOP_SECTIONS: ShopSection[] = [
+  {
+    id: "coins",
+    bannerTitleKey: "coinsBannerTitle",
+    bannerDescKey: "coinsBannerDesc",
+    offers: [
+      { id: "coins-ad", titleKey: "coinsOffer1", amount: 50, amountKey: "coinsLabel", price: 0, discount: 100, rewardType: "coins" },
+      { id: "coins-1", titleKey: "coinsOffer2", amount: 200, amountKey: "coinsLabel", price: 49000, discount: 10, rewardType: "coins" },
+      { id: "coins-2", titleKey: "coinsOffer3", amount: 450, amountKey: "coinsLabel", price: 89000, discount: 15, rewardType: "coins" },
+      { id: "coins-3", titleKey: "coinsOffer4", amount: 800, amountKey: "coinsLabel", price: 149000, discount: 20, rewardType: "coins" },
+      { id: "coins-4", titleKey: "coinsOffer5", amount: 1500, amountKey: "coinsLabel", price: 239000, discount: 25, rewardType: "coins" },
+      { id: "coins-5", titleKey: "coinsOffer6", amount: 3000, amountKey: "coinsLabel", price: 399000, discount: 35, rewardType: "coins" },
+    ],
+  },
+  {
+    id: "diamonds",
+    bannerTitleKey: "diamondsBannerTitle",
+    bannerDescKey: "diamondsBannerDesc",
+    offers: [
+      { id: "diamonds-ad", titleKey: "diamondsOffer1", amount: 5, amountKey: "gemsLabel", price: 0, discount: 100, rewardType: "gems" },
+      { id: "diamonds-1", titleKey: "diamondsOffer2", amount: 20, amountKey: "gemsLabel", price: 59000, discount: 10, rewardType: "gems" },
+      { id: "diamonds-2", titleKey: "diamondsOffer3", amount: 50, amountKey: "gemsLabel", price: 129000, discount: 15, rewardType: "gems" },
+      { id: "diamonds-3", titleKey: "diamondsOffer4", amount: 120, amountKey: "gemsLabel", price: 249000, discount: 20, rewardType: "gems" },
+      { id: "diamonds-4", titleKey: "diamondsOffer5", amount: 260, amountKey: "gemsLabel", price: 449000, discount: 25, rewardType: "gems" },
+      { id: "diamonds-5", titleKey: "diamondsOffer6", amount: 600, amountKey: "gemsLabel", price: 799000, discount: 35, rewardType: "gems" },
+    ],
+  },
+  {
+    id: "stickers",
+    bannerTitleKey: "stickersBannerTitle",
+    bannerDescKey: "stickersBannerDesc",
+    offers: [
+      { id: "stickers-ad", titleKey: "stickersOffer1", amount: 1, amountKey: "stickersLabel", price: 0, discount: 100, rewardType: "sticker" },
+      { id: "stickers-1", titleKey: "stickersOffer2", amount: 1, amountKey: "stickersLabel", price: 19000, discount: 10, rewardType: "sticker" },
+      { id: "stickers-2", titleKey: "stickersOffer3", amount: 1, amountKey: "stickersLabel", price: 29000, discount: 12, rewardType: "sticker" },
+      { id: "stickers-3", titleKey: "stickersOffer4", amount: 1, amountKey: "stickersLabel", price: 39000, discount: 15, rewardType: "sticker" },
+      { id: "stickers-4", titleKey: "stickersOffer5", amount: 1, amountKey: "stickersLabel", price: 49000, discount: 20, rewardType: "sticker" },
+      { id: "stickers-5", titleKey: "stickersOffer6", amount: 1, amountKey: "stickersLabel", price: 69000, discount: 25, rewardType: "sticker" },
+    ],
+  },
+  {
+    id: "avatars",
+    bannerTitleKey: "avatarsBannerTitle",
+    bannerDescKey: "avatarsBannerDesc",
+    offers: [
+      { id: "avatars-ad", titleKey: "avatarsOffer1", amount: 1, amountKey: "avatarsLabel", price: 0, discount: 100, rewardType: "avatar" },
+      { id: "avatars-1", titleKey: "avatarsOffer2", amount: 1, amountKey: "avatarsLabel", price: 49000, discount: 10, rewardType: "avatar" },
+      { id: "avatars-2", titleKey: "avatarsOffer3", amount: 1, amountKey: "avatarsLabel", price: 79000, discount: 12, rewardType: "avatar" },
+      { id: "avatars-3", titleKey: "avatarsOffer4", amount: 1, amountKey: "avatarsLabel", price: 109000, discount: 15, rewardType: "avatar" },
+      { id: "avatars-4", titleKey: "avatarsOffer5", amount: 1, amountKey: "avatarsLabel", price: 149000, discount: 20, rewardType: "avatar" },
+      { id: "avatars-5", titleKey: "avatarsOffer6", amount: 1, amountKey: "avatarsLabel", price: 199000, discount: 25, rewardType: "avatar" },
+    ],
+  },
+];
+
+export const WEEKLY_REWARDS = [
+  { day: 1, type: "coins", amount: 50 },
+  { day: 2, type: "gems", amount: 5 },
+  { day: 3, type: "coins", amount: 80 },
+  { day: 4, type: "avatar", amount: 1 },
+  { day: 5, type: "coins", amount: 120 },
+  { day: 6, type: "gems", amount: 10 },
+  { day: 7, type: "coins", amount: 200 },
+] as const;
+
+const avatarOfferMap = {
+  "avatars-ad": merchantImage,
+  "avatars-1": merchantGirlImage,
+  "avatars-2": merchantTwoImage,
+  "avatars-3": merchantGirlTwoImage,
+  "avatars-4": merchantThreeImage,
+  "avatars-5": merchantGirlThreeImage,
+} as const;
+
+export function formatTomans(amount: number) {
+  return `${amount.toLocaleString("fa-IR")} تومان`;
+}
+
+function addAvatar(userId?: string, avatarPath = merchantImage) {
+  updatePlayerExtras(userId, (current) => ({
+    ...current,
+    avatars: Array.from(new Set([...current.avatars, avatarPath])),
+    selectedAvatar: current.selectedAvatar || avatarPath,
+  }));
+}
+
+function addSticker(userId?: string) {
+  updatePlayerExtras(userId, (current) => ({
+    ...current,
+    stickers: Array.from(new Set([...current.stickers, `sticker-${Date.now()}`])),
+  }));
+}
+
+export function applyOfferPurchase(
+  userId: string | undefined,
+  sectionId: ShopSection["id"],
+  offerId: string,
+) {
+  const section = SHOP_SECTIONS.find((entry) => entry.id === sectionId);
+  const offer = section?.offers.find((entry) => entry.id === offerId);
+  if (!offer) return;
+
+  if (offer.rewardType === "coins") {
+    awardCoins(userId, offer.amount);
+    return;
+  }
+
+  if (offer.rewardType === "gems") {
+    updatePlayerExtras(userId, (current) => ({
+      ...current,
+      gems: current.gems + offer.amount,
+    }));
+    return;
+  }
+
+  if (offer.rewardType === "avatar") {
+    addAvatar(userId, avatarOfferMap[offer.id as keyof typeof avatarOfferMap] || merchantImage);
+    return;
+  }
+
+  addSticker(userId);
+}
+
+export function getCurrentRewardState(userId: string | undefined) {
+  const extras = readPlayerExtras(userId);
+  const today = new Date();
+  const lastClaim = extras.dailyRewardClaimedOn ? new Date(extras.dailyRewardClaimedOn) : null;
+
+  if (!lastClaim) return { canClaim: true, rewardIndex: 0, claimedToday: false };
+
+  const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  const startOfLastClaim = new Date(lastClaim.getFullYear(), lastClaim.getMonth(), lastClaim.getDate());
+  const diffDays = Math.round(
+    (startOfToday.getTime() - startOfLastClaim.getTime()) / (1000 * 60 * 60 * 24),
+  );
+
+  if (diffDays === 0) return { canClaim: false, rewardIndex: extras.dailyRewardIndex, claimedToday: true };
+  if (diffDays === 1) return { canClaim: true, rewardIndex: extras.dailyRewardIndex, claimedToday: false };
+  return { canClaim: true, rewardIndex: 0, claimedToday: false };
+}
+
+export function claimWeeklyReward(userId: string | undefined, avatarChoice?: "merchant" | "merchantGirl") {
+  const state = getCurrentRewardState(userId);
+  const reward = WEEKLY_REWARDS[state.rewardIndex];
+  if (!state.canClaim || !reward) return null;
+
+  if (reward.type === "coins") {
+    awardCoins(userId, reward.amount);
+  } else if (reward.type === "gems") {
+    updatePlayerExtras(userId, (current) => ({
+      ...current,
+      gems: current.gems + reward.amount,
+    }));
+  } else if (reward.type === "avatar") {
+    addAvatar(userId, avatarChoice === "merchantGirl" ? merchantGirlImage : merchantImage);
+  } else {
+    addSticker(userId);
+  }
+
+  updatePlayerExtras(userId, (current) => ({
+    ...current,
+    dailyRewardClaimedOn: new Date().toISOString(),
+    dailyRewardIndex: (state.rewardIndex + 1) % WEEKLY_REWARDS.length,
+  }));
+
+  return reward;
+}

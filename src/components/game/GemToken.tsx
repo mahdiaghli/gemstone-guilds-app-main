@@ -1,6 +1,12 @@
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { GemType, GEM_INFO } from '@/lib/gameData';
+import gemDiamondImg from '@/assets/gem-diamond.png';
+import gemSapphireImg from '@/assets/gem-blue.png';
+import gemEmeraldImg from '@/assets/gem-emerald.png';
+import gemRubyImg from '@/assets/gem-red.png';
+import gemOnyxImg from '@/assets/gem-onyx.png';
+import gemGoldImg from '@/assets/gem-gold.png';
 
 interface GemTokenProps {
   type: GemType | 'gold';
@@ -11,12 +17,26 @@ interface GemTokenProps {
   size?: 'sm' | 'md' | 'lg';
 }
 
+const gemImages: Record<GemType | 'gold', string> = {
+  diamond: gemDiamondImg,
+  sapphire: gemSapphireImg,
+  emerald: gemEmeraldImg,
+  ruby: gemRubyImg,
+  onyx: gemOnyxImg,
+  gold: gemGoldImg,
+};
+
 export default function GemToken({ type, count, onClick, selected, disabled, size = 'md' }: GemTokenProps) {
   const info = GEM_INFO[type];
   const sizeClasses = {
-    sm: 'w-7 h-7 text-[10px]',
-    md: 'w-11 h-11 text-sm',
-    lg: 'w-14 h-14 text-base',
+    sm: 'h-8 gap-1 px-2 text-[10px]',
+    md: 'h-10 gap-1.5 px-2.5 text-sm',
+    lg: 'h-12 gap-2 px-3 text-base',
+  };
+  const imageClasses = {
+    sm: 'h-4 w-4',
+    md: 'h-5 w-5',
+    lg: 'h-6 w-6',
   };
 
   return (
@@ -26,7 +46,7 @@ export default function GemToken({ type, count, onClick, selected, disabled, siz
       onClick={onClick}
       disabled={disabled || !onClick}
       className={cn(
-        'rounded-full flex flex-col items-center justify-center font-bold transition-all relative',
+        'rounded-full flex items-center justify-center font-bold transition-all relative',
         sizeClasses[size],
         selected && 'ring-2 ring-primary ring-offset-2 ring-offset-background',
         disabled && 'opacity-40 cursor-not-allowed',
@@ -36,10 +56,11 @@ export default function GemToken({ type, count, onClick, selected, disabled, siz
       style={{
         backgroundColor: info.bgColor,
         border: `2px solid ${info.color}`,
-        color: info.color,
+        color: '#fff',
       }}
     >
-      {count !== undefined && <span>{count}</span>}
+      <img src={gemImages[type]} alt={info.name} className={imageClasses[size]} />
+      {count !== undefined && <span className="min-w-[0.75rem] text-center">{count}</span>}
     </motion.button>
   );
 }

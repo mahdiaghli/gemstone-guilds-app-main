@@ -1,7 +1,16 @@
 import { cn } from '@/lib/utils';
-import { Noble, GEM_TYPES, GEM_INFO } from '@/lib/gameData';
+import { Noble, GEM_TYPES, GemType } from '@/lib/gameData';
 import { useLanguage } from '@/hooks/useLanguage';
 import noble1Img from '@/assets/noble1.png';
+import noble2Img from '@/assets/noble2.png';
+import noble3Img from '@/assets/noble3.png';
+import noble4Img from '@/assets/noble4.png';
+import noble5Img from '@/assets/noble5.png';
+import gemDiamondImg from '@/assets/gem-diamond.png';
+import gemSapphireImg from '@/assets/gem-blue.png';
+import gemEmeraldImg from '@/assets/gem-emerald.png';
+import gemRubyImg from '@/assets/gem-red.png';
+import gemOnyxImg from '@/assets/gem-onyx.png';
 
 interface NobleDisplayProps {
   noble: Noble;
@@ -16,8 +25,19 @@ const gemNameMap: Record<string, string> = {
   onyx: 'onyx',
 };
 
+const nobleImages = [noble1Img, noble2Img, noble3Img, noble4Img, noble5Img];
+const gemImages: Record<GemType, string> = {
+  diamond: gemDiamondImg,
+  sapphire: gemSapphireImg,
+  emerald: gemEmeraldImg,
+  ruby: gemRubyImg,
+  onyx: gemOnyxImg,
+};
+
 export default function NobleDisplay({ noble, compact }: NobleDisplayProps) {
   const { t } = useLanguage();
+  const nobleImage = nobleImages[(Math.max(1, noble.id) - 1) % nobleImages.length];
+  const requirementEntries = GEM_TYPES.filter((gem) => noble.requirements[gem]);
   
   return (
     <div 
@@ -26,40 +46,52 @@ export default function NobleDisplay({ noble, compact }: NobleDisplayProps) {
         compact ? 'w-12 h-12 p-1' : 'w-14 h-14 md:w-16 md:h-16 p-2',
       )}
       style={{
-        backgroundImage: `url('${noble1Img}')`,
+        backgroundImage: `url('${nobleImage}')`,
         backgroundSize: 'cover',
         backgroundPosition: 'center',
       }}
     >
-      {/* Points - top right corner - PROMINENT */}
-      <div className="absolute top-0.5 right-0.5 flex items-center justify-center">
-        <span className={cn(
-          'font-cinzel font-bold text-white drop-shadow-lg bg-black/50 px-1 py-0.5 rounded-md ring-2 ring-amber-400/60',
-          compact ? 'text-xs' : 'text-sm md:text-base',
-        )}>
-          {noble.points}
-        </span>
-      </div>
+      {/* <div className="absolute inset-x-0 top-0 h-[32%] bg-[linear-gradient(180deg,rgba(247,244,236,0.55),rgba(226,221,211,0.25))]" />
+      <div className="absolute inset-x-0 top-[32%] h-px bg-black/10" /> */}
 
-      {/* Requirements - bottom */}
-      <div className="absolute bottom-0.5 left-0.5 right-0.5 flex flex-wrap gap-0.5">
-        {GEM_TYPES.map(gem => {
+{/* Points - top right corner - white text with faint black circle behind */}
+<div className="absolute top-0.5 right-0.5">
+  <div
+    className={cn(
+      'flex items-center justify-center rounded-full',
+      'bg-black/35 ring-1 ring-black/20 backdrop-blur-[1px]',
+      compact ? 'h-5 w-5' : 'h-6 w-6 md:h-7 md:w-7',
+    )}
+  >
+    <span
+      className={cn(
+        'font-cinzel font-bold text-white leading-none',
+        'drop-shadow-[0_1px_1px_rgba(0,0,0,0.85)]',
+        compact ? 'text-[10px]' : 'text-xs md:text-sm',
+      )}
+    >
+      {noble.points}
+    </span>
+  </div>
+</div>
+
+
+      {/* Requirements - left side */}
+      <div className="absolute bottom-0.5 left-0.5 top-0.5 flex flex-col justify-end gap-0.5 rounded bg-black/42 p-0.5">
+        {requirementEntries.map(gem => {
           const req = noble.requirements[gem];
           if (!req) return null;
           return (
             <div
               key={gem}
               className={cn(
-                'rounded-full flex items-center justify-center font-bold ring-1 ring-white/60 bg-opacity-90',
-                compact ? 'w-3 h-3 text-[6px]' : 'w-3.5 h-3.5 text-[7px] md:text-[8px]',
+                'flex items-center gap-0.5 rounded-md font-bold text-white',
+                compact ? 'text-[6px]' : 'text-[7px] md:text-[8px]',
               )}
-              style={{
-                backgroundColor: GEM_INFO[gem].darkColor,
-                color: '#fff',
-              }}
               title={`${req}x ${t(gemNameMap[gem] as any)}`}
             >
-              {req}
+              <img src={gemImages[gem]} alt={t(gemNameMap[gem] as any)} className={compact ? 'h-3 w-3' : 'h-3.5 w-3.5'} />
+              <span>{req}</span>
             </div>
           );
         })}

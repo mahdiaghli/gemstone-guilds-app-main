@@ -202,7 +202,7 @@ export function LogPanel({ logs, onClear }: LogPanelProps) {
           {/* Compact view - show latest logs count */}
           {!isExpanded && (
             <div className="p-2 text-xs text-green-500 font-mono">
-              📝 {logs.length} لاگ ریکارڈ | {logs.length} logs recorded
+              📝 {logs.length} لاگ ریکورد شد | {logs.length} logs recorded
             </div>
           )}
         </motion.div>

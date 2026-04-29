@@ -1,21 +1,19 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { GameState } from '@/lib/gameData';
+import { useState, useEffect, useCallback, useRef } from "react";
+import { io, Socket } from "socket.io-client";
+import { GameState } from "@/lib/gameData";
+import { SOCKET_SERVER_URL } from "@/lib/socketConfig";
 
-// Dynamically import socket.io-client to avoid build issues
-let io: any = null;
-let Socket: any = null;
+function createTabPlayerId(): string {
+  const key = "splendor_tab_player_id";
+  let id = sessionStorage.getItem(key);
 
-(async () => {
-  try {
-    const socketModule = await import('socket.io-client');
-    io = socketModule.io;
-    Socket = socketModule.Socket;
-  } catch (err) {
-    console.warn('Socket.IO client not available - running in offline mode', err);
+  if (!id) {
+    id = `${Date.now()}-${Math.floor(Math.random() * 1e6)}`;
+    sessionStorage.setItem(key, id);
   }
-})();
 
-const SOCKET_SERVER_URL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:3001';
+  return id;
+}
 
 interface OnlinePlayer {
   id: string;
@@ -25,162 +23,237 @@ interface OnlinePlayer {
   joinedAt: number;
 }
 
-export function useOnlineGame(roomId: string, playerId: string, playerName: string) {
+export function useOnlineGame(
+  roomId: string,
+  playerId: string,
+  playerName: string,
+) {
   const [gameState, setGameState] = useState<GameState | null>(null);
-  const [roomPlayers, setRoomPlayers] = useState<Record<string, OnlinePlayer>>({});
-  const [roomStatus, setRoomStatus] = useState<'waiting' | 'playing' | 'finished'>('waiting');
+  const [roomPlayers, setRoomPlayers] = useState<Record<string, OnlinePlayer>>(
+    {},
+  );
+  const [roomStatus, setRoomStatus] = useState<
+    "waiting" | "playing" | "finished"
+  >("waiting");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const socketRef = useRef<any | null>(null);
+  const [playerIndexMap, setPlayerIndexMap] = useState<Record<string, number>>(
+    {},
+  );
+  const socketRef = useRef<Socket | null>(null);
   const joinedRef = useRef(false);
+  const fallbackPlayerIdRef = useRef<string>("");
+  const lastGameStateRef = useRef<string>("");
 
-  // Initialize socket connection
+  if (!fallbackPlayerIdRef.current) {
+    fallbackPlayerIdRef.current = createTabPlayerId();
+  }
+
+  const effectivePlayerId = playerId || fallbackPlayerIdRef.current;
+
   useEffect(() => {
-    if (!roomId || !playerId || !playerName || joinedRef.current) return;
-
-    // Check if socket.io is available
-    if (!io) {
-      setError('Socket.IO library not loaded. Please wait...');
-      setLoading(false);
-      return;
-    }
+    if (!roomId || !effectivePlayerId || joinedRef.current) return;
 
     try {
-      // Connect to socket server
       const socket = io(SOCKET_SERVER_URL, {
         reconnection: true,
-        reconnectionDelay: 1000,
-        reconnectionDelayMax: 5000,
-        reconnectionAttempts: 5,
+        reconnectionDelay: 500,
+        reconnectionDelayMax: 3000,
+        reconnectionAttempts: 8,
+        transports: ["websocket"],
+        upgrade: false,
+        rememberUpgrade: true,
+        randomizationFactor: 0.2,
+        timeout: 4000,
       });
 
       socketRef.current = socket;
 
-      socket.on('connect', () => {
-        console.log('✅ Connected to socket server');
+      socket.on("connect", () => {
         setError(null);
-        setLoading(false);
+        if (playerName) {
+          setLoading(false);
+        }
       });
 
-      socket.on('connect_error', (err: any) => {
-        console.error('❌ Socket connection error:', err);
-        setError('Failed to connect to server. Make sure server is running: "npm run dev:server"');
+      socket.on("connect_error", (err: any) => {
+        console.error(err);
+        setError("Failed to connect to server. Check if server is running.");
       });
 
-      socket.on('players-updated', (data: any) => {
+      socket.on("players-updated", (data) => {
         const { players, roomStatus } = data;
-        // Convert array to object keyed by player ID
         const playersObj = players.reduce(
           (acc: Record<string, OnlinePlayer>, p: OnlinePlayer) => {
             acc[p.id] = p;
             return acc;
           },
-          {}
+          {},
         );
         setRoomPlayers(playersObj);
-        setRoomStatus(roomStatus || 'waiting');
+        setRoomStatus(roomStatus || "waiting");
         setError(null);
+        setLoading(false);
       });
 
-      socket.on('game-started', (data: any) => {
-        const { gameState } = data;
+      socket.on("join-room-error", (data) => {
+        setError(data?.message || "Unable to join room.");
+        setLoading(false);
+        joinedRef.current = false;
+      });
+
+      socket.on("game-started", (data) => {
+        const { gameState, playerIndexMap } = data;
+        lastGameStateRef.current = JSON.stringify(gameState);
+        if (playerIndexMap) {
+          setPlayerIndexMap(playerIndexMap);
+        }
         setGameState(gameState);
-        setRoomStatus('playing');
+        setRoomStatus("playing");
       });
 
-      socket.on('game-state-updated', (data: any) => {
-        setGameState(data);
+      socket.on("player-index-map-updated", (data) => {
+        if (data?.playerIndexMap) {
+          setPlayerIndexMap(data.playerIndexMap);
+        }
+        if (data?.gameState) {
+          lastGameStateRef.current = JSON.stringify(data.gameState);
+          setGameState(data.gameState);
+        }
       });
 
-      socket.on('game-ended', () => {
-        setRoomStatus('waiting');
+      socket.on("game-state-updated", (data) => {
+        const newStateStr = JSON.stringify(data);
+        if (newStateStr !== lastGameStateRef.current) {
+          lastGameStateRef.current = newStateStr;
+          setGameState(data);
+        }
+      });
+
+      socket.on("player-removed", (data) => {
+        if (data?.gameState) {
+          lastGameStateRef.current = JSON.stringify(data.gameState);
+          setGameState(data.gameState);
+        }
+        if (data?.playerIndexMap) {
+          setPlayerIndexMap(data.playerIndexMap);
+        }
+      });
+
+      socket.on("game-ended", () => {
+        lastGameStateRef.current = "";
+        setRoomStatus("waiting");
         setGameState(null);
       });
 
-      socket.on('disconnect', () => {
-        console.log('⚠️ Disconnected from server');
-        setError('Disconnected from server');
+      socket.on("disconnect", () => {
+        setError("Disconnected from server. Reconnecting...");
+      });
+
+      socket.on("reconnect", () => {
+        setError(null);
       });
 
       return () => {
-        if (socket) {
-          socket.disconnect();
-        }
+        socket.disconnect();
       };
     } catch (err) {
-      console.error('Socket initialization error:', err);
-      setError('Failed to initialize connection');
+      console.error(err);
+      setError("Failed to initialize connection");
       setLoading(false);
     }
-  }, [roomId, playerId, playerName]);
+  }, [roomId, effectivePlayerId, playerName]);
 
-  // Join room
   const joinRoom = useCallback(
-    (playerCount: number = 4) => {
-      if (!socketRef.current || joinedRef.current) return;
+    (playerCount: number = 4, turnTime: number = 45, isHost: boolean = false, gameId?: string) => {
+      if (!socketRef.current || !playerName || joinedRef.current) return;
 
-      try {
-        socketRef.current.emit('join-room', {
-          roomId,
-          playerId,
-          playerName,
-          playerCount,
-          isHost: false,
-        });
+      socketRef.current.emit("join-room", {
+        roomId,
+        playerId: effectivePlayerId,
+        playerName,
+        playerCount,
+        turnTime,
+        isHost,
+        gameId,
+      });
 
-        joinedRef.current = true;
-      } catch (err) {
-        console.error('Error joining room:', err);
-        setError('Failed to join room');
-      }
+      joinedRef.current = true;
     },
-    [roomId, playerId, playerName]
+    [roomId, effectivePlayerId, playerName],
   );
 
-  // Leave room
   const leaveRoom = useCallback(() => {
     if (!socketRef.current) return;
 
-    socketRef.current.emit('leave-room', {
+    socketRef.current.emit("leave-room", {
       roomId,
-      playerId,
+      playerId: effectivePlayerId,
     });
 
     joinedRef.current = false;
-  }, [roomId, playerId]);
+  }, [roomId, effectivePlayerId]);
 
-  // Start game
   const startGame = useCallback(
-    (initialGameState: GameState) => {
+    (initialGameState: GameState, turnTime: number = 45) => {
       if (!socketRef.current) return;
 
-      socketRef.current.emit('start-game', {
+      socketRef.current.emit("start-game", {
         roomId,
         gameState: initialGameState,
+        turnTime,
       });
     },
-    [roomId]
+    [roomId],
   );
 
-  // Sync game state
   const syncGameState = useCallback(
     (newState: GameState) => {
       if (!socketRef.current) return;
 
       setGameState(newState);
-      socketRef.current.emit('sync-game-state', {
+      socketRef.current.emit("game-action", {
         roomId,
+        playerId: effectivePlayerId,
         gameState: newState,
+        timestamp: Date.now(),
       });
     },
-    [roomId]
+    [roomId, effectivePlayerId],
   );
 
-  // Finish game
+  const broadcastCardPurchase = useCallback(
+    (cardId: number, playerIndex: number) => {
+      if (!socketRef.current) return;
+
+      socketRef.current.emit("card-purchased", {
+        roomId,
+        cardId,
+        playerIndex,
+        playerId: effectivePlayerId,
+      });
+    },
+    [roomId, effectivePlayerId],
+  );
+
+  const broadcastTokenAction = useCallback(
+    (gems: string[], playerIndex: number) => {
+      if (!socketRef.current) return;
+
+      socketRef.current.emit("tokens-taken", {
+        roomId,
+        gems,
+        playerIndex,
+        playerId: effectivePlayerId,
+      });
+    },
+    [roomId, effectivePlayerId],
+  );
+
   const finishGame = useCallback(() => {
     if (!socketRef.current) return;
 
-    socketRef.current.emit('end-game', {
+    socketRef.current.emit("end-game", {
       roomId,
     });
   }, [roomId]);
@@ -191,7 +264,11 @@ export function useOnlineGame(roomId: string, playerId: string, playerName: stri
     roomStatus,
     loading,
     error,
+    playerIndexMap,
+    socket: socketRef.current,
     syncGameState,
+    broadcastCardPurchase,
+    broadcastTokenAction,
     joinRoom,
     leaveRoom,
     startGame,

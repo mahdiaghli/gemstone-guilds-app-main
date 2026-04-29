@@ -70,6 +70,7 @@ export function initializeGame(playerCount: number): GameState {
     },
     nobles: shuffle(ALL_NOBLES).slice(0, nobleCount),
     isLastRound: false,
+    lastRoundTriggerIndex: null,
     gameOver: false,
     winner: null,
   };
@@ -213,6 +214,10 @@ function checkNobles(state: GameState): GameState {
   const newPlayers = state.players.map(p => ({ ...p }));
   const player = { ...newPlayers[state.currentPlayerIndex] };
   player.nobles = [...player.nobles];
+  if (player.nobles.length >= 1) {
+    newPlayers[state.currentPlayerIndex] = player;
+    return { ...state, players: newPlayers };
+  }
   const bonuses = getPlayerBonuses(player);
   const newNobles = [...state.nobles];
 
@@ -238,13 +243,20 @@ export function advanceTurn(state: GameState): GameState {
   const score = getPlayerScore(s.players[s.currentPlayerIndex]);
 
   if (score >= 15 && !s.isLastRound) {
-    s = { ...s, isLastRound: true };
+    s = {
+      ...s,
+      isLastRound: true,
+      lastRoundTriggerIndex: s.currentPlayerIndex,
+    };
   }
 
   const next = (s.currentPlayerIndex + 1) % s.players.length;
 
-  // Last round ends when we return to player 0
-  if (s.isLastRound && next === 0) {
+  if (
+    s.isLastRound &&
+    s.lastRoundTriggerIndex !== null &&
+    next === s.lastRoundTriggerIndex
+  ) {
     let maxScore = -1, winnerId = 0;
     for (const p of s.players) {
       const ps = getPlayerScore(p);
@@ -253,7 +265,12 @@ export function advanceTurn(state: GameState): GameState {
         winnerId = p.id;
       }
     }
-    return { ...s, gameOver: true, winner: winnerId, currentPlayerIndex: next };
+    return {
+      ...s,
+      gameOver: true,
+      winner: winnerId,
+      currentPlayerIndex: next,
+    };
   }
 
   return { ...s, currentPlayerIndex: next };

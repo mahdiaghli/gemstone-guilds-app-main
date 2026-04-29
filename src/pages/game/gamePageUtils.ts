@@ -1,0 +1,72 @@
+import type { Socket } from "socket.io-client";
+
+import type { GameState, TokenType } from "@/lib/gameData";
+import type { AIDifficulty } from "@/lib/aiPlayer";
+import type { CardBackId } from "@/lib/cosmetics";
+import { buildBackCardsByLevel } from "@/lib/cosmetics";
+import { getPlayerScore } from "@/lib/gameLogic";
+
+export type Phase =
+  | "idle"
+  | "selectingTokens"
+  | "mustReturnTokens"
+  | "cardAction"
+  | "aiThinking";
+
+export interface GameProps {
+  mode?: "local" | "ai" | "online";
+  roomId?: string;
+  playerId?: string;
+  playerName?: string;
+  playerIndex?: number;
+  roomPlayers?: Record<string, unknown>;
+  playerNamesList?: string[];
+  socket?: Socket | null;
+  serverGameState?: GameState | null;
+  onGameStateChange?: (state: GameState) => void;
+  onGameEnd?: () => void;
+}
+
+export function getBackCardsByLevel(selectedCardBack: CardBackId) {
+  return buildBackCardsByLevel(selectedCardBack);
+}
+
+export function getAiDelay(aiDifficulty: AIDifficulty) {
+  if (aiDifficulty === "easy") return 150 + Math.random() * 100;
+  if (aiDifficulty === "hard") return 250 + Math.random() * 100;
+  return 200 + Math.random() * 100;
+}
+
+export function getTimeoutReturnToken(state: GameState, playerIndex: number) {
+  const player = state.players[playerIndex];
+  if (!player) return null;
+
+  const tokenOrder: TokenType[] = ["diamond", "sapphire", "emerald", "ruby", "onyx", "gold"];
+
+  return (
+    tokenOrder
+      .filter((tokenType) => player.tokens[tokenType] > 0)
+      .sort((a, b) => {
+        const av = player.tokens[a];
+        const bv = player.tokens[b];
+        if (a === "gold" && b !== "gold") return 1;
+        if (b === "gold" && a !== "gold") return -1;
+        return bv - av;
+      })[0] ?? null
+  );
+}
+
+export function buildTurnWarningMessage(
+  lang: "fa" | "en",
+  currentPlayerName: string,
+) {
+  if (lang === "fa") {
+    return `⏳ نوبت شما نیست | اکنون نوبت ${currentPlayerName} است`;
+  }
+  return `⏳ Not your turn | Waiting for ${currentPlayerName}'s turn`;
+}
+
+export function buildWinnerRewardKey(state: GameState) {
+  if (state.winner === null) return "";
+  return `${state.winner}-${state.players.length}-${getPlayerScore(state.players[state.winner])}`;
+}

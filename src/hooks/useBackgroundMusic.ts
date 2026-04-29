@@ -1,39 +1,61 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useEffect } from 'react';
+import bgMusic from '@/assets/Mohsen Lorestani _ Bacha Nana128 (UpMusic).mp3';
+
+let globalAudio: HTMLAudioElement | null = null;
+const MUSIC_ENABLED_KEY = 'splendor-music-enabled';
+const MUSIC_VOLUME_KEY = 'splendor-music-volume';
 
 export function useBackgroundMusic() {
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-  const [isPlaying, setIsPlaying] = useState(true);
-  const [volume, setVolume] = useState(0.5);
+  const [isPlaying, setIsPlaying] = useState(() => localStorage.getItem(MUSIC_ENABLED_KEY) !== 'false');
+  const [volume, setVolume] = useState(() => {
+    const raw = Number(localStorage.getItem(MUSIC_VOLUME_KEY));
+    return Number.isFinite(raw) && raw >= 0 && raw <= 1 ? raw : 0.5;
+  });
 
   useEffect(() => {
-    // Create audio element if it doesn't exist
-    if (!audioRef.current) {
-      const audio = new Audio();
-      audio.loop = true;
-      audio.volume = volume;
-      // Try to use a public music file or fallback
-      audio.src = '/background-music.mp3'; // Will need to add this file
-      audioRef.current = audio;
+    if (!globalAudio) {
+      globalAudio = new Audio(bgMusic);
+      globalAudio.loop = true;
     }
-  }, []);
+    globalAudio.volume = volume;
+
+    if (isPlaying) {
+      globalAudio
+        .play()
+        .then(() => setIsPlaying(true))
+        .catch(() => {});
+    }
+  }, [volume, isPlaying]);
+
+  useEffect(() => {
+    if (!globalAudio) {
+      globalAudio = new Audio(bgMusic);
+      globalAudio.loop = true;
+      globalAudio.volume = volume;
+    }
+
+    localStorage.setItem(MUSIC_ENABLED_KEY, isPlaying ? 'true' : 'false');
+
+    if (isPlaying) {
+      globalAudio
+        .play()
+        .then(() => setIsPlaying(true))
+        .catch(() => {});
+    } else {
+      globalAudio.pause();
+    }
+  }, [isPlaying]);
 
   const toggleMusic = () => {
-    if (!audioRef.current) return;
-    
-    if (isPlaying) {
-      audioRef.current.pause();
-    } else {
-      audioRef.current.play().catch(err => {
-        console.warn('Failed to play music:', err);
-      });
-    }
-    setIsPlaying(!isPlaying);
+    if (!globalAudio) return;
+    setIsPlaying((prev) => !prev);
   };
 
   const setMusicVolume = (newVolume: number) => {
     setVolume(newVolume);
-    if (audioRef.current) {
-      audioRef.current.volume = newVolume;
+    localStorage.setItem(MUSIC_VOLUME_KEY, String(newVolume));
+    if (globalAudio) {
+      globalAudio.volume = newVolume;
     }
   };
 

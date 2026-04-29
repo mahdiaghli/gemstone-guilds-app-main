@@ -35,17 +35,18 @@ export interface GameState {
   visibleCards: { 1: (Card | null)[]; 2: (Card | null)[]; 3: (Card | null)[] };
   nobles: Noble[];
   isLastRound: boolean;
+  lastRoundTriggerIndex: number | null;
   gameOver: boolean;
   winner: number | null;
 }
 
 export const GEM_INFO: Record<GemType | 'gold', { name: string; color: string; bgColor: string; darkColor: string }> = {
-  diamond:  { name: 'Diamond',  color: '#e2e8f0', bgColor: 'rgba(226,232,240,0.15)', darkColor: '#94a3b8' },
-  sapphire: { name: 'Sapphire', color: '#3b82f6', bgColor: 'rgba(59,130,246,0.15)',  darkColor: '#1d4ed8' },
-  emerald:  { name: 'Emerald',  color: '#22c55e', bgColor: 'rgba(34,197,94,0.15)',   darkColor: '#15803d' },
-  ruby:     { name: 'Ruby',     color: '#ef4444', bgColor: 'rgba(239,68,68,0.15)',   darkColor: '#b91c1c' },
-  onyx:     { name: 'Onyx',     color: '#94a3b8', bgColor: 'rgba(148,163,184,0.12)', darkColor: '#475569' },
-  gold:     { name: 'Gold',     color: '#eab308', bgColor: 'rgba(234,179,8,0.15)',   darkColor: '#a16207' },
+  diamond:  { name: 'Diamond',  color: '#ffffff', bgColor: 'rgba(226,232,240,0.15)', darkColor: '#919191' },
+  sapphire: { name: 'Sapphire', color: '#222dff', bgColor: 'rgba(59,130,246,0.15)',  darkColor: '#1d4ed8' },
+  emerald:  { name: 'Emerald',  color: '#00c32a', bgColor: 'rgba(34,197,94,0.15)',   darkColor: '#0fc937' },
+  ruby:     { name: 'Ruby',     color: '#ff0000', bgColor: 'rgba(239,68,68,0.15)',   darkColor: '#b91c1c' },
+  onyx:     { name: 'Onyx',     color: '#574545', bgColor: 'rgba(148,163,184,0.12)', darkColor: '#959494' },
+  gold:     { name: 'Gold',     color: '#eab308', bgColor: 'rgba(234,179,8,0.15)',   darkColor: '#ffffff' },
 };
 
 export const LEVEL_COLORS: Record<number, string> = {

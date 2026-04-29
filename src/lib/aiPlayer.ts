@@ -3,11 +3,61 @@ import { canPlayerAffordCard, getPlayerBonuses, getPlayerScore, getTotalTokens }
 
 export type AIDifficulty = 'easy' | 'medium' | 'hard';
 
-type AIAction =
+export type AIAction =
   | { type: 'takeTokens'; gems: GemType[] }
   | { type: 'purchaseCard'; cardId: number }
   | { type: 'reserveCard'; cardId: number }
   | { type: 'reserveDeck'; level: 1 | 2 | 3 };
+
+export function getAIActionCandidates(
+  state: GameState,
+  difficulty: AIDifficulty = 'medium',
+): AIAction[] {
+  const primary = getAIAction(state, difficulty);
+  const player = state.players[state.currentPlayerIndex];
+  const candidates: AIAction[] = [primary];
+
+  const affordableVisible = [1, 2, 3]
+    .flatMap((level) => state.visibleCards[level as 1 | 2 | 3])
+    .filter((card): card is Card => Boolean(card))
+    .filter((card) => canPlayerAffordCard(player, card))
+    .map((card) => ({ type: 'purchaseCard', cardId: card.id } as AIAction));
+  const affordableReserved = player.reservedCards
+    .filter((card) => canPlayerAffordCard(player, card))
+    .map((card) => ({ type: 'purchaseCard', cardId: card.id } as AIAction));
+  const available = GEM_TYPES.filter((gem) => state.tokenPool[gem] > 0);
+  const takeActions: AIAction[] = [];
+
+  for (const gem of available) {
+    if (state.tokenPool[gem] >= 4) {
+      takeActions.push({ type: 'takeTokens', gems: [gem, gem] });
+    }
+  }
+  if (available.length >= 3) {
+    takeActions.push({ type: 'takeTokens', gems: available.slice(0, 3) });
+  }
+  if (available.length >= 1) {
+    takeActions.push({ type: 'takeTokens', gems: [available[0]] });
+  }
+
+  const reserveActions: AIAction[] = player.reservedCards.length < 3
+    ? [
+        ...[3, 2, 1].flatMap((level) =>
+          state.visibleCards[level as 1 | 2 | 3]
+            .filter((card): card is Card => Boolean(card))
+            .map((card) => ({ type: 'reserveCard', cardId: card.id } as AIAction)),
+        ),
+        { type: 'reserveDeck', level: 1 },
+        { type: 'reserveDeck', level: 2 },
+        { type: 'reserveDeck', level: 3 },
+      ]
+    : [];
+
+  return [...candidates, ...affordableVisible, ...affordableReserved, ...takeActions, ...reserveActions].filter(
+    (action, index, array) =>
+      array.findIndex((entry) => JSON.stringify(entry) === JSON.stringify(action)) === index,
+  );
+}
 
 function scoreCard(card: Card, state: GameState, playerIndex: number): number {
   const player = state.players[playerIndex];

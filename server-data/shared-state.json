@@ -1,0 +1,301 @@
+{
+  "users": [
+    {
+      "id": "1775495697901",
+      "username": "laptop3",
+      "email": "mahdiss.aghli12345@gmail.com",
+      "password": "123456",
+      "createdAt": "2026-04-06T17:14:57.901Z",
+      "selectedAvatar": "/src/assets/merchant3.png"
+    },
+    {
+      "id": "1775547728683",
+      "username": "mahdi phone 2",
+      "email": "mahdi.aghli12345@gmail.com",
+      "password": "123",
+      "createdAt": "2026-04-07T07:42:08.683Z"
+    },
+    {
+      "id": "1775552047292",
+      "username": "laptop4",
+      "email": "laptop4",
+      "password": "aaa",
+      "createdAt": "2026-04-07T08:54:07.292Z",
+      "selectedAvatar": "/src/assets/merchant.png"
+    },
+    {
+      "id": "1775668593564",
+      "username": "laptop 5",
+      "email": "aaa",
+      "password": "ccc",
+      "createdAt": "2026-04-08T17:16:33.564Z"
+    },
+    {
+      "id": "1775672225470",
+      "username": "444",
+      "email": "",
+      "password": "jN67revEWaMFygP",
+      "createdAt": "2026-04-08T18:17:05.470Z"
+    },
+    {
+      "id": "1775740301988",
+      "username": "lll",
+      "email": "laptop4",
+      "password": "aaa",
+      "createdAt": "2026-04-09T13:11:41.988Z"
+    },
+    {
+      "id": "1776197456036",
+      "username": "laptop2",
+      "email": "laptop2",
+      "password": "123456",
+      "createdAt": "2026-04-14T20:10:56.036Z",
+      "selectedAvatar": "/src/assets/merchant2.png"
+    }
+  ],
+  "groups": [
+    {
+      "creatorId": "1775552047292",
+      "name": "ccc22",
+      "description": "cccqq\ndfbngsf\nsfgnsgfn\n\ngfnsf\ngn\ngnsgf\nnsgf\nngf\nngnfn",
+      "flag": "🎌",
+      "minScore": 0,
+      "visibility": "public",
+      "id": "group-1775584639553",
+      "code": "GRP-GROUP1",
+      "members": [
+        "1775552047292",
+        "1775495697901",
+        "1775547728683",
+        "1776073155790",
+        "1776197456036"
+      ],
+      "pendingRequests": [],
+      "createdAt": "2026-04-07T17:57:19.554Z"
+    },
+    {
+      "creatorId": "1773222630317",
+      "name": ";;;",
+      "description": ";",
+      "minScore": 0,
+      "visibility": "public",
+      "id": "group-1775475705283",
+      "members": [
+        "1773222630317"
+      ],
+      "pendingRequests": [],
+      "createdAt": "2026-04-06T11:41:45.283Z",
+      "code": "GRP-GROUP1",
+      "flag": "🏳️"
+    },
+    {
+      "creatorId": "1773222630317",
+      "name": "aaaa",
+      "description": "aa",
+      "minScore": 0,
+      "visibility": "public",
+      "id": "group-1775471802454",
+      "members": [
+        "1773222630317"
+      ],
+      "pendingRequests": [],
+      "createdAt": "2026-04-06T10:36:42.455Z",
+      "code": "GRP-GROUP1",
+      "flag": "🏳️"
+    }
+  ],
+  "friends": {
+    "1775495697901": [
+      "1775552047292",
+      "1775547728683"
+    ],
+    "1775552047292": [
+      "1775495697901",
+      "1775547728683",
+      "1776073155790"
+    ],
+    "1775547728683": [
+      "1775495697901",
+      "1775552047292"
+    ],
+    "1776073155790": [
+      "1775552047292"
+    ]
+  },
+  "friendRequests": [
+    {
+      "id": "1776191057126-1776073155790-1775552047292",
+      "fromUserId": "1776073155790",
+      "toUserId": "1775552047292",
+      "createdAt": "2026-04-14T18:24:17.126Z",
+      "status": "accepted"
+    },
+    {
+      "id": "1775666925054-1775552047292-1775547728683",
+      "fromUserId": "1775552047292",
+      "toUserId": "1775547728683",
+      "createdAt": "2026-04-08T16:48:45.054Z",
+      "status": "accepted"
+    },
+    {
+      "id": "1775666883247-1775495697901-1775547728683",
+      "fromUserId": "1775495697901",
+      "toUserId": "1775547728683",
+      "createdAt": "2026-04-08T16:48:03.247Z",
+      "status": "accepted"
+    },
+    {
+      "id": "1775634502447-1775495697901-1775552047292",
+      "fromUserId": "1775495697901",
+      "toUserId": "1775552047292",
+      "createdAt": "2026-04-08T07:48:22.447Z",
+      "status": "accepted"
+    }
+  ],
+  "messages": [
+    {
+      "id": "1775666892594-1775547728683",
+      "participants": [
+        "1775495697901",
+        "1775547728683"
+      ],
+      "senderId": "1775547728683",
+      "text": "Dff",
+      "createdAt": "2026-04-08T16:48:12.596Z"
+    },
+    {
+      "id": "1775666901355-1775495697901",
+      "participants": [
+        "1775495697901",
+        "1775547728683"
+      ],
+      "senderId": "1775495697901",
+      "text": "ییی",
+      "createdAt": "2026-04-08T16:48:21.355Z"
+    },
+    {
+      "id": "1775666906212-1775495697901",
+      "participants": [
+        "1775495697901",
+        "1775547728683"
+      ],
+      "senderId": "1775495697901",
+      "text": "aaa",
+      "createdAt": "2026-04-08T16:48:26.212Z"
+    },
+    {
+      "id": "1775634536511-1775552047292",
+      "participants": [
+        "1775495697901",
+        "1775552047292"
+      ],
+      "senderId": "1775552047292",
+      "text": "aaa",
+      "createdAt": "2026-04-08T07:48:56.512Z"
+    },
+    {
+      "id": "1775634544269-1775495697901",
+      "participants": [
+        "1775495697901",
+        "1775552047292"
+      ],
+      "senderId": "1775495697901",
+      "text": "bbb",
+      "createdAt": "2026-04-08T07:49:04.269Z"
+    },
+    {
+      "id": "1777037553565-1775552047292",
+      "participants": [
+        "1775495697901",
+        "1775552047292"
+      ],
+      "senderId": "1775552047292",
+      "text": "lll",
+      "createdAt": "2026-04-24T13:32:33.565Z"
+    },
+    {
+      "id": "1777037555184-1775552047292",
+      "participants": [
+        "1775495697901",
+        "1775552047292"
+      ],
+      "senderId": "1775552047292",
+      "text": "\\",
+      "createdAt": "2026-04-24T13:32:35.184Z"
+    }
+  ],
+  "groupMessages": [
+    {
+      "id": "1775634478455-1775495697901-group-1775584639553",
+      "groupId": "group-1775584639553",
+      "senderId": "1775495697901",
+      "text": ",,,",
+      "createdAt": "2026-04-08T07:47:58.455Z"
+    },
+    {
+      "id": "1775634492377-1775552047292-group-1775584639553",
+      "groupId": "group-1775584639553",
+      "senderId": "1775552047292",
+      "text": "aaa",
+      "createdAt": "2026-04-08T07:48:12.377Z"
+    },
+    {
+      "id": "1775640811078-1775495697901-group-1775584639553",
+      "groupId": "group-1775584639553",
+      "senderId": "1775495697901",
+      "text": ",,",
+      "createdAt": "2026-04-08T09:33:31.078Z"
+    },
+    {
+      "id": "1775640821796-1775552047292-group-1775584639553",
+      "groupId": "group-1775584639553",
+      "senderId": "1775552047292",
+      "text": ".,.,",
+      "createdAt": "2026-04-08T09:33:41.796Z"
+    },
+    {
+      "id": "1775640827849-1775552047292-group-1775584639553",
+      "groupId": "group-1775584639553",
+      "senderId": "1775552047292",
+      "text": "hjh",
+      "createdAt": "2026-04-08T09:33:47.849Z"
+    },
+    {
+      "id": "1775667856066-1775547728683-group-1775584639553",
+      "groupId": "group-1775584639553",
+      "senderId": "1775547728683",
+      "text": "Ayo",
+      "createdAt": "2026-04-08T17:04:16.066Z"
+    },
+    {
+      "id": "1776195229960-1776073155790-group-1775584639553",
+      "groupId": "group-1775584639553",
+      "senderId": "1776073155790",
+      "text": "ayyyo",
+      "createdAt": "2026-04-14T19:33:49.960Z"
+    },
+    {
+      "id": "1776197626155-1776197456036-group-1776197549946",
+      "groupId": "group-1776197549946",
+      "senderId": "1776197456036",
+      "text": "cc",
+      "createdAt": "2026-04-14T20:13:46.155Z"
+    }
+  ],
+  "gameInvites": [
+    {
+      "id": "invite-1775645468615-1775495697901-1775552047292",
+      "fromUserId": "1775495697901",
+      "toUserId": "1775552047292",
+      "createdAt": "2026-04-08T10:51:08.615Z",
+      "status": "accepted"
+    },
+    {
+      "id": "invite-1775634520651-1775495697901-1775552047292",
+      "fromUserId": "1775495697901",
+      "toUserId": "1775552047292",
+      "createdAt": "2026-04-08T07:48:40.651Z",
+      "status": "accepted"
+    }
+  ]
+}

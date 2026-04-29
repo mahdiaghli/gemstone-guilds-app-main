@@ -1,0 +1,298 @@
+import { AnimatePresence, motion } from "framer-motion";
+
+import CardDisplay from "@/components/game/CardDisplay";
+import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Card, GameState } from "@/lib/gameData";
+import { canPlayerAffordCard, getPlayerScore } from "@/lib/gameLogic";
+import overlayBackground from "@/assets/background.png";
+
+type GameOverlaysProps = {
+  t: (key: string) => string;
+  state: GameState;
+  currentPlayer: GameState["players"][number];
+  selectedCard: Card | null;
+  isReserved: boolean;
+  showQuickRules: boolean;
+  showExitConfirm: boolean;
+  showRematchRequest: boolean;
+  waitingForRematch: boolean;
+  turnWarning: string;
+  systemNotice: string;
+  onCloseQuickRules: () => void;
+  onCancelCardAction: () => void;
+  onBuyCard: () => void;
+  onReserveCard: () => void;
+  onLeaveGame: () => void;
+  onCloseExitConfirm: (open: boolean) => void;
+  onCloseRematchRequest: (open: boolean) => void;
+  onCloseWaitingRematch: (open: boolean) => void;
+  onDeclineRematch: () => void;
+  onAcceptRematch: () => void;
+  onPlayAgain: () => void;
+  onMenu: () => void;
+};
+
+export default function GameOverlays({
+  t,
+  state,
+  currentPlayer,
+  selectedCard,
+  isReserved,
+  showQuickRules,
+  showExitConfirm,
+  showRematchRequest,
+  waitingForRematch,
+  turnWarning,
+  systemNotice,
+  onCloseQuickRules,
+  onCancelCardAction,
+  onBuyCard,
+  onReserveCard,
+  onLeaveGame,
+  onCloseExitConfirm,
+  onCloseRematchRequest,
+  onCloseWaitingRematch,
+  onDeclineRematch,
+  onAcceptRematch,
+  onPlayAgain,
+  onMenu,
+}: GameOverlaysProps) {
+  const modalBackgroundStyle = {
+    backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.8), rgba(0, 0, 0, 0.84)), url(${overlayBackground})`,
+    backgroundSize: "cover",
+    backgroundPosition: "center",
+  } as const;
+
+  return (
+    <>
+      <AnimatePresence>
+        {turnWarning && (
+          <motion.div
+            initial={{ opacity: 0, height: 0, y: -10 }}
+            animate={{ opacity: 1, height: "auto", y: 0 }}
+            exit={{ opacity: 0, height: 0, y: -10 }}
+            className="mb-3 rounded-lg border border-yellow-500/40 bg-yellow-400/20 p-3 text-center"
+          >
+            <p className="text-sm font-semibold text-yellow-700 dark:text-yellow-300">{turnWarning}</p>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {systemNotice && (
+          <motion.div
+            initial={{ opacity: 0, height: 0, y: -10 }}
+            animate={{ opacity: 1, height: "auto", y: 0 }}
+            exit={{ opacity: 0, height: 0, y: -10 }}
+            className="mb-3 rounded-lg border border-blue-500/40 bg-blue-400/20 p-3 text-center"
+          >
+            <p className="text-sm font-semibold text-blue-700 dark:text-blue-300">{systemNotice}</p>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {showQuickRules && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-background/55 p-4 backdrop-blur-sm"
+            onClick={onCloseQuickRules}
+          >
+            <motion.div
+              initial={{ scale: 0.95, y: 20, opacity: 0 }}
+              animate={{ scale: 1, y: 0, opacity: 1 }}
+              exit={{ scale: 0.95, y: 20, opacity: 0 }}
+              transition={{ type: "spring", damping: 18 }}
+              className="w-full max-w-lg rounded-2xl border border-primary/30 p-6 shadow-2xl"
+              style={modalBackgroundStyle}
+              onClick={(event) => event.stopPropagation()}
+            >
+              <h2 className="mb-2 font-cinzel text-2xl tracking-wider text-primary">{t("quickRulesTitle")}</h2>
+              <p className="mb-4 font-body text-sm text-muted-foreground">{t("quickRulesSubtitle")}</p>
+              <ul className="space-y-2 font-body text-sm text-foreground/90">
+                <li>• {t("quickRulesObjective")}</li>
+                <li>• {t("quickRulesTurn")}</li>
+                <li>• {t("quickRulesTokens")}</li>
+                <li>• {t("quickRulesReserve")}</li>
+                <li>• {t("quickRulesNobles")}</li>
+                <li>• {t("quickRulesWin")}</li>
+              </ul>
+              <div className="mt-6 flex justify-end">
+                <Button variant="game" onClick={onCloseQuickRules}>
+                  {t("quickRulesClose")}
+                </Button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {selectedCard && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-background/85 p-4 backdrop-blur-sm"
+            onClick={onCancelCardAction}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: 20 }}
+              transition={{ type: "spring", damping: 20, stiffness: 300 }}
+              className="w-full max-w-sm rounded-2xl border-2 border-primary/30 p-8 shadow-2xl"
+              style={modalBackgroundStyle}
+              onClick={(event) => event.stopPropagation()}
+            >
+              <motion.div className="mb-6 flex justify-center px-4 py-5" initial={{ scale: 0.8 }} animate={{ scale: 1 }} transition={{ delay: 0.1 }}>
+                <div className="origin-top scale-[190%] transform p-2">
+                  <CardDisplay
+                    card={selectedCard}
+                    affordable={canPlayerAffordCard(currentPlayer, selectedCard)}
+                    emphasizeAffordableCosts
+                  />
+                </div>
+              </motion.div>
+
+              <motion.div
+                className="mb-6 space-y-2 text-center"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.15 }}
+              >
+                <div className="inline-block rounded-full border border-primary/20 bg-primary/10 px-4 py-1">
+                  <span className="font-cinzel text-sm tracking-wider text-primary">
+                    {selectedCard.points > 0 ? `${selectedCard.points} ${t("pts")}` : t("noPoints")}
+                  </span>
+                </div>
+              </motion.div>
+              <motion.div
+                className="flex flex-col gap-2 space-y-2"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.25 }}
+              >
+                {canPlayerAffordCard(currentPlayer, selectedCard) && (
+                  <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                    <Button variant="game" onClick={onBuyCard} className="w-full font-cinzel">
+                      ✨ {t("purchase")}
+                    </Button>
+                  </motion.div>
+                )}
+                {!isReserved && currentPlayer.reservedCards.length < 3 && (
+                  <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                    <Button variant="game-secondary" onClick={onReserveCard} className="w-full font-cinzel">
+                      📌 {t("reserve")}
+                    </Button>
+                  </motion.div>
+                )}
+                <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                  <Button variant="ghost" onClick={onCancelCardAction} className="w-full font-cinzel text-muted-foreground">
+                    ✕ {t("cancel")}
+                  </Button>
+                </motion.div>
+              </motion.div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {state.gameOver && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-background/90 backdrop-blur-md"
+          >
+            <motion.div
+              initial={{ scale: 0.8, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              transition={{ type: "spring", damping: 15 }}
+              className="mx-4 max-w-sm rounded-2xl border border-primary/30 p-8 text-center shadow-2xl"
+              style={modalBackgroundStyle}
+            >
+              <span className="mb-4 block text-4xl">👑</span>
+              <h2 className="mb-2 font-cinzel text-2xl tracking-wider text-primary">
+                {t("player")} {(state.winner ?? 0) + 1} {t("wins")}
+              </h2>
+              <p className="mb-6 font-body text-lg text-muted-foreground">
+                {t("score")}: {getPlayerScore(state.players[state.winner ?? 0])}
+              </p>
+              <div className="space-y-2">
+                {state.players.map((player) => (
+                  <div key={player.id} className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">
+                      {t("player")} {player.id + 1}
+                    </span>
+                    <span className="font-bold text-foreground">
+                      {getPlayerScore(player)} {t("pts")}
+                    </span>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-6 flex gap-2">
+                <Button variant="game" onClick={onPlayAgain} className="flex-1">
+                  {t("playAgain")}
+                </Button>
+                <Button variant="ghost" onClick={onMenu} className="flex-1">
+                  {t("menu")}
+                </Button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AlertDialog open={showExitConfirm} onOpenChange={onCloseExitConfirm}>
+        <AlertDialogContent className="bg-cover bg-center" style={modalBackgroundStyle}>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("leaveGameTitle")}</AlertDialogTitle>
+            <AlertDialogDescription>{t("leaveGameDescription")}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t("stay")}</AlertDialogCancel>
+            <AlertDialogAction onClick={onLeaveGame}>{t("leaveGameAction")}</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={showRematchRequest} onOpenChange={onCloseRematchRequest}>
+        <AlertDialogContent className="bg-cover bg-center" style={modalBackgroundStyle}>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("rematchRequestTitle")}</AlertDialogTitle>
+            <AlertDialogDescription>{t("rematchRequestMessage")}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={onDeclineRematch}>{t("decline")}</AlertDialogCancel>
+            <AlertDialogAction onClick={onAcceptRematch}>{t("accept")}</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={waitingForRematch} onOpenChange={onCloseWaitingRematch}>
+        <AlertDialogContent className="bg-cover bg-center" style={modalBackgroundStyle}>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("rematchRequestTitle")}</AlertDialogTitle>
+            <AlertDialogDescription>{t("waitingRematchVotes")}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t("stay")}</AlertDialogCancel>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
+  );
+}
