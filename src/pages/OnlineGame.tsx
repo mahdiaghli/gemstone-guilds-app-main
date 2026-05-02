@@ -11,6 +11,7 @@ import DeadMansDrawGame from './DeadMansDrawGame';
 import { useAuth } from '@/hooks/useAuth';
 import PageTopBar from '@/components/game/PageTopBar';
 import { getGameById, getGameMenuPath } from '@/lib/gameCatalog';
+import { markPendingEntryFeeConsumed, refundPendingEntryFee } from '@/lib/onlineEntryFee';
 import { initializeDeadMansDrawGame } from '@/lib/deadMansDraw';
 
 export default function OnlineGame() {
@@ -98,9 +99,16 @@ export default function OnlineGame() {
   // Start game if room status changes
   useEffect(() => {
     if (roomStatus === 'playing' && !gameStarted) {
+      markPendingEntryFeeConsumed();
       setGameStarted(true);
     }
   }, [roomStatus, gameStarted]);
+
+  useEffect(() => {
+    if (error || errorMsg) {
+      refundPendingEntryFee(user?.id);
+    }
+  }, [error, errorMsg, user?.id]);
 
   useEffect(() => {
     if (!roomId?.startsWith("MM-")) return;
@@ -128,6 +136,9 @@ export default function OnlineGame() {
   };
 
   const handleLeaveRoom = async () => {
+    if (!gameStarted) {
+      refundPendingEntryFee(user?.id);
+    }
     leaveRoom();
     navigate(menuPath);
   };

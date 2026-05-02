@@ -1,12 +1,14 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useGame } from "@/hooks/useGame";
+import { setGlobalMusicTrack } from "@/hooks/useBackgroundMusic";
 import { useLanguage } from "@/hooks/useLanguage";
 import {
   GemType,
   TokenType,
   Card,
   GameState,
+  GEM_TYPES,
 } from "@/lib/gameData";
 import {
   getPlayerScore,
@@ -27,6 +29,7 @@ import {
   awardWinProgress,
   awardLossProgress,
 } from "@/lib/progression";
+import { recordFinishedGame } from "@/lib/playerAnalytics";
 import {
   cloneChallengeState,
   getDailyPuzzleDefinition,
@@ -95,6 +98,7 @@ export default function useSplendorGameController(props: GameProps = {}) {
   const awardedWinnerRef = useRef<string | null>(null);
   const awardedLossRef = useRef<string | null>(null);
   const handledChallengeOutcomeRef = useRef<string | null>(null);
+  const recordedAnalyticsRef = useRef<string | null>(null);
   const dailyPuzzleDefinition = useMemo(
     () => (challengeId === "daily-puzzle" ? getDailyPuzzleDefinition() : null),
     [challengeId],
@@ -248,6 +252,7 @@ export default function useSplendorGameController(props: GameProps = {}) {
   }, [challengeId, gameMode, initialLocalState, resetGame]);
 
   const handleLeaveGame = useCallback(() => {
+    setGlobalMusicTrack("lobby");
     if (gameMode === "online") {
       props.onGameEnd?.();
     }
@@ -269,10 +274,18 @@ export default function useSplendorGameController(props: GameProps = {}) {
   }, []);
 
   useEffect(() => {
+    setGlobalMusicTrack("game");
+    return () => {
+      setGlobalMusicTrack("lobby");
+    };
+  }, []);
+
+  useEffect(() => {
     if (!state.gameOver) {
       awardedWinnerRef.current = null;
       awardedLossRef.current = null;
       handledChallengeOutcomeRef.current = null;
+      recordedAnalyticsRef.current = null;
     }
   }, [state.gameOver]);
 
@@ -305,6 +318,19 @@ export default function useSplendorGameController(props: GameProps = {}) {
       awardLossProgress(user?.id);
     }
   }, [gameMode, localPlayerIndex, state.gameOver, state.winner, user?.id]);
+
+  useEffect(() => {
+    if (!state.gameOver || state.winner === null) return;
+    const analyticsKey = `${selectedGame.id}-${gameMode}-${state.winner}-${state.players.length}`;
+    if (recordedAnalyticsRef.current === analyticsKey) return;
+    recordedAnalyticsRef.current = analyticsKey;
+    recordFinishedGame(
+      user?.id,
+      selectedGame.id,
+      gameMode as "local" | "ai" | "online",
+      state.winner === localPlayerIndex,
+    );
+  }, [gameMode, localPlayerIndex, selectedGame.id, state.gameOver, state.players.length, state.winner, user?.id]);
 
   useEffect(() => {
     if (!state.gameOver || state.winner === null || !challengeId) return;
@@ -412,6 +438,31 @@ export default function useSplendorGameController(props: GameProps = {}) {
     },
     [gameMode, props.onGameStateChange],
   );
+
+  const resetSplendorSession = useCallback((nextState: GameState) => {
+    resetGame(nextState);
+    setDisplayState(nextState);
+    setSelectedGems([]);
+    setSelectedCard(null);
+    setTempPoolDisplay(null);
+    setTurnWarning("");
+    setSystemNotice("");
+    setPhase("idle");
+    setDailyPuzzleStep(0);
+    setTurnLimitTurnsUsed(0);
+    setShowQuickRules(false);
+    setShowExitConfirm(false);
+    setShowRematchRequest(false);
+    setWaitingForRematch(false);
+    setTurnSecondsLeft(turnDurationSeconds);
+    previousPlayerIndexRef.current = nextState.currentPlayerIndex;
+    handledChallengeOutcomeRef.current = null;
+    awardedWinnerRef.current = null;
+    awardedLossRef.current = null;
+    recordedAnalyticsRef.current = null;
+    lastServerStateRef.current = null;
+    lastSyncedStateRef.current = null;
+  }, [resetGame, turnDurationSeconds]);
 
   useEffect(() => {
     if (gameMode !== "online" || !props.socket) return;
@@ -1136,6 +1187,7 @@ export default function useSplendorGameController(props: GameProps = {}) {
     waitingForRematch,
     turnWarning,
     systemNotice,
+    stateCurrentPlayerIndex: state.currentPlayerIndex,
     onCloseQuickRules: () => setShowQuickRules(false),
     onCancelCardAction: handleCancel,
     onBuyCard: handleBuyCard,
@@ -1186,20 +1238,21 @@ export default function useSplendorGameController(props: GameProps = {}) {
       }
 
       if (challengeId === "daily-puzzle") {
-        resetGame(initialLocalState);
-        setDailyPuzzleStep(0);
+        resetSplendorSession(initialLocalState);
         return;
       }
 
       if (challengeId === "turn-limit") {
-        resetGame();
-        setTurnLimitTurnsUsed(0);
+        resetSplendorSession(initialLocalState);
         return;
       }
 
-      resetGame();
+      resetSplendorSession(initialLocalState);
     },
-    onMenu: () => navigate(menuPath),
+    onMenu: () => {
+      setGlobalMusicTrack("lobby");
+      navigate(menuPath);
+    },
     panelCount,
     tempPoolDisplay,
     selectedGems,

@@ -74,7 +74,7 @@ export default function Index() {
         className="absolute inset-0 bg-cover bg-center"
         style={{ backgroundImage: `url(${pageBackground})` }}
       />
-      <div className="absolute inset-0 bg-gradient-to-t from-background via-background/30 to-background/60" />
+      <div className="absolute inset-0 bg-gradient-to-t from-background via-background/10 to-background/10" />
 
       {GEM_DECORATIONS.map((gem, i) => (
         <span

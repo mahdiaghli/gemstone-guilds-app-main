@@ -1,9 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { motion } from "framer-motion";
-import { BookOpenText, X } from "lucide-react";
-
-import { Button } from "@/components/ui/button";
+import { setGlobalMusicTrack } from "@/hooks/useBackgroundMusic";
 import { useLanguage } from "@/hooks/useLanguage";
 import { useAuth } from "@/hooks/useAuth";
 import {
@@ -28,31 +25,22 @@ import {
 } from "@/lib/deadMansDraw";
 import { chooseDeadMansDrawAIAction } from "@/lib/deadMansDrawAI";
 import { getGameMenuPath } from "@/lib/gameCatalog";
-import backgroundImage from "@/assets/background-game-splendor.png";
-import overlayBackground from "@/assets/background.png";
-import zirkhakiBackground from "@/assets/background-zirkhaki.png";
+import { recordFinishedGame } from "@/lib/playerAnalytics";
 
-import { CardChip } from "./dead-mans-draw/CardChip";
-import { DeckCounter } from "./dead-mans-draw/DeckCounter";
-import { PendingChoices } from "./dead-mans-draw/PendingChoices";
-import { PlayerStack } from "./dead-mans-draw/PlayerStack";
+import { DeadMansDrawBoardView } from "./dead-mans-draw/DeadMansDrawBoardView";
+import {
+  DeadMansDrawExitModal,
+  DeadMansDrawPendingDrawer,
+  DeadMansDrawSummaryModal,
+} from "./dead-mans-draw/DeadMansDrawOverlays";
 import { PowerChoiceScreen } from "./dead-mans-draw/PowerChoiceScreen";
 import { PowerTargetScreen } from "./dead-mans-draw/PowerTargetScreen";
-import { SUIT_DESCRIPTION_KEYS, SUIT_TRANSLATION_KEYS } from "./dead-mans-draw/shared";
-
-type DeadMansDrawGameProps = {
-  mode?: "local" | "ai" | "online";
-  roomId?: string;
-  playerId?: string;
-  playerName?: string;
-  playerIndex?: number;
-  roomPlayers?: Record<string, any>;
-  playerNamesList?: string[];
-  socket?: any;
-  serverGameState?: DeadMansDrawState | null;
-  onGameStateChange?: (state: DeadMansDrawState) => void;
-  onGameEnd?: () => void;
-};
+import { DEAD_MANS_DRAW_TUTORIAL_STEPS } from "./dead-mans-draw/shared";
+import {
+  DeadMansDrawGameOverView,
+  DeadMansDrawBonusPreviewView,
+} from "./dead-mans-draw/DeadMansDrawStatusViews";
+import type { DeadMansDrawGameProps } from "./dead-mans-draw/types";
 
 export default function DeadMansDrawGame(props: DeadMansDrawGameProps = {}) {
   const navigate = useNavigate();
@@ -118,6 +106,7 @@ export default function DeadMansDrawGame(props: DeadMansDrawGameProps = {}) {
 
   const [bonusPreview, setBonusPreview] = useState<{ playerIndex: number; cards: DeadMansDrawCard[] } | null>(null);
   const previousStateRef = useRef<DeadMansDrawState | null>(null);
+  const recordedAnalyticsRef = useRef<string | null>(null);
 
   const localPlayerIndex = gameMode === "online" ? (props.playerIndex ?? 0) : (currentState.ringSelectionIndex ?? currentState.currentPlayerIndex);
   const activePlayerIndex = currentState.ringSelectionIndex ?? currentState.powerTargetSelection?.playerIndex ?? currentState.currentPlayerIndex;
@@ -128,12 +117,20 @@ export default function DeadMansDrawGame(props: DeadMansDrawGameProps = {}) {
   }, [gameMode, humanPlayerCount]);
   const activePlayerIsAI = isAIPlayer(activePlayerIndex);
   const isCurrentPlayerMe = gameMode === "online" ? activePlayerIndex === localPlayerIndex : !activePlayerIsAI;
+  const tutorialSteps = DEAD_MANS_DRAW_TUTORIAL_STEPS.filter((step) => [1, 3, 4, 6].includes(step));
 
   useEffect(() => {
     if (!currentState.pendingEffect) {
       setChoicesCollapsed(false);
     }
   }, [currentState.pendingEffect]);
+
+  useEffect(() => {
+    setGlobalMusicTrack("game");
+    return () => {
+      setGlobalMusicTrack("lobby");
+    };
+  }, []);
 
   useEffect(() => {
     const previousState = previousStateRef.current;
@@ -157,6 +154,19 @@ export default function DeadMansDrawGame(props: DeadMansDrawGameProps = {}) {
     }
     previousStateRef.current = currentState;
   }, [currentState]);
+
+  useEffect(() => {
+    if (!currentState.gameOver) {
+      recordedAnalyticsRef.current = null;
+      return;
+    }
+
+    const won = currentState.winnerIndices.includes(localPlayerIndex);
+    const analyticsKey = `dead-mans-draw-${gameMode}-${localPlayerIndex}-${currentState.winnerIndices.join(",")}`;
+    if (recordedAnalyticsRef.current === analyticsKey) return;
+    recordedAnalyticsRef.current = analyticsKey;
+    recordFinishedGame(user?.id, "dead-mans-draw", gameMode, won);
+  }, [currentState.gameOver, currentState.winnerIndices, gameMode, localPlayerIndex, user?.id]);
 
   const actionState = getDeadMansDrawActionState(currentState);
   const previewLocked = Boolean(bustPreview);
@@ -222,6 +232,7 @@ export default function DeadMansDrawGame(props: DeadMansDrawGameProps = {}) {
   }, [currentState, interactionLocked, runAction]);
 
   const handleMenu = useCallback(() => {
+    setGlobalMusicTrack("lobby");
     if (gameMode === "online") props.onGameEnd?.();
     navigate(menuPath);
   }, [gameMode, menuPath, navigate, props]);
@@ -279,57 +290,33 @@ export default function DeadMansDrawGame(props: DeadMansDrawGameProps = {}) {
 
   if (bonusPreview) {
     return (
-      <div dir={dir} className="relative min-h-screen overflow-hidden text-white">
-        <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url(${zirkhakiBackground})` }} />
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(56,189,248,0.16),_transparent_32%),linear-gradient(180deg,rgba(6,16,27,0.74),rgba(2,6,23,0.78)_66%)]" />
-        <div className="relative mx-auto flex min-h-screen max-w-5xl items-center px-4 py-8">
-          <div
-            className="w-full rounded-[34px] border border-sky-300/25 bg-cover bg-center p-6 shadow-[0_24px_80px_rgba(15,23,42,0.7)]"
-            style={{
-              backgroundImage: `linear-gradient(rgba(2,6,23,0.88), rgba(2,6,23,0.92)), url(${overlayBackground})`,
-            }}
-          >
-            <p className="font-cinzel text-xs uppercase tracking-[0.38em] text-sky-100/65">Chest + Key</p>
-            <h1 className="mt-3 font-cinzel text-4xl text-white">{t("deadMansDrawBonusPreviewTitle", { player: getPlayerDisplayName(bonusPreview.playerIndex) })}</h1>
-            <p className="mt-3 text-sm leading-6 text-slate-300/80">{t("deadMansDrawBonusPreviewBody")}</p>
-            <div className="mt-8 flex flex-wrap gap-4">{bonusPreview.cards.map((card) => <CardChip key={card.id} card={card} />)}</div>
-            <div className="mt-8"><Button variant="game" onClick={() => setBonusPreview(null)}>{t("deadMansDrawBonusPreviewConfirm")}</Button></div>
-          </div>
-        </div>
-      </div>
+      <DeadMansDrawBonusPreviewView
+        dir={dir}
+        t={t}
+        preview={bonusPreview}
+        getPlayerDisplayName={getPlayerDisplayName}
+        onConfirm={() => setBonusPreview(null)}
+      />
     );
   }
 
   if (currentState.gameOver) {
     return (
-      <div dir={dir} className="relative min-h-screen overflow-hidden text-white">
-        <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url(${zirkhakiBackground})` }} />
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(251,191,36,0.18),_transparent_34%),linear-gradient(180deg,rgba(18,11,2,0.74),rgba(2,6,23,0.8)_68%)]" />
-        <div className="relative mx-auto flex min-h-screen max-w-5xl items-center px-4 py-8">
-          <motion.div initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} className="w-full rounded-[34px] border border-amber-300/30 bg-slate-950/85 p-6 shadow-[0_24px_80px_rgba(15,23,42,0.72)]">
-            <p className="font-cinzel text-xs uppercase tracking-[0.38em] text-amber-100/65">{t("deadMansDrawGameOver")}</p>
-            <h1 className="mt-3 font-cinzel text-4xl text-amber-200">{t("deadMansDrawWinnerLine", { winners: winnerNames.join(", ") })}</h1>
-            <p className="mt-3 max-w-3xl text-sm leading-6 text-amber-50/75">{t("deadMansDrawGameOverBody")}</p>
-            {tiedForScore.length > currentState.winnerIndices.length && tiebreakWinner.length === currentState.winnerIndices.length ? (
-              <div className="mt-5 rounded-3xl border border-sky-300/25 bg-sky-300/10 p-4 text-sm leading-6 text-sky-50/85">
-                {t("deadMansDrawTiebreakBody", { score: highestScore, winners: winnerNames.join(", "), cards: topCardCount })}
-              </div>
-            ) : null}
-            <div className="mt-8 grid gap-4 md:grid-cols-2">
-              {scoreBoard.map((entry) => (
-                <div key={entry.index} className="rounded-[26px] border border-white/10 bg-black/20 p-4">
-                  <p className="font-cinzel text-xl text-white">{getPlayerDisplayName(entry.index)}</p>
-                  <p className="mt-2 text-sm text-white/65">{t("deadMansDrawScoreLine", { score: entry.score, cards: entry.cardCount })}</p>
-                </div>
-              ))}
-            </div>
-            <div className="mt-8 flex flex-wrap gap-3">
-              <Button variant="game" onClick={resetLocalGame} disabled={gameMode === "online"}>{t("deadMansDrawPlayAgain")}</Button>
-              <Button variant="outline" onClick={handleMenu}>{t("deadMansDrawBackToMenu")}</Button>
-            </div>
-          </motion.div>
-        </div>
-      </div>
+      <DeadMansDrawGameOverView
+        dir={dir}
+        t={t}
+        winnerNames={winnerNames}
+        highestScore={highestScore}
+        tiedForScoreCount={tiedForScore.length}
+        winnerCount={currentState.winnerIndices.length}
+        tiebreakWinnerCount={tiebreakWinner.length}
+        topCardCount={topCardCount}
+        scoreBoard={scoreBoard}
+        getPlayerDisplayName={getPlayerDisplayName}
+        onPlayAgain={resetLocalGame}
+        onMenu={handleMenu}
+        playAgainDisabled={gameMode === "online"}
+      />
     );
   }
 
@@ -354,228 +341,66 @@ export default function DeadMansDrawGame(props: DeadMansDrawGameProps = {}) {
   const canCollect = actionState.canCollect && !interactionLocked && !(gameMode === "online" && !isCurrentPlayerMe);
 
   return (
-    <div dir={dir} className="relative min-h-screen overflow-hidden text-white">
-      <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url(${backgroundImage})` }} />
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(20,184,166,0.10),_transparent_30%),linear-gradient(180deg,rgba(7,17,28,0.22),rgba(2,6,23,0.52)_60%)]" />
-
-      <div className="relative z-10 mx-auto max-w-md rounded-[28px] border border-white/10 bg-slate-950/16 px-3 py-4 backdrop-blur-[1px] sm:max-w-lg sm:px-4">
-        <div className="space-y-4 pb-8">
-          <div className="flex items-center justify-end gap-2 rounded-[28px] border border-white/10 bg-slate-950/46 px-4 py-3 shadow-[0_18px_50px_rgba(2,6,23,0.30)] backdrop-blur-sm">
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => setShowTutorialSummary(true)}
-                className="flex h-11 w-11 items-center justify-center rounded-full border border-teal-300/35 bg-teal-300/10 text-teal-50 transition hover:bg-teal-300/20"
-                aria-label={t("gameSummary")}
-                title={t("gameSummary")}
-              >
-                <BookOpenText className="h-5 w-5" />
-              </button>
-              <button
-                type="button"
-                onClick={() => setShowExitConfirm(true)}
-                className="flex h-11 w-11 items-center justify-center rounded-full border border-rose-300/35 bg-rose-300/10 text-rose-50 transition hover:bg-rose-300/20"
-                aria-label={t("deadMansDrawBackToMenu")}
-                title={t("deadMansDrawBackToMenu")}
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-          </div>
-
-          <div className="rounded-[30px] border border-amber-300/20 bg-slate-950/48 p-4 shadow-[0_20px_60px_rgba(2,6,23,0.38)]">
-            <div className="grid grid-cols-3 gap-3">
-              <DeckCounter label={t("deadMansDrawDrawDeck")} count={currentState.drawPile.length} onClick={canReveal ? handleReveal : undefined} disabled={!canReveal} />
-              <div className="flex items-center justify-center">
-                <Button variant="ghost" onClick={handleCollect} disabled={!canCollect} className="w-full min-h-[46px] rounded-2xl">{t("deadMansDrawCollect")}</Button>
-              </div>
-              <DeckCounter label={t("deadMansDrawBurnPile")} count={currentState.discardPile.length} />
-            </div>
-          </div>
-
-          <div className="rounded-[30px] border border-teal-300/20 bg-slate-950/48 p-4 shadow-[0_18px_55px_rgba(2,6,23,0.35)]">
-            <div className="flex items-center justify-between gap-3">
-              <p className="text-[11px] uppercase tracking-[0.3em] text-teal-100/45">{t("deadMansDrawTreasureArea")}</p>
-              {currentState.pendingEffect ? <span className="rounded-full border border-amber-300/30 bg-amber-400/10 px-3 py-1 text-[10px] uppercase tracking-[0.24em] text-amber-100">{t(`deadMansDrawEffectBadge${currentState.pendingEffect.kind}`)}</span> : null}
-            </div>
-
-            <div className="mt-4 grid grid-cols-3 gap-2">
-              {visibleTreasureArea.length ? visibleTreasureArea.map((card) => (
-                <div key={card.id} className="relative flex justify-center">
-                  <motion.div
-                    initial={false}
-                    animate={{
-                      opacity: selectedTreasureHelpId === card.id ? 1 : 0,
-                      y: selectedTreasureHelpId === card.id ? 0 : 6,
-                      scale: selectedTreasureHelpId === card.id ? 1 : 0.96,
-                    }}
-                    transition={{ duration: 0.18 }}
-                    className="pointer-events-none absolute inset-2 z-10 flex items-center justify-center"
-                  >
-                    <div className="rounded-[18px] border border-white/15 bg-slate-950/90 px-2.5 py-2 text-center shadow-[0_16px_40px_rgba(2,6,23,0.55)] backdrop-blur-sm">
-                      <p className="font-cinzel text-[10px] uppercase tracking-[0.24em] text-amber-100/65">
-                        {t(SUIT_TRANSLATION_KEYS[card.suit])}
-                      </p>
-                      <p className="mt-1 text-[11px] leading-4 text-slate-100/90">
-                        {t(SUIT_DESCRIPTION_KEYS[card.suit])}
-                      </p>
-                    </div>
-                  </motion.div>
-                  <CardChip
-                    card={card}
-                    compact
-                    highlighted={highlightedTreasureIds.has(card.id)}
-                    onClick={() => setSelectedTreasureHelpId((current) => current === card.id ? null : card.id)}
-                    className={selectedTreasureHelpId === card.id ? "border-amber-300/70 shadow-[0_0_0_2px_rgba(252,211,77,0.35),0_10px_30px_rgba(2,6,23,0.35)]" : undefined}
-                  />
-                </div>
-              )) : (
-                <div className="col-span-3 rounded-3xl border border-dashed border-white/10 px-4 py-8 text-center text-sm text-white/35">{t("deadMansDrawRevealHint")}</div>
-              )}
-            </div>
-          </div>
-
-          <div className="space-y-3">
-            {currentState.players.map((player, index) => (
-              <PlayerStack
-                key={player.id}
-                player={player}
-                isActive={index === activePlayerIndex}
-                displayName={getPlayerDisplayName(index)}
-                t={t}
-                markedOpponentName={player.markedOpponentIndex !== null ? getPlayerDisplayName(player.markedOpponentIndex) : null}
-              />
-            ))}
-          </div>
-        </div>
-      </div>
-
+    <>
+      <DeadMansDrawBoardView
+        dir={dir}
+        t={t}
+        currentState={currentState}
+        canReveal={canReveal}
+        canCollect={canCollect}
+        onReveal={handleReveal}
+        onCollect={handleCollect}
+        visibleTreasureArea={visibleTreasureArea}
+        highlightedTreasureIds={highlightedTreasureIds}
+        selectedTreasureHelpId={selectedTreasureHelpId}
+        onToggleTreasureHelp={(cardId) =>
+          setSelectedTreasureHelpId((current) => current === cardId ? null : cardId)
+        }
+        getPlayerDisplayName={getPlayerDisplayName}
+        activePlayerIndex={activePlayerIndex}
+        onOpenSummary={() => setShowTutorialSummary(true)}
+        onOpenExit={() => setShowExitConfirm(true)}
+      />
       {drawerOpen ? <div className={choicesCollapsed ? "h-20" : "h-80"} aria-hidden="true" /> : null}
-
-      {showTutorialSummary ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-sm" onClick={() => setShowTutorialSummary(false)}>
-          <motion.div
-            initial={{ opacity: 0, y: 18, scale: 0.96 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            className="relative w-full max-w-lg rounded-[32px] border border-teal-300/25 bg-cover bg-center p-6 shadow-[0_24px_80px_rgba(2,6,23,0.7)]"
-            style={{
-              backgroundImage: `linear-gradient(rgba(2,6,23,0.9), rgba(2,6,23,0.93)), url(${zirkhakiBackground})`,
-            }}
-            onClick={(event) => event.stopPropagation()}
-          >
-            <button
-              type="button"
-              onClick={() => setShowTutorialSummary(false)}
-              className="absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/5 text-white/80 transition hover:bg-white/10"
-              aria-label={t("cancel")}
-            >
-              <X className="h-5 w-5" />
-            </button>
-            <p className="font-cinzel text-xs uppercase tracking-[0.35em] text-teal-100/55">{t("gameSummary")}</p>
-            <h2 className="mt-2 font-cinzel text-3xl text-white">{t("deadMansDrawTutorialTitle")}</h2>
-            <p className="mt-3 text-sm leading-6 text-slate-300/80">{t("deadMansDrawTutorialIntro")}</p>
-            <div className="mt-6 space-y-3">
-              {[1, 3, 4, 6].map((step) => (
-                <div key={step} className="rounded-2xl border border-white/10 bg-white/5 p-3">
-                  <p className="font-cinzel text-sm text-amber-100">{t(`deadMansDrawTutorialStep${step}Title`)}</p>
-                  <p className="mt-1 text-sm leading-6 text-slate-200/85">{t(`deadMansDrawTutorialStep${step}Body`)}</p>
-                </div>
-              ))}
-            </div>
-          </motion.div>
-        </div>
-      ) : null}
-
-      {showExitConfirm ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 p-4 backdrop-blur-sm" onClick={() => setShowExitConfirm(false)}>
-          <motion.div
-            initial={{ opacity: 0, y: 18, scale: 0.96 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            className="relative w-full max-w-md rounded-[32px] border border-rose-300/25 bg-cover bg-center p-6 shadow-[0_24px_80px_rgba(2,6,23,0.7)]"
-            style={{
-              backgroundImage: `linear-gradient(rgba(40,10,14,0.9), rgba(20,8,12,0.93)), url(${zirkhakiBackground})`,
-            }}
-            onClick={(event) => event.stopPropagation()}
-          >
-            <button
-              type="button"
-              onClick={() => setShowExitConfirm(false)}
-              className="absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/5 text-white/80 transition hover:bg-white/10"
-              aria-label={t("cancel")}
-            >
-              <X className="h-5 w-5" />
-            </button>
-            <p className="font-cinzel text-xs uppercase tracking-[0.35em] text-rose-100/55">{t("leaveGameTitle")}</p>
-            <h2 className="mt-2 font-cinzel text-3xl text-white">{t("leaveGameTitle")}</h2>
-            <p className="mt-3 text-sm leading-6 text-slate-200/80">{t("leaveGameDescription")}</p>
-            <div className="mt-6 flex flex-wrap gap-3">
-              <Button variant="outline" onClick={() => setShowExitConfirm(false)}>{t("stay")}</Button>
-              <Button variant="game" onClick={handleMenu}>{t("leaveGameAction")}</Button>
-            </div>
-          </motion.div>
-        </div>
-      ) : null}
-
-      {currentState.pendingEffect ? (
-        <div className="fixed inset-x-0 bottom-0 z-40 px-3 pb-3 sm:px-4">
-          <motion.div
-            layout
-            className="mx-auto max-w-md rounded-[30px] border border-white/10 bg-cover bg-center p-4 shadow-[0_-12px_40px_rgba(2,6,23,0.55)] backdrop-blur sm:max-w-lg"
-            style={{
-              backgroundImage: `linear-gradient(rgba(2,6,23,0.9), rgba(2,6,23,0.94)), url(${zirkhakiBackground})`,
-            }}
-          >
-            <div className="flex items-center justify-between gap-4">
-              {!choicesCollapsed ? (
-                <div>
-                  {/* <p className="font-cinzel text-xs uppercase tracking-[0.32em] text-white/40">{t("deadMansDrawResolveEffect")}</p> */}
-                  <h2 className="mt-1 font-cinzel text-xl text-white">{t("deadMansDrawActiveChoices")}</h2>
-                </div>
-              ) : <span />}
-              <button
-                type="button"
-                onClick={() => setChoicesCollapsed((value) => !value)}
-                className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/5 text-xl text-white/80 transition hover:bg-white/10"
-              >
-                <motion.span animate={{ rotate: choicesCollapsed ? 180 : 0 }} transition={{ duration: 0.2 }}>⌄</motion.span>
-              </button>
-            </div>
-
-            <motion.div
-              initial={false}
-              animate={{ height: choicesCollapsed ? 0 : "auto", opacity: choicesCollapsed ? 0 : 1, marginTop: choicesCollapsed ? 0 : 16 }}
-              transition={{ duration: 0.25 }}
-              className="overflow-hidden"
-            >
-              <div className="max-h-[55vh] overflow-y-auto pr-1">
-                <PendingChoices
-                  pendingEffect={currentState.pendingEffect}
-                  onAstrolabe={(revealPeekedCard) => {
-                    const previewCard = revealPeekedCard ? currentState.drawPile[currentState.drawPile.length - 1] ?? null : null;
-                    runActionWithBustPreview(previewCard, () => resolveAstrolabeChoice(currentState, revealPeekedCard));
-                  }}
-                  onPistol={(targetPlayerIndex, suit) => runAction(() => resolvePistolChoice(currentState, targetPlayerIndex, suit))}
-                  onDagger={(targetPlayerIndex, suit) => {
-                    const previewCard = currentState.players[targetPlayerIndex]?.collected[suit].slice(-1)[0] ?? null;
-                    runActionWithBustPreview(previewCard, () => resolveDaggerChoice(currentState, targetPlayerIndex, suit));
-                  }}
-                  onHorseshoe={(suit) => {
-                    const previewCard = currentState.players[currentState.currentPlayerIndex]?.collected[suit].slice(-1)[0] ?? null;
-                    runActionWithBustPreview(previewCard, () => resolveHorseshoeChoice(currentState, suit));
-                  }}
-                  onMap={(cardId) => {
-                    const previewCard = currentState.pendingEffect?.kind === "map" ? currentState.pendingEffect.options.find((card) => card.id === cardId) ?? null : null;
-                    runActionWithBustPreview(previewCard, () => resolveMapChoice(currentState, cardId));
-                  }}
-                  onMisfire={(suit) => runAction(() => resolveMisfireChoice(currentState, suit))}
-                  disabled={interactionLocked || (gameMode === "online" && !isCurrentPlayerMe)}
-                  t={t}
-                />
-              </div>
-            </motion.div>
-          </motion.div>
-        </div>
-      ) : null}
-    </div>
+      <DeadMansDrawSummaryModal
+        open={showTutorialSummary}
+        t={t}
+        tutorialSteps={tutorialSteps}
+        onClose={() => setShowTutorialSummary(false)}
+      />
+      <DeadMansDrawExitModal
+        open={showExitConfirm}
+        t={t}
+        onClose={() => setShowExitConfirm(false)}
+        onLeave={handleMenu}
+      />
+      <DeadMansDrawPendingDrawer
+        pendingEffect={currentState.pendingEffect}
+        t={t}
+        collapsed={choicesCollapsed}
+        onToggleCollapsed={() => setChoicesCollapsed((value) => !value)}
+        disabled={interactionLocked || (gameMode === "online" && !isCurrentPlayerMe)}
+        onAstrolabe={(revealPeekedCard) => {
+          const previewCard = revealPeekedCard ? currentState.drawPile[currentState.drawPile.length - 1] ?? null : null;
+          runActionWithBustPreview(previewCard, () => resolveAstrolabeChoice(currentState, revealPeekedCard));
+        }}
+        onPistol={(targetPlayerIndex, suit) => runAction(() => resolvePistolChoice(currentState, targetPlayerIndex, suit))}
+        onDagger={(targetPlayerIndex, suit) => {
+          const previewCard = currentState.players[targetPlayerIndex]?.collected[suit].slice(-1)[0] ?? null;
+          runActionWithBustPreview(previewCard, () => resolveDaggerChoice(currentState, targetPlayerIndex, suit));
+        }}
+        onHorseshoe={(suit) => {
+          const previewCard = currentState.players[currentState.currentPlayerIndex]?.collected[suit].slice(-1)[0] ?? null;
+          runActionWithBustPreview(previewCard, () => resolveHorseshoeChoice(currentState, suit));
+        }}
+        onMap={(cardId) => {
+          const previewCard = currentState.pendingEffect?.kind === "map"
+            ? currentState.pendingEffect.options.find((card) => card.id === cardId) ?? null
+            : null;
+          runActionWithBustPreview(previewCard, () => resolveMapChoice(currentState, cardId));
+        }}
+        onMisfire={(suit) => runAction(() => resolveMisfireChoice(currentState, suit))}
+      />
+    </>
   );
 }

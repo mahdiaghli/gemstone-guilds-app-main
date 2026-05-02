@@ -25,6 +25,9 @@ export default function Login() {
 
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [rememberMe, setRememberMe] = useState(
+    () => localStorage.getItem("splendor-remember-me") === "true",
+  );
   const [error, setError] = useState<string | null>(null);
 
   const redirectTo = useMemo(
@@ -34,7 +37,7 @@ export default function Login() {
 
   const handleLogin = async () => {
     setError(null);
-    const ok = await login(username.trim(), password);
+    const ok = await login(username.trim(), password, rememberMe);
     if (!ok) {
       setError(t("invalidCredentials"));
       return;
@@ -137,6 +140,16 @@ export default function Login() {
               </div>
 
               {error && <p className="text-red-300 text-sm px-1">{error}</p>}
+
+              <label className="flex items-center gap-2 px-1 text-sm text-[#f3d79a]">
+                <input
+                  type="checkbox"
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
+                  className="h-4 w-4 rounded border border-[#e7c474]/50 bg-transparent"
+                />
+                <span>Remember me</span>
+              </label>
 
               {/* LOGIN BUTTON */}
               <Button

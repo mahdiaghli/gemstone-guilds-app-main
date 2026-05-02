@@ -4,21 +4,45 @@ export interface PlayerProgress {
   xp: number;
 }
 
+export const PROGRESSION_CONFIG = {
+  entryFees: {
+    onlineManual: 5,
+    onlineMatchmaking: 5,
+  },
+  rewards: {
+    winCoins: 10,
+    winXp: 25,
+    matchmakingWinCoins: 20,
+    matchmakingWinXp: 50,
+  },
+  scoring: {
+    xpPerLevel: 100,
+    winScoreGain: 12,
+    lossScorePenalty: 4,
+  },
+} as const;
+
 export const DEFAULT_PROGRESS: PlayerProgress = {
   points: 0,
   coins: 1000,
   xp: 0,
 };
 
-export const GAME_ENTRY_FEE = 5;
-export const WIN_REWARD_COINS = 10;
-export const WIN_REWARD_XP = 25;
-export const MATCHMAKING_WIN_REWARD_COINS = 20;
-export const MATCHMAKING_WIN_REWARD_XP = 50;
+export const GAME_ENTRY_FEE = PROGRESSION_CONFIG.entryFees.onlineManual;
+export const WIN_REWARD_COINS = PROGRESSION_CONFIG.rewards.winCoins;
+export const WIN_REWARD_XP = PROGRESSION_CONFIG.rewards.winXp;
+export const MATCHMAKING_WIN_REWARD_COINS = PROGRESSION_CONFIG.rewards.matchmakingWinCoins;
+export const MATCHMAKING_WIN_REWARD_XP = PROGRESSION_CONFIG.rewards.matchmakingWinXp;
 
-export const XP_PER_LEVEL = 100;
-export const WIN_SCORE_GAIN = 12;
-export const LOSS_SCORE_PENALTY = 4;
+export const XP_PER_LEVEL = PROGRESSION_CONFIG.scoring.xpPerLevel;
+export const WIN_SCORE_GAIN = PROGRESSION_CONFIG.scoring.winScoreGain;
+export const LOSS_SCORE_PENALTY = PROGRESSION_CONFIG.scoring.lossScorePenalty;
+
+export type GameEntryFeeMode = keyof typeof PROGRESSION_CONFIG.entryFees;
+
+export function getGameEntryFee(mode: GameEntryFeeMode = "onlineManual") {
+  return PROGRESSION_CONFIG.entryFees[mode];
+}
 
 function getProgressKey(userId?: string | null) {
   return `splendor-progress:${userId || "guest"}`;
@@ -64,18 +88,36 @@ export function updateProgress(
   return next;
 }
 
-export function payGameEntryFee(userId?: string | null) {
+export function payGameEntryFee(
+  userId?: string | null,
+  mode: GameEntryFeeMode = "onlineManual",
+) {
   const current = readProgress(userId);
-  if (current.coins < GAME_ENTRY_FEE) {
-    return { ok: true as const, progress: current, charged: 0 };
+  const fee = getGameEntryFee(mode);
+  if (current.coins < fee) {
+    return { ok: false as const, progress: current, charged: 0, required: fee };
   }
 
   const next = {
     ...current,
-    coins: current.coins - GAME_ENTRY_FEE,
+    coins: current.coins - fee,
   };
   writeProgress(userId, next);
-  return { ok: true as const, progress: next, charged: GAME_ENTRY_FEE };
+  return { ok: true as const, progress: next, charged: fee, required: fee };
+}
+
+export function refundGameEntryFee(
+  userId: string | null | undefined,
+  amount: number,
+) {
+  if (!amount) {
+    return readProgress(userId);
+  }
+
+  return updateProgress(userId, (current) => ({
+    ...current,
+    coins: current.coins + Math.max(0, amount),
+  }));
 }
 
 export function awardWinProgress(

@@ -8,6 +8,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { SOCKET_SERVER_URL } from '@/lib/socketConfig';
 import PageTopBar from '@/components/game/PageTopBar';
 import { getGameById, getGameMenuPath } from '@/lib/gameCatalog';
+import { refundPendingEntryFee } from '@/lib/onlineEntryFee';
 import { getPageBackground } from '@/lib/pageBackgrounds';
 
 // Log helper function
@@ -280,6 +281,7 @@ export default function OnlineMatchmaking() {
     }
     setSearching(false);
     setWaitingCount(0);
+    refundPendingEntryFee(user?.id);
     navigate(menuPath);
   };
 

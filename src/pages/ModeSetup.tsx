@@ -4,7 +4,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { useLanguage } from "@/hooks/useLanguage";
 import { useAuth } from "@/hooks/useAuth";
-import { GAME_ENTRY_FEE, payGameEntryFee } from "@/lib/progression";
+import { getGameEntryFee, payGameEntryFee } from "@/lib/progression";
 import { AIDifficulty } from "@/lib/aiPlayer";
 import { Button } from "@/components/ui/button";
 import PageTopBar from "@/components/game/PageTopBar";
@@ -28,6 +28,7 @@ export default function ModeSetup() {
     null,
   );
   const [difficulty, setDifficulty] = useState<AIDifficulty>("medium");
+  const [entryError, setEntryError] = useState("");
 
   // LOCAL
   const [localPlayerCount, setLocalPlayerCount] = useState(2);
@@ -76,7 +77,25 @@ export default function ModeSetup() {
     selectedPlayers: number,
     selectedOnlineMode: "manual" | "matchmaking",
   ) => {
-    payGameEntryFee(user?.id);
+    const feeMode =
+      selectedOnlineMode === "matchmaking" ? "onlineMatchmaking" : "onlineManual";
+    const feeResult = payGameEntryFee(user?.id, feeMode);
+    if (!feeResult.ok) {
+      setEntryError(
+        `You need ${feeResult.required} coins to enter online play.`,
+      );
+      return;
+    }
+
+    sessionStorage.setItem(
+      "splendor-online-entry-fee",
+      JSON.stringify({
+        charged: feeResult.charged,
+        feeMode,
+        refunded: false,
+      }),
+    );
+    setEntryError("");
 
     if (selectedOnlineMode === "manual") {
       navigate(
@@ -151,7 +170,7 @@ export default function ModeSetup() {
         className="absolute inset-0 bg-cover bg-center"
         style={{ backgroundImage: `url(${pageBackground})` }}
       />
-      <div className="absolute inset-0 bg-gradient-to-t from-background via-background/20 to-background/50" />
+      <div className="absolute inset-0 bg-gradient-to-t from-background via-background/10 to-background/10" />
 
       <PageTopBar />
 
@@ -316,8 +335,11 @@ export default function ModeSetup() {
                 <span className="flex-1 font-cinzel">Find Match</span>
               </button>
               <p className="text-xs text-muted-foreground">
-                Online entry fee: {GAME_ENTRY_FEE} coins if available
+                Online entry fee: {getGameEntryFee("onlineManual")} coins
               </p>
+              {entryError ? (
+                <p className="text-sm text-red-300">{entryError}</p>
+              ) : null}
             </div>
 
             <div className="space-y-3">

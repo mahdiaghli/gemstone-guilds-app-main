@@ -60,7 +60,7 @@ export default function GamesList() {
               className="group relative w-full overflow-hidden rounded-[30px] border border-white/10 bg-slate-950/75 text-left shadow-[0_24px_60px_rgba(2,6,23,0.45)] transition-all active:scale-[0.99] sm:hover:-translate-y-1 sm:hover:border-primary/50"
             >
               <div
-                className="absolute inset-0 bg-cover bg-center opacity-40 transition-opacity group-hover:opacity-35"
+                className="absolute inset-0 bg-cover bg-center opacity-80 transition-opacity group-hover:opacity-35"
                 style={{ backgroundImage: `url(${posters?.wide || GAME_IMAGES[game.id] || deadMansDrawImage})` }}
               />
               <div

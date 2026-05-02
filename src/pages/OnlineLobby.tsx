@@ -6,6 +6,7 @@ import { useLanguage } from '@/hooks/useLanguage';
 import { useAuth } from '@/hooks/useAuth';
 import PageTopBar from '@/components/game/PageTopBar';
 import { getGameById, getGameMenuPath } from '@/lib/gameCatalog';
+import { refundPendingEntryFee } from '@/lib/onlineEntryFee';
 import { getPageBackground } from '@/lib/pageBackgrounds';
 
 // Simple UUID v4 generator
@@ -49,11 +50,27 @@ export default function OnlineLobby() {
     setGeneratedRoom(code);
   };
 
-  const copyToClipboard = () => {
+  const copyToClipboard = async () => {
     if (!generatedRoom) return;
-    navigator.clipboard.writeText(generatedRoom);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(generatedRoom);
+      } else {
+        const textarea = document.createElement("textarea");
+        textarea.value = generatedRoom;
+        textarea.setAttribute("readonly", "");
+        textarea.style.position = "absolute";
+        textarea.style.left = "-9999px";
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand("copy");
+        document.body.removeChild(textarea);
+      }
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (error) {
+      console.error("Failed to copy room code", error);
+    }
   };
 
   const handleCreateRoom = () => {
@@ -270,7 +287,10 @@ export default function OnlineLobby() {
 
         {/* Back button */}
         <Button
-          onClick={() => navigate(menuPath)}
+          onClick={() => {
+            refundPendingEntryFee(user?.id);
+            navigate(menuPath);
+          }}
           variant="ghost"
           className="w-full mt-2 text-muted-foreground hover:text-foreground text-xs"
         >

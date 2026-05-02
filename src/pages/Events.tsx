@@ -17,12 +17,19 @@ import {
 } from "lucide-react";
 
 import AppPageShell from "@/components/game/AppPageShell";
-import { useLanguage } from "@/hooks/useLanguage";
+import { useLanguage, type TranslationKey } from "@/hooks/useLanguage";
 import { shellBackgrounds } from "@/lib/pageBackgrounds";
 
 // --- Data Constants (Translation Keys) ---
 
-const LEAGUE_TIERS = [
+const LEAGUE_TIERS: Array<{
+  id: string;
+  icon: typeof Shield;
+  color: string;
+  bg: string;
+  titleKey: TranslationKey;
+  descKey: TranslationKey;
+}> = [
   { id: "onyx", icon: Shield, color: "text-slate-400 dark:text-slate-500", bg: "bg-slate-400/10", titleKey: "tierOnyx", descKey: "tierOnyxDesc" },
   { id: "emerald", icon: Gem, color: "text-emerald-400", bg: "bg-emerald-400/10", titleKey: "tierEmerald", descKey: "tierEmeraldDesc" },
   { id: "sapphire", icon: Gem, color: "text-blue-400", bg: "bg-blue-400/10", titleKey: "tierSapphire", descKey: "tierSapphireDesc" },
@@ -31,14 +38,30 @@ const LEAGUE_TIERS = [
   { id: "noble", icon: Crown, color: "text-amber-400", bg: "bg-amber-400/10", titleKey: "tierNoble", descKey: "tierNobleDesc" },
 ];
 
-const ACTIVE_EVENTS = [
+const ACTIVE_EVENTS: Array<{
+  id: string;
+  icon: typeof Timer;
+  color: string;
+  bg: string;
+  titleKey: TranslationKey;
+  descKey: TranslationKey;
+  timeKey: TranslationKey;
+}> = [
   { id: "blitz", icon: Timer, color: "text-yellow-400", bg: "bg-yellow-400/10", titleKey: "eventBlitz", descKey: "eventBlitzDesc", timeKey: "endsIn2Days" },
   { id: "marathon", icon: Clock, color: "text-orange-400", bg: "bg-orange-400/10", titleKey: "eventMarathon", descKey: "eventMarathonDesc", timeKey: "endsIn5Days" },
   { id: "rich", icon: Gem, color: "text-purple-400", bg: "bg-purple-400/10", titleKey: "eventRichStart", descKey: "eventRichStartDesc", timeKey: "endsIn12Hours" },
   { id: "knockout", icon: Swords, color: "text-red-400", bg: "bg-red-400/10", titleKey: "eventKnockout", descKey: "eventKnockoutDesc", timeKey: "startsIn2Hours" },
 ];
 
-const SOLO_CHALLENGES = [
+const SOLO_CHALLENGES: Array<{
+  id: string;
+  icon: typeof Puzzle;
+  color: string;
+  bg: string;
+  titleKey: TranslationKey;
+  descKey: TranslationKey;
+  rewardKey: TranslationKey;
+}> = [
   { id: "puzzle", icon: Puzzle, color: "text-indigo-400", bg: "bg-indigo-400/10", titleKey: "soloPuzzle", descKey: "soloPuzzleDesc", rewardKey: "rewardCoins" },
   { id: "survival", icon: Bot, color: "text-teal-400", bg: "bg-teal-400/10", titleKey: "soloSurvival", descKey: "soloSurvivalDesc", rewardKey: "rewardCardBack" },
   { id: "turnlimit", icon: Zap, color: "text-lime-400", bg: "bg-lime-400/10", titleKey: "soloTurnLimit", descKey: "soloTurnLimitDesc", rewardKey: "avatarName1" },

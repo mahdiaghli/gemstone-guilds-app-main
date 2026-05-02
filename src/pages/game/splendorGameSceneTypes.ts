@@ -7,7 +7,7 @@ export type SplendorGameSceneProps = {
   gameMode: "local" | "ai" | "online";
   phase: Phase;
   lang: string;
-  t: (key: string) => string;
+  t: (key: string, values?: Record<string, string | number>) => string;
   gameTitle: string;
   state: GameState;
   currentPlayer: GameState["players"][number];
@@ -31,6 +31,7 @@ export type SplendorGameSceneProps = {
   waitingForRematch: boolean;
   turnWarning: string;
   systemNotice: string;
+  stateCurrentPlayerIndex: number;
   onCloseQuickRules: () => void;
   onCancelCardAction: () => void;
   onBuyCard: () => void;

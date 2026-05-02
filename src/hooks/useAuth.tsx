@@ -10,13 +10,14 @@ interface User {
 
 interface AuthContextType {
   user: User | null;
-  login: (username: string, password: string) => Promise<boolean>;
-  register: (username: string, email: string, password: string) => Promise<boolean>;
+  login: (username: string, password: string, rememberMe?: boolean) => Promise<boolean>;
+  register: (username: string, email: string, password: string, rememberMe?: boolean) => Promise<boolean>;
   updateProfile: (updates: { username: string; email?: string }) => Promise<boolean>;
   logout: () => void;
   isLoading: boolean;
 }
 
+const USER_STORAGE_KEY = "splendor_user";
 // فعلاً مقدار پیش‌فرض undefined برای جلوگیری از استفاده خارج از Provider
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -39,12 +40,15 @@ export function AuthProvider({ children }: AuthProviderProps) {
   // بررسی نشست قبلی
   useEffect(() => {
     try {
-      const savedUser = localStorage.getItem("splendor_user");
+      const savedUser =
+        localStorage.getItem(USER_STORAGE_KEY) ||
+        sessionStorage.getItem(USER_STORAGE_KEY);
       if (savedUser) {
         setUser(JSON.parse(savedUser));
       }
     } catch {
-      localStorage.removeItem("splendor_user");
+      localStorage.removeItem(USER_STORAGE_KEY);
+      sessionStorage.removeItem(USER_STORAGE_KEY);
     } finally {
       setIsLoading(false);
     }
@@ -61,7 +65,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
   }, []);
 
   // ورود کاربر
-  const login = async (username: string, password: string): Promise<boolean> => {
+  const login = async (
+    username: string,
+    password: string,
+    _rememberMe = false,
+  ): Promise<boolean> => {
     setIsLoading(true);
     try {
       const localUsersRaw = localStorage.getItem("splendor_users");
@@ -79,7 +87,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
           createdAt: foundUser.createdAt,
         };
         setUser(userSession);
-        localStorage.setItem("splendor_user", JSON.stringify(userSession));
+        localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(userSession));
+        sessionStorage.setItem(USER_STORAGE_KEY, JSON.stringify(userSession));
         return true;
       }
       return false;
@@ -95,7 +104,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const register = async (
     username: string,
     email: string,
-    password: string
+    password: string,
+    _rememberMe = false,
   ): Promise<boolean> => {
     setIsLoading(true);
     try {
@@ -133,7 +143,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
         createdAt: newUser.createdAt,
       };
       setUser(userSession);
-      localStorage.setItem("splendor_user", JSON.stringify(userSession));
+      localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(userSession));
+      sessionStorage.setItem(USER_STORAGE_KEY, JSON.stringify(userSession));
       localStorage.setItem("splendor-needs-tutorial", "true");
 
       return true;
@@ -174,7 +185,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
         email: updates.email || "",
       };
       setUser(nextUser);
-      localStorage.setItem("splendor_user", JSON.stringify(nextUser));
+      localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(nextUser));
+      sessionStorage.setItem(USER_STORAGE_KEY, JSON.stringify(nextUser));
 
       fetch(`${API_SERVER_URL}/users`, {
         method: "POST",
@@ -194,7 +206,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
   // خروج از حساب
   const logout = () => {
     setUser(null);
-    localStorage.removeItem("splendor_user");
+    localStorage.removeItem(USER_STORAGE_KEY);
+    sessionStorage.removeItem(USER_STORAGE_KEY);
   };
 
   const value: AuthContextType = {

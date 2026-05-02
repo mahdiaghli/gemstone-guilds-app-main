@@ -15,10 +15,10 @@ import {
   TOKEN_TYPES,
   TokenType,
 } from "@/lib/gameData";
-import { canPlayerAffordCard, getPlayerBonuses, getTotalTokens } from "@/lib/gameLogic";
+import { canPlayerAffordCard, getPlayerBonuses } from "@/lib/gameLogic";
 
 type GameBoardProps = {
-  t: (key: string) => string;
+  t: (key: string, values?: Record<string, string | number>) => string;
   state: GameState;
   currentPlayer: GameState["players"][number];
   panelCount: number;
@@ -58,35 +58,6 @@ export default function GameBoard({
 }: GameBoardProps) {
   return (
     <>
-      <AnimatePresence>
-        {phase === "mustReturnTokens" && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: "auto" }}
-            exit={{ opacity: 0, height: 0 }}
-            className="mb-3 rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-center"
-          >
-            <p className="font-body text-sm text-foreground">
-              {t("tooManyTokens")} ({getTotalTokens(currentPlayer)} → 10)
-            </p>
-            <div className="mt-2 flex justify-center gap-2">
-              {TOKEN_TYPES.map(
-                (type) =>
-                  currentPlayer.tokens[type] > 0 && (
-                    <GemToken
-                      key={type}
-                      type={type}
-                      count={currentPlayer.tokens[type]}
-                      size="sm"
-                      onClick={() => handleReturnToken(type)}
-                    />
-                  ),
-              )}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
       <div className="mb-3 flex gap-2 overflow-x-auto pb-1">
         <span className="mr-1 self-center font-cinzel text-[10px] tracking-wider text-muted-foreground">
           {t("nobles")}

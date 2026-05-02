@@ -10,7 +10,7 @@ export type BotSurvivalStage = "easy" | "medium" | "hard";
 export interface DailyPuzzleAction {
   type: "takeTokens" | "purchaseCard";
   gems?: GemType[];
-  cardId?: number;
+  cardId?: Card["id"];
 }
 
 export interface SoloChallengeProgress {

@@ -21,7 +21,7 @@ export function DeckCounter({
   );
 
   return (
-    <div className="rounded-[24px] border border-white/10 bg-black/20 p-3">
+    <div className="">
       <p className="mb-2 text-[11px] uppercase tracking-[0.28em] text-white/45">{label}</p>
       {onClick ? (
         <button

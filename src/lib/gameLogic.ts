@@ -112,7 +112,7 @@ export function performTakeTokens(state: GameState, gems: GemType[]): GameState 
   return { ...state, players: newPlayers, tokenPool: newPool };
 }
 
-export function performPurchaseCard(state: GameState, cardId: number): GameState {
+export function performPurchaseCard(state: GameState, cardId: string | number): GameState {
   const newPlayers = state.players.map(p => ({ ...p }));
   const player = { ...newPlayers[state.currentPlayerIndex] };
   player.tokens = { ...player.tokens };
@@ -161,7 +161,7 @@ export function performPurchaseCard(state: GameState, cardId: number): GameState
   return newState;
 }
 
-export function performReserveCard(state: GameState, cardId: number, fromDeckLevel?: 1 | 2 | 3): GameState {
+export function performReserveCard(state: GameState, cardId: string | number, fromDeckLevel?: 1 | 2 | 3): GameState {
   const newPlayers = state.players.map(p => ({ ...p }));
   const player = { ...newPlayers[state.currentPlayerIndex] };
   player.tokens = { ...player.tokens };

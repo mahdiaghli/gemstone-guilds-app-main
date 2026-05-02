@@ -31,6 +31,8 @@ export default function SplendorGameHUD(props: Pick<
   | "waitingForRematch"
   | "turnWarning"
   | "systemNotice"
+  | "stateCurrentPlayerIndex"
+  | "handleReturnToken"
   | "onCloseQuickRules"
   | "onCancelCardAction"
   | "onBuyCard"
@@ -79,6 +81,12 @@ export default function SplendorGameHUD(props: Pick<
         waitingForRematch={props.waitingForRematch}
         turnWarning={props.turnWarning}
         systemNotice={props.systemNotice}
+        phase={props.phase}
+        gameMode={props.gameMode}
+        isCurrentPlayerMe={props.isCurrentPlayerMe}
+        stateCurrentPlayerIndex={props.stateCurrentPlayerIndex}
+        getPlayerDisplayName={props.getPlayerDisplayName}
+        handleReturnToken={props.handleReturnToken}
         onCloseQuickRules={props.onCloseQuickRules}
         onCancelCardAction={props.onCancelCardAction}
         onBuyCard={props.onBuyCard}

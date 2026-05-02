@@ -1,20 +1,42 @@
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { Card, GemType, GEM_TYPES } from '@/lib/gameData';
-import { useLanguage } from '@/hooks/useLanguage';
-import level1Img from '@/assets/level1.png';
-import level2Img from '@/assets/level2.png';
-import level3Img from '@/assets/level3.png';
+import { useLanguage, type TranslationKey } from '@/hooks/useLanguage';
 import backcard1Img from '@/assets/backcard1.png';
 import backcard2Img from '@/assets/backcard2.png';
 import backcard3Img from '@/assets/backcard3.png';
+import diamond1Img from '@/assets/diamond1.png';
+import diamond21Img from '@/assets/diamond21.png';
+import diamond22Img from '@/assets/diamond22.png';
+import diamond44Img from '@/assets/diamond44.png';
+import diamond53Img from '@/assets/diamond53.png';
+import blue1Img from '@/assets/blue1.png';
+import blue21Img from '@/assets/blue21.png';
+import blue22Img from '@/assets/blue22.png';
+import blue44Img from '@/assets/blue44.png';
+import blue53Img from '@/assets/blue53.png';
+import green1Img from '@/assets/green1.png';
+import green21Img from '@/assets/green21.png';
+import green22Img from '@/assets/green22.png';
+import green44Img from '@/assets/green44.png';
+import green53Img from '@/assets/green53.png';
+import red1Img from '@/assets/red1.png';
+import red21Img from '@/assets/red21.png';
+import red22Img from '@/assets/red22.png';
+import red44Img from '@/assets/red44.png';
+import red53Img from '@/assets/red53.png';
+import onyx1Img from '@/assets/onyx1.png';
+import onyx21Img from '@/assets/onyx21.png';
+import onyx22Img from '@/assets/onyx22.png';
+import onyx44Img from '@/assets/onyx44.png';
+import onyx53Img from '@/assets/onyx53.png';
 import gemDiamondImg from '@/assets/gem-diamond.png';
 import gemSapphireImg from '@/assets/gem-blue.png';
 import gemEmeraldImg from '@/assets/gem-emerald.png';
 import gemRubyImg from '@/assets/gem-red.png';
 import gemOnyxImg from '@/assets/gem-onyx.png';
 
-const gemNameMap: Record<GemType, string> = {
+const gemNameMap: Record<GemType, TranslationKey> = {
   diamond: 'diamond',
   sapphire: 'sapphire',
   emerald: 'emerald',
@@ -29,9 +51,9 @@ interface CardDisplayProps {
   compact?: boolean;
   showBack?: boolean;
   emphasizeAffordableCosts?: boolean;
+  costStatus?: Partial<Record<GemType, boolean>>;
 }
 
-const levelImages = { 1: level1Img, 2: level2Img, 3: level3Img };
 const backCardImages = [backcard1Img, backcard2Img, backcard3Img];
 const gemImages: Record<GemType, string> = {
   diamond: gemDiamondImg,
@@ -40,6 +62,61 @@ const gemImages: Record<GemType, string> = {
   ruby: gemRubyImg,
   onyx: gemOnyxImg,
 };
+const cardFaceImages: Record<GemType, Record<string, string>> = {
+  diamond: {
+    level1: diamond1Img,
+    level2a: diamond21Img,
+    level2b: diamond22Img,
+    level3a: diamond53Img,
+    level3b: diamond44Img,
+  },
+  sapphire: {
+    level1: blue1Img,
+    level2a: blue21Img,
+    level2b: blue22Img,
+    level3a: blue53Img,
+    level3b: blue44Img,
+  },
+  emerald: {
+    level1: green1Img,
+    level2a: green21Img,
+    level2b: green22Img,
+    level3a: green53Img,
+    level3b: green44Img,
+  },
+  ruby: {
+    level1: red1Img,
+    level2a: red21Img,
+    level2b: red22Img,
+    level3a: red53Img,
+    level3b: red44Img,
+  },
+  onyx: {
+    level1: onyx1Img,
+    level2a: onyx21Img,
+    level2b: onyx22Img,
+    level3a: onyx53Img,
+    level3b: onyx44Img,
+  },
+};
+
+function getCardSequence(card: Card) {
+  if (typeof card.id !== 'string') return 0;
+  const match = card.id.match(/-(\d{2})$/);
+  return match ? Number(match[1]) : 0;
+}
+
+function getCardFaceImage(card: Card) {
+  const artSet = cardFaceImages[card.gemBonus];
+  if (card.level === 1) return artSet.level1;
+
+  if (card.level === 2) {
+    const sequence = getCardSequence(card);
+    return sequence >= 4 ? artSet.level2b : artSet.level2a;
+  }
+
+  return card.points === 4 ? artSet.level3b : artSet.level3a;
+}
 
 export default function CardDisplay({
   card,
@@ -48,9 +125,10 @@ export default function CardDisplay({
   compact,
   showBack,
   emphasizeAffordableCosts,
+  costStatus,
 }: CardDisplayProps) {
   const { t } = useLanguage();
-  const cardImagePath = levelImages[card.level as 1 | 2 | 3];
+  const cardImagePath = getCardFaceImage(card);
   const backImagePath = backCardImages[Math.floor(Math.random() * 3)];
   const costEntries = GEM_TYPES.filter((gem) => card.cost[gem]);
   const costLayoutClass = costEntries.length > 2
@@ -130,9 +208,11 @@ export default function CardDisplay({
             <div
               key={gem}
               className={cn(
-                'flex items-center gap-0.5 rounded-md bg-black/55 px-0.5 py-[1px] font-bold text-white ring-1',
-                compact ? 'text-[7px]' : 'text-[9px] md:text-[10px]',
-                affordable && emphasizeAffordableCosts
+    'flex items-center gap-0.2 rounded-md bg-black/55 px-0.5 py-[1px] font-bold text سفید ring-1',
+                compact       ? 'text-[7px] px-1'
+                              : 'text-[9px] md:text-[10px] px-0.5',
+                                'min-w-[1.6rem]',
+                (affordable && emphasizeAffordableCosts) || costStatus?.[gem]
                   ? 'ring-amber-300 shadow-[0_0_8px_rgba(252,211,77,0.55)]'
                   : 'ring-transparent',
                 gridPlacement,

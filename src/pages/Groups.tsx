@@ -43,6 +43,14 @@ import flag8Img from "@/assets/flag8.png";
 import flag9Img from "@/assets/flag9.png";
 import flag10Img from "@/assets/flag10.png";
 
+type GroupSettingsDraft = {
+  name: string;
+  description: string;
+  minScore: string;
+  visibility: "public" | "private" | "closed";
+  flag: string;
+};
+
 const FLAG_OPTIONS = [
   { id: "flag1", src: flag1Img },
   { id: "flag2", src: flag2Img },
@@ -58,11 +66,11 @@ const FLAG_OPTIONS = [
 
 const FLAG_MAP = Object.fromEntries(FLAG_OPTIONS.map((flag) => [flag.id, flag.src]));
 
-const DEFAULT_SETTINGS_DRAFT = {
+const DEFAULT_SETTINGS_DRAFT: GroupSettingsDraft = {
   name: "",
   description: "",
   minScore: "0",
-  visibility: "public" as const,
+  visibility: "public",
   flag: FLAG_OPTIONS[0].id,
 };
 
@@ -89,7 +97,7 @@ export default function Groups() {
   const [groupWarningOpen, setGroupWarningOpen] = useState(false);
   const [leaveConfirmOpen, setLeaveConfirmOpen] = useState(false);
   const [editGroupOpen, setEditGroupOpen] = useState(false);
-  const [settingsDraft, setSettingsDraft] = useState(DEFAULT_SETTINGS_DRAFT);
+  const [settingsDraft, setSettingsDraft] = useState<GroupSettingsDraft>(DEFAULT_SETTINGS_DRAFT);
   const [rankViewMode, setRankViewMode] = useState<RankViewMode>("groups");
 
   const view = useMemo<GroupsView>(() => {

@@ -72,6 +72,14 @@ export function useOnlineGame(
       socket.on("connect", () => {
         setError(null);
         if (playerName) {
+          socket.emit("join-room", {
+            roomId,
+            playerId: effectivePlayerId,
+            playerName,
+          });
+          joinedRef.current = true;
+        }
+        if (playerName) {
           setLoading(false);
         }
       });
@@ -147,7 +155,7 @@ export function useOnlineGame(
       });
 
       socket.on("disconnect", () => {
-        setError("Disconnected from server. Reconnecting...");
+        setError("Disconnected from server. Trying to reconnect to your game...");
       });
 
       socket.on("reconnect", () => {
@@ -166,7 +174,7 @@ export function useOnlineGame(
 
   const joinRoom = useCallback(
     (playerCount: number = 4, turnTime: number = 45, isHost: boolean = false, gameId?: string) => {
-      if (!socketRef.current || !playerName || joinedRef.current) return;
+      if (!socketRef.current || !playerName) return;
 
       socketRef.current.emit("join-room", {
         roomId,
@@ -223,7 +231,7 @@ export function useOnlineGame(
   );
 
   const broadcastCardPurchase = useCallback(
-    (cardId: number, playerIndex: number) => {
+    (cardId: string | number, playerIndex: number) => {
       if (!socketRef.current) return;
 
       socketRef.current.emit("card-purchased", {

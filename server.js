@@ -580,6 +580,7 @@ const io = new Server(httpServer, {
 
 // In-memory room storage
 const rooms = new Map();
+const DISCONNECT_GRACE_MS = 30000;
 
 // In-memory matchmaking queue (waiting players)
 const matchmakingQueue = {
@@ -619,9 +620,18 @@ function getOrCreateRoom(roomId) {
         playersInGame: [], // ordered list used for index mapping
       },
       rematch: null,
+      disconnectTimers: new Map(),
     });
   }
   return rooms.get(roomId);
+}
+
+function clearDisconnectTimer(room, playerId) {
+  const existing = room?.disconnectTimers?.get(playerId);
+  if (existing) {
+    clearTimeout(existing);
+    room.disconnectTimers.delete(playerId);
+  }
 }
 
 function buildPlayerIndexMap(room) {
@@ -805,6 +815,52 @@ function clearTurnTimer(room) {
   }
 }
 
+function getSplendorPlayerScore(player) {
+  const cardPoints = (player?.cards || []).reduce((sum, card) => sum + (card?.points || 0), 0);
+  const noblePoints = (player?.nobles || []).reduce((sum, noble) => sum + (noble?.points || 0), 0);
+  return cardPoints + noblePoints;
+}
+
+function finishSplendorTurn(state) {
+  if (!state) return state;
+  const nextState = {
+    ...state,
+    players: [...state.players],
+  };
+
+  const currentIndex = nextState.currentPlayerIndex || 0;
+  const currentScore = getSplendorPlayerScore(nextState.players[currentIndex]);
+  if (currentScore >= 15 && !nextState.isLastRound) {
+    nextState.isLastRound = true;
+    nextState.lastRoundTriggerIndex = currentIndex;
+  }
+
+  const nextIndex = (currentIndex + 1) % nextState.players.length;
+  nextState.currentPlayerIndex = nextIndex;
+
+  if (
+    nextState.isLastRound &&
+    nextState.lastRoundTriggerIndex !== null &&
+    nextIndex === nextState.lastRoundTriggerIndex
+  ) {
+    let winner = 0;
+    let bestScore = -1;
+    nextState.players.forEach((player, index) => {
+      const score = getSplendorPlayerScore(player);
+      const currentWinnerCards = nextState.players[winner]?.cards?.length ?? Number.MAX_SAFE_INTEGER;
+      const playerCards = player?.cards?.length ?? Number.MAX_SAFE_INTEGER;
+      if (score > bestScore || (score === bestScore && playerCards < currentWinnerCards)) {
+        bestScore = score;
+        winner = index;
+      }
+    });
+    nextState.gameOver = true;
+    nextState.winner = winner;
+  }
+
+  return nextState;
+}
+
 function normalizeTimedOutPlayer(room) {
   if (!room?.gameState) return;
   const playerIndex = room.gameState.currentPlayerIndex || 0;
@@ -852,18 +908,57 @@ function startTurnTimer(roomId) {
     const idx = r.gameState.currentPlayerIndex || 0;
     console.log(`⏱️  [TURN] Timeout in room ${roomId} | playerIndex=${idx}`);
 
+    if (r.gameId !== "dead-mans-draw") {
+      const missedTurns = (r.turn.missedByIndex.get(idx) || 0) + 1;
+      r.turn.missedByIndex.set(idx, missedTurns);
+
+      if (missedTurns >= 2) {
+        const removalResult = removePlayerFromGame(roomId, idx);
+        if (removalResult) {
+          io.to(roomId).emit("players-updated", {
+            players: getRoomPlayersArray(roomId),
+            roomStatus: removalResult.roomStatus,
+            playerIndexMap: removalResult.playerIndexMap,
+          });
+          io.to(roomId).emit("player-removed", {
+            playerIndex: idx,
+            playerId: removalResult.removedPlayerMeta?.id || null,
+            playerName: removalResult.removedPlayerMeta?.name || null,
+            reason: "afk",
+          });
+          io.to(roomId).emit("game-state-updated", removalResult.gameState);
+          if (removalResult.roomStatus === "playing") {
+            startTurnTimer(roomId);
+          }
+        }
+        return;
+      }
+    }
+
     normalizeTimedOutPlayer(r);
 
     // Auto-advance turn
     const playerCount =
       r.turn.playersInGame?.length || r.gameState.players?.length || 2;
-    r.gameState.currentPlayerIndex = (idx + 1) % Math.max(2, playerCount);
+    r.gameState = r.gameId === "dead-mans-draw"
+      ? {
+          ...r.gameState,
+          currentPlayerIndex: (idx + 1) % Math.max(2, playerCount),
+        }
+      : finishSplendorTurn(r.gameState);
+
+    if (r.gameState?.gameOver) {
+      r.status = "finished";
+      clearTurnTimer(r);
+    }
     io.to(roomId).emit("game-state-updated", r.gameState);
-    startTurnTimer(roomId);
+    if (r.status === "playing") {
+      startTurnTimer(roomId);
+    }
   }, durationMs);
 }
 
-function handlePlayerDeparture(roomId, playerId, socketId = null) {
+function handlePlayerDeparture(roomId, playerId, socketId = null, forceRemove = false) {
   const room = rooms.get(roomId);
   if (!room) return;
 
@@ -871,7 +966,28 @@ function handlePlayerDeparture(roomId, playerId, socketId = null) {
     || Array.from(room.players.values()).find((player) => player.socketId === socketId);
   const resolvedPlayerId = waitingPlayer?.id || playerId;
 
-  if (room.status === "playing" && room.gameState) {
+  if (room.status === "playing" && room.gameState && !forceRemove) {
+    const reconnectingPlayer = waitingPlayer
+      || Array.from(room.players.values()).find((player) => player.socketId === socketId);
+    if (reconnectingPlayer) {
+      reconnectingPlayer.connected = false;
+      io.to(roomId).emit("players-updated", {
+        players: getRoomPlayersArray(roomId),
+        roomStatus: room.status,
+      });
+      clearDisconnectTimer(room, reconnectingPlayer.id);
+      room.disconnectTimers.set(
+        reconnectingPlayer.id,
+        setTimeout(() => {
+          const latestRoom = rooms.get(roomId);
+          if (!latestRoom) return;
+          latestRoom.disconnectTimers.delete(reconnectingPlayer.id);
+          handlePlayerDeparture(roomId, reconnectingPlayer.id, socketId, true);
+        }, DISCONNECT_GRACE_MS),
+      );
+      return;
+    }
+
     const playerIndex = room.turn.playersInGame.findIndex(
       (player) => player.id === resolvedPlayerId || player.socketId === socketId,
     );
@@ -1101,14 +1217,7 @@ io.on("connection", (socket) => {
     console.log(`   Socket ID: ${socket.id} | نام: ${playerName}`);
 
     const existingRoom = rooms.get(roomId);
-    if (!isHost && !existingRoom) {
-      socket.emit("join-room-error", {
-        message: "Room code does not exist.",
-      });
-      return;
-    }
-
-    const room = isHost ? getOrCreateRoom(roomId) : existingRoom;
+    const room = isHost ? getOrCreateRoom(roomId) : (existingRoom || getOrCreateRoom(roomId));
     if (!room) return;
 
     if (!isHost && room.status !== "waiting") {
@@ -1118,21 +1227,16 @@ io.on("connection", (socket) => {
       return;
     }
 
-    if (!isHost && room.maxPlayers && room.players.size >= room.maxPlayers) {
-      socket.emit("join-room-error", {
-        message: "Room is full.",
-      });
-      return;
-    }
-
     // Add player to room
     room.players.set(playerId, {
+      ...(room.players.get(playerId) || {}),
       id: playerId,
       name: playerName,
       socketId: socket.id,
       connected: true,
-      joinedAt: Date.now(),
+      joinedAt: room.players.get(playerId)?.joinedAt || Date.now(),
     });
+    clearDisconnectTimer(room, playerId);
 
     // Update max players if host is setting it
     if (isHost && playerCount) {
@@ -1155,6 +1259,14 @@ io.on("connection", (socket) => {
       roomStatus: room.status,
     });
 
+    if (room.status === "playing" && room.gameState) {
+      io.to(socket.id).emit("game-started", {
+        gameState: room.gameState,
+        playersInGame: room.turn.playersInGame,
+        playerIndexMap: buildPlayerIndexMap(room),
+      });
+    }
+
     console.log(
       `📊 [PLAYERS] Room ${roomId} now has ${room.players.size} players | تعداد بازیکنان: ${room.players.size}`,
     );
@@ -1166,7 +1278,7 @@ io.on("connection", (socket) => {
     console.log(
       `👋 [LEAVE-ROOM] Player ${playerId} leaving room ${roomId} | بازیکن ترک اتاق`,
     );
-    handlePlayerDeparture(roomId, playerId, socket.id);
+    handlePlayerDeparture(roomId, playerId, socket.id, true);
     socket.leave(roomId);
   });
 
@@ -1220,20 +1332,15 @@ io.on("connection", (socket) => {
     const room = rooms.get(roomId);
     if (room) {
       const prevIndex = room.gameState?.currentPlayerIndex;
+      if (typeof prevIndex === "number") {
+        room.turn.missedByIndex.set(prevIndex, 0);
+      }
       room.gameState = gameState;
       // Broadcast updated game state to ALL players in room (including sender)
       io.to(roomId).emit("game-state-updated", gameState);
       console.log(
         `📡 [SYNC] Game state synced in room ${roomId} | وضعیت بروزرسانی شد`,
       );
-
-      if (
-        typeof prevIndex === "number" &&
-        typeof gameState?.currentPlayerIndex === "number" &&
-        gameState.currentPlayerIndex !== prevIndex
-      ) {
-        room.turn.missedByIndex.set(prevIndex, 0);
-      }
 
       if (
         room.status === "playing" &&
@@ -1251,20 +1358,15 @@ io.on("connection", (socket) => {
     const room = rooms.get(roomId);
     if (room) {
       const prevIndex = room.gameState?.currentPlayerIndex;
+      if (typeof prevIndex === "number") {
+        room.turn.missedByIndex.set(prevIndex, 0);
+      }
       room.gameState = gameState;
       // Broadcast to all players in room
       io.to(roomId).emit("game-state-updated", gameState);
       console.log(
         `⚡ [ACTION] Game action from ${playerId} in room ${roomId} | عملیات بازی`,
       );
-
-      if (
-        typeof prevIndex === "number" &&
-        typeof gameState?.currentPlayerIndex === "number" &&
-        gameState.currentPlayerIndex !== prevIndex
-      ) {
-        room.turn.missedByIndex.set(prevIndex, 0);
-      }
 
       if (
         room.status === "playing" &&

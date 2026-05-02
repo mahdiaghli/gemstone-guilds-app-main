@@ -5,8 +5,8 @@ export type AIDifficulty = 'easy' | 'medium' | 'hard';
 
 export type AIAction =
   | { type: 'takeTokens'; gems: GemType[] }
-  | { type: 'purchaseCard'; cardId: number }
-  | { type: 'reserveCard'; cardId: number }
+  | { type: 'purchaseCard'; cardId: string | number }
+  | { type: 'reserveCard'; cardId: string | number }
   | { type: 'reserveDeck'; level: 1 | 2 | 3 };
 
 export function getAIActionCandidates(

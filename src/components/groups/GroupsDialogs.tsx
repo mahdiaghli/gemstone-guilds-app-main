@@ -14,6 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { GroupInfoCard, PlayerInfoDetails } from "@/components/groups/GroupsViews";
+import type { TranslationKey } from "@/hooks/useLanguage";
 import type { GroupEntry } from "@/lib/social";
 
 export default function GroupsDialogs({
@@ -46,7 +47,7 @@ export default function GroupsDialogs({
   onCloseFeedback,
 }: {
   dir: string;
-  t: (key: string) => string;
+  t: (key: TranslationKey) => string;
   infoGroup: GroupEntry | null;
   currentGroupId?: string;
   currentUserId?: string;

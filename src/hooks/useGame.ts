@@ -22,11 +22,11 @@ export function useGame(playerCount: number, initialState?: GameState) {
     setState(s => performTakeTokens(s, gems));
   }, []);
 
-  const purchaseCard = useCallback((cardId: number) => {
+  const purchaseCard = useCallback((cardId: string | number) => {
     setState(s => performPurchaseCard(s, cardId));
   }, []);
 
-  const reserveCard = useCallback((cardId: number, fromDeckLevel?: 1 | 2 | 3) => {
+  const reserveCard = useCallback((cardId: string | number, fromDeckLevel?: 1 | 2 | 3) => {
     setState(s => performReserveCard(s, cardId, fromDeckLevel));
   }, []);
 

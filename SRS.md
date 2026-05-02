@@ -175,7 +175,7 @@ The Gemstone Guilds application aims to deliver an accessible, engaging multipla
 - Refunds issued when game fails to start
 - Fee structure adjustable via progression configuration
 
-### 3.3 Challenge Modes
+### 3.3 Challenge Modes (not implemented and not complete yet)
 
 #### FR-3.3.1: Daily Puzzle Challenge
 **Description:** Puzzle-based challenges that reset daily for all players.
@@ -289,7 +289,6 @@ The Gemstone Guilds application aims to deliver an accessible, engaging multipla
   - Avatars: purchasable with coins or gems
   - Stickers: text/emote reactions
   - Set as "active" for display in games
-  - Unlock percentage tracking
   
 - **Weekly Rewards:**
   - 3-5 different rotating offers per week
@@ -434,7 +433,7 @@ The Gemstone Guilds application aims to deliver an accessible, engaging multipla
 - Leave group: members can abandon group anytime
 - Disband group: leader can disband (requires no pending games)
 - Group chat channel for members
-- Group-specific cosmetics (group badge/emblem)
+- Group-specific cosmetics (group badge)
 
 **Acceptance Criteria:**
 - Groups create successfully with proper cost deduction
@@ -448,10 +447,9 @@ The Gemstone Guilds application aims to deliver an accessible, engaging multipla
 
 **Requirements:**
 - In-game chat: visible to all players in current game
-- Lobby chat: visible to matchmaking lobby participants
 - Group chat: visible to group members only
-- Friend chat: direct messaging between friends (future phase)
-- Message history persisted (24 hours)
+- Friend chat: direct messaging between friends
+- Message history persisted (last 100 messages)
 - Profanity filter (configurable filter list)
 - @ mentions to tag players
 - Emotes/stickers support
@@ -493,16 +491,13 @@ The Gemstone Guilds application aims to deliver an accessible, engaging multipla
 
 **Requirements:**
 - Background music plays in menus and lobby
-- Music mutes during gameplay (player choice)
-- Volume control: 0-100% slider
+- Music changes during gameplay
 - Music persists across page navigation
 - Supports multiple tracks with auto-crossfade
-- Controls: Play, Pause, Mute, Volume
-- Remembers volume preference between sessions
+- Controls: Play, Pause
 
 **Acceptance Criteria:**
 - Music plays without stuttering
-- Volume adjustments smooth and immediate
 - Mute toggles work correctly
 - Preferences persist after refresh
 
@@ -518,7 +513,6 @@ The Gemstone Guilds application aims to deliver an accessible, engaging multipla
 
 **Acceptance Criteria:**
 - Sounds play at appropriate moments
-- Sound volume adjustable
 - Mute setting honored
 
 ### 3.8 Tutorial & Learning
@@ -601,13 +595,9 @@ The Gemstone Guilds application aims to deliver an accessible, engaging multipla
 #### NFR-4.3.1: User Interface
 - Mobile-responsive design (iOS, Android, responsive web)
 - Accessibility: WCAG 2.1 AA compliance minimum
-- Keyboard navigation throughout app
-- Screen reader support for blind users
-- High contrast mode option
 - Configurable font sizes
 
 #### NFR-4.3.2: Intuitiveness
-- Undo functionality for last 2 actions (if allowed by game rules)
 - Hover tooltips on complex UI elements
 - Clear visual feedback for enabled/disabled actions
 - Confirmation dialogs for destructive actions
@@ -631,6 +621,7 @@ The Gemstone Guilds application aims to deliver an accessible, engaging multipla
 - Mobile browsers (iOS Safari, Chrome Mobile): 85%+
 
 #### NFR-4.4.2: Device Support
+- mainly for mobile application
 - Desktop (1920×1080 minimum recommended)
 - Tablet (iPad 5th gen+, Android 7"+)
 - Mobile (iPhone 8+, Android 8+)
@@ -829,9 +820,7 @@ Player {
 ### 6.2 Business Constraints
 
 - **Regulatory:**
-  - GDPR compliance for EU users
   - Children's Online Privacy Protection Act (COPPA) if targeting <13 year-olds
-  - Regional gambling laws (if applicable)
   
 - **Monetization:**
   - Free-to-play with optional cosmetics purchases
@@ -839,13 +828,13 @@ Player {
   - In-game currency purchasable with real money
 
 - **Content:**
-  - Suitable for ages 13+ (ESRB: T for Teen or equivalent)
+  - Suitable for ages 7+ (ESRB: T for Teen or equivalent)
   - No explicit violence, adult content, or hate speech
 
 ### 6.3 Assumptions
 
 1. **User Base:**
-   - Primarily players aged 13-60
+   - Primarily players aged 7-60
    - Comfortable with online gaming and multiplayer
    - Multilingual audience (English & Persian speakers)
 
@@ -931,7 +920,6 @@ Player {
 - ✅ WCAG 2.1 AA compliance
 - ✅ Keyboard navigation throughout
 - ✅ Screen reader compatible
-- ✅ High contrast mode available
 
 ### 7.3 Test Coverage Requirements
 
@@ -945,34 +933,12 @@ Player {
 
 ---
 
-## 8. Glossary of Terms
-
-- **Coin**: Primary in-game currency, earned through gameplay
-- **Gem/Diamond**: Premium currency, purchased with real money
-- **Rank Points**: Competitive rating determining player skill level
-- **Prestige**: Card victory point value in Splendor
-- **Token**: In-game game token (gem colors + gold in Splendor)
-- **Card**: Individual game card with cost, bonus, and value
-- **Noble**: Prestige-providing NPC card in Splendor
-- **Hazard**: Disaster card type in Dead Man's Draw
-- **Plunder/Treasure**: Valuable card types in Dead Man's Draw
-- **AI Difficulty**: Opponent difficulty level (Easy/Medium/Hard)
-- **Matchmaking**: System pairing players of similar skill
-- **Session**: Single game instance
-- **Leaderboard**: Ranked player list
-- **Guild/Group**: Player collection with shared statistics
-- **Cosmetics**: Visual items (avatars, stickers) without gameplay impact
-- **Monetization**: Revenue generation through in-game purchases
-
----
-
 ## 9. Out-of-Scope Items (Future Enhancements)
 
 1. **Advanced Features:**
    - Seasonal battle passes
    - Ranked ladder/rating system (beyond basic leaderboards)
    - Tournament brackets
-   - Spectator mode with live commentary
    - Streaming integration (Twitch, YouTube)
 
 2. **Games:**
@@ -984,8 +950,6 @@ Player {
 3. **Platforms:**
    - Native mobile apps (iOS, Android)
    - Desktop app (Electron)
-   - VR/AR experiences
-   - Smartwatch companion app
 
 4. **Social:**
    - Clans/alliances

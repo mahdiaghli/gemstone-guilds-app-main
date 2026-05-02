@@ -1,3 +1,4 @@
+import type { TranslationKey } from "@/hooks/useLanguage";
 import type { DeadMansDrawRing, DeadMansDrawSuit } from "@/lib/deadMansDraw";
 
 import coinZirkhaki from "@/assets/coin-zirkhaki.png";
@@ -55,7 +56,7 @@ export const ENGLISH_SUIT_NAMES: Record<DeadMansDrawSuit, string> = {
   key: "Key",
 };
 
-export const SUIT_TRANSLATION_KEYS: Record<DeadMansDrawSuit, string> = {
+export const SUIT_TRANSLATION_KEYS: Record<DeadMansDrawSuit, TranslationKey> = {
   astrolabe: "deadMansDrawSuitAstrolabe",
   pistol: "deadMansDrawSuitPistol",
   dagger: "deadMansDrawSuitDagger",
@@ -68,7 +69,7 @@ export const SUIT_TRANSLATION_KEYS: Record<DeadMansDrawSuit, string> = {
   key: "deadMansDrawSuitKey",
 };
 
-export const SUIT_DESCRIPTION_KEYS: Record<DeadMansDrawSuit, string> = {
+export const SUIT_DESCRIPTION_KEYS: Record<DeadMansDrawSuit, TranslationKey> = {
   astrolabe: "deadMansDrawSuitHelpAstrolabe",
   pistol: "deadMansDrawSuitHelpPistol",
   dagger: "deadMansDrawSuitHelpDagger",
@@ -128,6 +129,19 @@ export const POWER_VISUALS: Record<DeadMansDrawRing, { power: string; character:
     label: "Seamus Quinn",
   },
 };
+
+export const DEAD_MANS_DRAW_TUTORIAL_STEPS = [1, 2, 3, 4, 5, 6, 7, 8] as const;
+
+type DeadMansDrawTutorialStep = typeof DEAD_MANS_DRAW_TUTORIAL_STEPS[number];
+
+export type DeadMansDrawTutorialTitleKey =
+  `deadMansDrawTutorialStep${DeadMansDrawTutorialStep}Title`;
+
+export type DeadMansDrawTutorialBodyKey =
+  `deadMansDrawTutorialStep${DeadMansDrawTutorialStep}Body`;
+
+export type DeadMansDrawTutorialSummaryKey =
+  `deadMansDrawTutorialStep${DeadMansDrawTutorialStep}Summary`;
 
 export const getPowerAbilityKey = (ringId: DeadMansDrawRing) => {
   switch (ringId) {

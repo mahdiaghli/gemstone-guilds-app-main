@@ -1,3 +1,5 @@
+import splendorCardsData from "@/components/game/cards-Splendor.json";
+
 export type GemType = 'diamond' | 'sapphire' | 'emerald' | 'ruby' | 'onyx';
 export type TokenType = GemType | 'gold';
 
@@ -5,7 +7,7 @@ export const GEM_TYPES: GemType[] = ['diamond', 'sapphire', 'emerald', 'ruby', '
 export const TOKEN_TYPES: TokenType[] = ['diamond', 'sapphire', 'emerald', 'ruby', 'onyx', 'gold'];
 
 export interface Card {
-  id: number;
+  id: string | number;
   level: 1 | 2 | 3;
   gemBonus: GemType;
   points: number;
@@ -55,60 +57,90 @@ export const LEVEL_COLORS: Record<number, string> = {
   3: '#3b82f6',
 };
 
-// Card generation using rotational patterns
-function createLevelCards(level: 1 | 2 | 3, patterns: [number, number, number, number, number][]): Card[] {
-  let id = level * 1000;
-  const cards: Card[] = [];
-  for (const gem of GEM_TYPES) {
-    const others = GEM_TYPES.filter(g => g !== gem);
-    for (const [pts, a, b, c, d] of patterns) {
-      const cost: Partial<Record<GemType, number>> = {};
-      if (a > 0) cost[others[0]] = a;
-      if (b > 0) cost[others[1]] = b;
-      if (c > 0) cost[others[2]] = c;
-      if (d > 0) cost[others[3]] = d;
-      cards.push({ id: id++, level, gemBonus: gem, points: pts, cost });
+const CARD_COLOR_TO_GEM: Record<string, GemType> = {
+  white: "diamond",
+  blue: "sapphire",
+  green: "emerald",
+  red: "ruby",
+  black: "onyx",
+};
+
+type SplendorJsonCard = {
+  id: string | number;
+  level: 1 | 2 | 3;
+  color: string;
+  points: number;
+  cost: Record<string, number>;
+};
+
+type SplendorJsonNoble = {
+  id: string | number;
+  points: number;
+  requirement?: Record<string, number>;
+  requirements?: Record<string, number>;
+};
+
+function normalizeCardCost(rawCost: Record<string, number>): Partial<Record<GemType, number>> {
+  const cost: Partial<Record<GemType, number>> = {};
+  for (const [color, amount] of Object.entries(rawCost || {})) {
+    const gem = CARD_COLOR_TO_GEM[color];
+    if (gem && amount > 0) {
+      cost[gem] = amount;
     }
   }
-  return cards;
+  return cost;
 }
 
-export const ALL_CARDS: Card[] = [
-  ...createLevelCards(1, [
-    [0, 1, 1, 1, 1],
-    [0, 1, 2, 1, 1],
-    [0, 2, 2, 0, 1],
-    [0, 3, 0, 0, 0],
-    [0, 0, 0, 2, 1],
-    [0, 2, 0, 0, 2],
-    [0, 0, 4, 0, 0],
-    [1, 0, 0, 0, 4],
-  ]),
-  ...createLevelCards(2, [
-    [1, 3, 2, 2, 0],
-    [1, 2, 3, 0, 3],
-    [2, 0, 0, 4, 2],
-    [2, 0, 5, 0, 0],
-    [2, 5, 3, 0, 0],
-    [3, 6, 0, 0, 0],
-  ]),
-  ...createLevelCards(3, [
-    [3, 3, 3, 5, 3],
-    [4, 0, 7, 0, 0],
-    [4, 3, 6, 3, 0],
-    [5, 0, 7, 3, 0],
-  ]),
+function isSplendorCard(entry: unknown): entry is SplendorJsonCard {
+  return Boolean(
+    entry &&
+    typeof entry === "object" &&
+    "level" in entry &&
+    "color" in entry &&
+    "cost" in entry,
+  );
+}
+
+function isSplendorNoble(entry: unknown): entry is SplendorJsonNoble {
+  return Boolean(
+    entry &&
+    typeof entry === "object" &&
+    "points" in entry &&
+    ("requirement" in entry || "requirements" in entry) &&
+    !("level" in entry),
+  );
+}
+
+function normalizeNobleRequirements(rawRequirements: Record<string, number>): Partial<Record<GemType, number>> {
+  const requirements: Partial<Record<GemType, number>> = {};
+  for (const [color, amount] of Object.entries(rawRequirements || {})) {
+    const gem = CARD_COLOR_TO_GEM[color];
+    if (gem && amount > 0) {
+      requirements[gem] = amount;
+    }
+  }
+  return requirements;
+}
+
+const rawCardEntries: SplendorJsonCard[] = [
+  ...((splendorCardsData.cards || []) as unknown[]).filter(isSplendorCard),
+  ...((splendorCardsData.nobles || []) as unknown[]).filter(isSplendorCard),
 ];
 
-export const ALL_NOBLES: Noble[] = [
-  { id: 1, points: 3, requirements: { diamond: 4, sapphire: 4 } },
-  { id: 2, points: 3, requirements: { emerald: 4, ruby: 4 } },
-  { id: 3, points: 3, requirements: { onyx: 4, diamond: 4 } },
-  { id: 4, points: 3, requirements: { sapphire: 4, emerald: 4 } },
-  { id: 5, points: 3, requirements: { diamond: 3, sapphire: 3, emerald: 3 } },
-  { id: 6, points: 3, requirements: { sapphire: 3, emerald: 3, ruby: 3 } },
-  { id: 7, points: 3, requirements: { emerald: 3, ruby: 3, onyx: 3 } },
-  { id: 8, points: 3, requirements: { ruby: 3, onyx: 3, diamond: 3 } },
-  { id: 9, points: 3, requirements: { onyx: 3, diamond: 3, sapphire: 3 } },
-  { id: 10, points: 3, requirements: { diamond: 3, emerald: 3, onyx: 3 } },
-];
+const rawNobleEntries = ((splendorCardsData.nobles || []) as unknown[]).filter(isSplendorNoble);
+
+export const ALL_CARDS: Card[] = rawCardEntries.map((card) => ({
+  id: card.id,
+  level: card.level as 1 | 2 | 3,
+  gemBonus: CARD_COLOR_TO_GEM[card.color],
+  points: card.points,
+  cost: normalizeCardCost(card.cost),
+}));
+
+export const ALL_NOBLES: Noble[] = rawNobleEntries.map((noble, index) => ({
+  id: typeof noble.id === "number" ? noble.id : index + 1,
+  points: noble.points,
+  requirements: normalizeNobleRequirements(
+    noble.requirement || noble.requirements || {},
+  ),
+}));

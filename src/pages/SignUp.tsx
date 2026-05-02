@@ -26,6 +26,9 @@ export default function SignUp() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
+  const [rememberMe, setRememberMe] = useState(
+    () => localStorage.getItem("splendor-remember-me") === "true",
+  );
   const [error, setError] = useState<string | null>(null);
 
   const handleSignUp = async () => {
@@ -36,7 +39,7 @@ export default function SignUp() {
       return;
     }
 
-    const ok = await register(username.trim(), email.trim(), password);
+    const ok = await register(username.trim(), email.trim(), password, rememberMe);
     if (!ok) {
       setError(t("usernameExists"));
       return;
@@ -131,6 +134,16 @@ export default function SignUp() {
                 {error}
               </div>
             )}
+
+            <label className="flex items-center justify-center gap-2 text-sm text-[#f7ebc3]">
+              <input
+                type="checkbox"
+                checked={rememberMe}
+                onChange={(e) => setRememberMe(e.target.checked)}
+                className="h-4 w-4 rounded border border-[#f6d78a]/60 bg-transparent"
+              />
+              <span>Remember me</span>
+            </label>
 
             <div className="pt-3 pb-4 flex items-center justify-center gap-4">
               <span className="inline-block h-[1px] w-16 bg-[#c5a55a]/60" />

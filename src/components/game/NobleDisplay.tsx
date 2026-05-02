@@ -2,10 +2,15 @@ import { cn } from '@/lib/utils';
 import { Noble, GEM_TYPES, GemType } from '@/lib/gameData';
 import { useLanguage } from '@/hooks/useLanguage';
 import noble1Img from '@/assets/noble1.png';
+import noble10Img from '@/assets/noble10.png';
 import noble2Img from '@/assets/noble2.png';
 import noble3Img from '@/assets/noble3.png';
 import noble4Img from '@/assets/noble4.png';
 import noble5Img from '@/assets/noble5.png';
+import noble6Img from '@/assets/noble6.png';
+import noble7Img from '@/assets/noble7.png';
+import noble8Img from '@/assets/noble8.png';
+import noble9Img from '@/assets/noble9.png';
 import gemDiamondImg from '@/assets/gem-diamond.png';
 import gemSapphireImg from '@/assets/gem-blue.png';
 import gemEmeraldImg from '@/assets/gem-emerald.png';
@@ -25,7 +30,18 @@ const gemNameMap: Record<string, string> = {
   onyx: 'onyx',
 };
 
-const nobleImages = [noble1Img, noble2Img, noble3Img, noble4Img, noble5Img];
+const nobleImages = [
+  noble1Img,
+  noble2Img,
+  noble3Img,
+  noble4Img,
+  noble5Img,
+  noble6Img,
+  noble7Img,
+  noble8Img,
+  noble9Img,
+  noble10Img,
+];
 const gemImages: Record<GemType, string> = {
   diamond: gemDiamondImg,
   sapphire: gemSapphireImg,
@@ -36,7 +52,8 @@ const gemImages: Record<GemType, string> = {
 
 export default function NobleDisplay({ noble, compact }: NobleDisplayProps) {
   const { t } = useLanguage();
-  const nobleImage = nobleImages[(Math.max(1, noble.id) - 1) % nobleImages.length];
+  const nobleIndex = typeof noble.id === 'number' ? noble.id : Number(noble.id);
+  const nobleImage = nobleImages[(Math.max(1, nobleIndex) - 1) % nobleImages.length];
   const requirementEntries = GEM_TYPES.filter((gem) => noble.requirements[gem]);
   
   return (
@@ -60,7 +77,7 @@ export default function NobleDisplay({ noble, compact }: NobleDisplayProps) {
     className={cn(
       'flex items-center justify-center rounded-full',
       'bg-black/35 ring-1 ring-black/20 backdrop-blur-[1px]',
-      compact ? 'h-5 w-5' : 'h-6 w-6 md:h-7 md:w-7',
+      compact ? 'h-2 w-2' : 'h-3 w-3 md:h-7 md:w-7',
     )}
   >
     <span

@@ -1,6 +1,7 @@
 import { AnimatePresence, motion } from "framer-motion";
 
 import CardDisplay from "@/components/game/CardDisplay";
+import GemToken from "@/components/game/GemToken";
 import { Button } from "@/components/ui/button";
 import {
   AlertDialog,
@@ -12,14 +13,17 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Card, GameState } from "@/lib/gameData";
-import { canPlayerAffordCard, getPlayerScore } from "@/lib/gameLogic";
+import { Card, GameState, TOKEN_TYPES, TokenType } from "@/lib/gameData";
+import { canPlayerAffordCard, getPlayerBonuses, getPlayerScore, getTotalTokens } from "@/lib/gameLogic";
 import overlayBackground from "@/assets/background.png";
+import type { GemType } from "@/lib/gameData";
 
 type GameOverlaysProps = {
-  t: (key: string) => string;
+  t: (key: string, values?: Record<string, string | number>) => string;
   state: GameState;
   currentPlayer: GameState["players"][number];
+  phase: "idle" | "selectingTokens" | "mustReturnTokens" | "cardAction" | "aiThinking";
+  gameMode: "local" | "ai" | "online";
   selectedCard: Card | null;
   isReserved: boolean;
   showQuickRules: boolean;
@@ -28,6 +32,10 @@ type GameOverlaysProps = {
   waitingForRematch: boolean;
   turnWarning: string;
   systemNotice: string;
+  stateCurrentPlayerIndex: number;
+  getPlayerDisplayName: (index: number) => string;
+  isCurrentPlayerMe: () => boolean;
+  handleReturnToken: (token: TokenType) => void;
   onCloseQuickRules: () => void;
   onCancelCardAction: () => void;
   onBuyCard: () => void;
@@ -46,6 +54,8 @@ export default function GameOverlays({
   t,
   state,
   currentPlayer,
+  phase,
+  gameMode,
   selectedCard,
   isReserved,
   showQuickRules,
@@ -54,6 +64,10 @@ export default function GameOverlays({
   waitingForRematch,
   turnWarning,
   systemNotice,
+  stateCurrentPlayerIndex,
+  getPlayerDisplayName,
+  isCurrentPlayerMe,
+  handleReturnToken,
   onCloseQuickRules,
   onCancelCardAction,
   onBuyCard,
@@ -67,14 +81,83 @@ export default function GameOverlays({
   onPlayAgain,
   onMenu,
 }: GameOverlaysProps) {
+  const currentPlayerBonuses = getPlayerBonuses(currentPlayer);
+  const selectedCardCostStatus: Partial<Record<GemType, boolean>> | undefined = selectedCard
+    ? Object.fromEntries(
+        Object.entries(selectedCard.cost).map(([gem, cost]) => [
+          gem,
+          (currentPlayer.tokens[gem as GemType] ?? 0) + currentPlayerBonuses[gem as GemType] >= (cost ?? 0),
+        ]),
+      ) as Partial<Record<GemType, boolean>>
+    : undefined;
+
   const modalBackgroundStyle = {
     backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.8), rgba(0, 0, 0, 0.84)), url(${overlayBackground})`,
     backgroundSize: "cover",
     backgroundPosition: "center",
   } as const;
 
+  const showReturnDrawer = phase === "mustReturnTokens" && !state.gameOver;
+  const showWaitingDrawer =
+    !showReturnDrawer &&
+    !state.gameOver &&
+    gameMode === "online" &&
+    !isCurrentPlayerMe();
+
   return (
     <>
+      <AnimatePresence>
+        {(showReturnDrawer || showWaitingDrawer) && (
+          <motion.div
+            initial={{ opacity: 0, y: -120 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -120 }}
+            transition={{ type: "spring", damping: 18, stiffness: 220 }}
+            className="fixed inset-x-0 top-0 z-40 flex justify-center px-4 pt-20"
+          >
+            <div
+              className={`w-full max-w-3xl rounded-b-[28px] border px-5 py-4 shadow-2xl backdrop-blur-md ${
+                showReturnDrawer
+                  ? "border-red-400/40 bg-[linear-gradient(180deg,rgba(127,29,29,0.96),rgba(69,10,10,0.94))]"
+                  : "border-amber-300/40 bg-[linear-gradient(180deg,rgba(120,53,15,0.95),rgba(67,20,7,0.93))]"
+              }`}
+            >
+              {showReturnDrawer ? (
+                <>
+                  <div className="text-center">
+                    <p className="font-cinzel text-lg tracking-[0.18em] text-red-100">Return Tokens</p>
+                    <p className="mt-1 text-sm text-red-50/85">
+                      {t("tooManyTokens")} ({getTotalTokens(currentPlayer)} / 10)
+                    </p>
+                  </div>
+                  <div className="mt-4 flex flex-wrap justify-center gap-2">
+                    {TOKEN_TYPES.map(
+                      (type) =>
+                        currentPlayer.tokens[type] > 0 && (
+                          <GemToken
+                            key={type}
+                            type={type}
+                            count={currentPlayer.tokens[type]}
+                            size="sm"
+                            onClick={() => handleReturnToken(type)}
+                          />
+                        ),
+                    )}
+                  </div>
+                </>
+              ) : (
+                <div className="text-center">
+                  <p className="font-cinzel text-lg tracking-[0.18em] text-amber-100">Wait For Your Turn</p>
+                  <p className="mt-1 text-sm text-amber-50/85">
+                    {getPlayerDisplayName(stateCurrentPlayerIndex)} is playing right now.
+                  </p>
+                </div>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <AnimatePresence>
         {turnWarning && (
           <motion.div
@@ -163,6 +246,7 @@ export default function GameOverlays({
                     card={selectedCard}
                     affordable={canPlayerAffordCard(currentPlayer, selectedCard)}
                     emphasizeAffordableCosts
+                    costStatus={selectedCardCostStatus}
                   />
                 </div>
               </motion.div>
@@ -226,17 +310,22 @@ export default function GameOverlays({
             >
               <span className="mb-4 block text-4xl">👑</span>
               <h2 className="mb-2 font-cinzel text-2xl tracking-wider text-primary">
-                {t("player")} {(state.winner ?? 0) + 1} {t("wins")}
+                {getPlayerDisplayName(state.winner ?? 0)} {t("wins")}
               </h2>
               <p className="mb-6 font-body text-lg text-muted-foreground">
                 {t("score")}: {getPlayerScore(state.players[state.winner ?? 0])}
               </p>
               <div className="space-y-2">
                 {state.players.map((player) => (
-                  <div key={player.id} className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">
-                      {t("player")} {player.id + 1}
-                    </span>
+                  <div key={player.id} className="flex items-center justify-between text-sm">
+                    <div className="text-left">
+                      <span className="text-muted-foreground">
+                        {getPlayerDisplayName(player.id)}
+                      </span>
+                      <p className="text-xs text-muted-foreground">
+                        {t("splendorBoughtCardsLine", { count: player.cards.length })}
+                      </p>
+                    </div>
                     <span className="font-bold text-foreground">
                       {getPlayerScore(player)} {t("pts")}
                     </span>
