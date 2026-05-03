@@ -1,21 +1,3 @@
-# Gemstone Guilds - Development Roadmap
-
-**Last Updated:** May 2, 2026  
-**Project:** Gemstone Guilds Multiplayer Card Game Platform  
-**Planning Horizon:** 18 Months
-
----
-
-## Vision Statement
-
-Create the premier web-based multiplayer card gaming platform that delivers engaging, accessible gaming experiences with a thriving social community, fair progression systems, and sustainable monetization—expanding the portfolio of games while maintaining quality and player satisfaction.
-
----
-
-## Development Phases
-
----
-
 ## Phase 1: Launch Preparation & Polish (May - June 2026)
 
 **Duration:** 6 weeks  
