@@ -1,11 +1,3 @@
-*.jpeg filter=lfs diff=lfs merge=lfs -text
-*.gif filter=lfs diff=lfs merge=lfs -text
-*.mp3 filter=lfs diff=lfs merge=lfs -text
-*.wav filter=lfs diff=lfs merge=lfs -text
-*.unitypackage filter=lfs diff=lfs merge=lfs -text
-*.asset filter=lfs diff=lfs merge=lfs -text
-*.png filter=lfs diff=lfs merge=lfs -text
-*.jpg filter=lfs diff=lfs merge=lfs -text
 src/assets/red53.png !text !filter !merge !diff
 src/assets/reserve.png !text !filter !merge !diff
 src/assets/rock[[:space:]]rank.png !text !filter !merge !diff
