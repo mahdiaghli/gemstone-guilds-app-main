@@ -43,14 +43,14 @@ export default function PlayerPanel({ player, playerName, isActive, isAI, onRese
       {/* Tokens */}
       <div className="flex flex-wrap gap-1 mb-1.5">
         {TOKEN_TYPES.map(type => {
-          if (player.tokens[type] === 0) return null;
+          const hasToken = player.tokens[type] > 0;
           return (
-            <div key={type} className="flex items-center gap-0.5">
+            <div key={type} className="flex items-center gap-0.5" data-player-token-slot={`${player.id}-${type}`}>
               <div
-                className="w-3 h-3 rounded-full"
+                className={cn("w-3 h-3 rounded-full transition-opacity", hasToken ? "opacity-100" : "opacity-25")}
                 style={{ backgroundColor: GEM_INFO[type].color }}
               />
-              <span className="text-[10px] font-bold text-foreground">{player.tokens[type]}</span>
+              <span className={cn("text-[10px] font-bold transition-opacity", hasToken ? "text-foreground opacity-100" : "text-foreground/25 opacity-100")}>{player.tokens[type]}</span>
             </div>
           );
         })}
@@ -61,7 +61,7 @@ export default function PlayerPanel({ player, playerName, isActive, isAI, onRese
         {GEM_TYPES.map(gem => {
           const count = bonuses[gem];
           return (
-            <div key={gem} className="flex items-center gap-0.5 relative">
+            <div key={gem} className="flex items-center gap-0.5 relative" data-player-bonus-slot={`${player.id}-${gem}`}>
               {/* Stacked card icons */}
               <div className="relative" style={{ width: 10 + Math.max(0, count - 1) * 3, height: 14 }}>
                 {Array.from({ length: Math.min(count, 5) }).map((_, i) => (
@@ -98,36 +98,38 @@ export default function PlayerPanel({ player, playerName, isActive, isAI, onRese
       </div>
 
       {/* Reserved cards */}
-      {player.reservedCards.length > 0 && (
-        <div className="mt-1.5 pt-1.5 border-t border-border/30">
-          {isActive && !isAI ? (
-            <div className="flex gap-1 overflow-x-auto px-1 py-1">
-              {player.reservedCards.map(card => (
-                <CardDisplay
-                  key={card.id}
-                  card={card}
-                  compact
-                  onClick={() => onReservedCardClick?.(card)}
-                  affordable={canPlayerAffordCard(player, card)}
-                />
-              ))}
-            </div>
-          ) : (
-            <span className="text-[10px] text-muted-foreground">
-              {player.reservedCards.length} {t('reserved')}
-            </span>
-          )}
-        </div>
-      )}
+      <div className="mt-1.5 pt-1.5 border-t border-border/30" data-player-reserved-slot={String(player.id)}>
+        {player.reservedCards.length > 0 && isActive && !isAI && (
+          <div className="flex gap-1 overflow-x-auto px-1 py-1">
+            {player.reservedCards.map(card => (
+              <CardDisplay
+                key={card.id}
+                card={card}
+                dataCardId={card.id}
+                compact
+                onClick={() => onReservedCardClick?.(card)}
+                affordable={canPlayerAffordCard(player, card)}
+              />
+            ))}
+          </div>
+        )}
+        {player.reservedCards.length > 0 && (!isActive || isAI) && (
+          <span className="text-[10px] text-muted-foreground">
+            {player.reservedCards.length} {t('reserved')}
+          </span>
+        )}
+      </div>
 
       {/* Nobles */}
-      {player.nobles.length > 0 && (
-        <div className="flex gap-1 mt-1">
-          {player.nobles.map(n => (
-            <NobleDisplay key={n.id} noble={n} compact />
-          ))}
-        </div>
-      )}
+      <div className="flex gap-1 mt-1 min-h-3" data-player-nobles-slot={String(player.id)}>
+        {player.nobles.length > 0 ? (
+          player.nobles.map(n => (
+            <div key={n.id} data-player-noble-slot={`${player.id}-${n.id}`}>
+              <NobleDisplay noble={n} compact />
+            </div>
+          ))
+        ) : null}
+      </div>
     </div>
   );
 }

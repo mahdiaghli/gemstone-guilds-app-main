@@ -383,6 +383,18 @@ export default function Tutorial() {
               }}
             />
 
+            {/* راهنمای قدم‌به‌قدم روی خود صفحه بازی */}
+            {!isDeadMansDraw && (
+              <TutorialMenuCard
+                accent="blue"
+                title="Interactive game walkthrough"
+                description="Open the Splendor board and learn each part directly on the real game screen."
+                icon={diceImg}
+                dir={dir as "rtl" | "ltr"}
+                onClick={() => navigate("/game?players=2&mode=local&game=splendor&tutorial=1")}
+              />
+            )}
+
             {/* دستورالعمل کامل بازی */}
             <TutorialMenuCard
               accent="orange"

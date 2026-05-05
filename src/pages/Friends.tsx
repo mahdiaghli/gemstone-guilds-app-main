@@ -16,6 +16,8 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/hooks/useAuth";
 import { useLanguage } from "@/hooks/useLanguage";
+import { generateClientId } from "@/lib/clientId";
+import { GAME_CATALOG, getGameById } from "@/lib/gameCatalog";
 import { shellBackgrounds } from "@/lib/pageBackgrounds";
 import {
   getChatParticipants,
@@ -50,6 +52,11 @@ export default function Friends() {
   const [requestSentOpen, setRequestSentOpen] = useState(false);
   const [requestFeedback, setRequestFeedback] = useState<{ title: string; message: string } | null>(null);
   const [activeTab, setActiveTab] = useState("chats");
+  const [inviteDialogFriendId, setInviteDialogFriendId] = useState<string | null>(null);
+  const [inviteGameId, setInviteGameId] = useState("splendor");
+  const [invitePlayerCount, setInvitePlayerCount] = useState(2);
+  const [inviteHumanPlayers, setInviteHumanPlayers] = useState(2);
+  const [inviteTurnTime, setInviteTurnTime] = useState<15 | 30 | 45 | 60>(45);
 
   const requests = useMemo(() => (user ? getFriendRequests(user.id) : []), [user, refreshKey]);
   const groupRequests = useMemo(() => (user ? getGroupRequestsForCreator(user.id) : []), [user, refreshKey]);
@@ -63,6 +70,7 @@ export default function Friends() {
 
   const refresh = () => setRefreshKey((value) => value + 1);
   const myUserCode = getUserCode(user?.id);
+  const inviteFriendName = getUserDisplayName(inviteDialogFriendId || undefined);
 
   useEffect(() => {
     let cancelled = false;
@@ -284,9 +292,11 @@ export default function Friends() {
                   </Button>
                   <Button
                     onClick={() => {
-                      if (!user) return;
-                      sendGameInvite(user.id, friendId);
-                      refresh();
+                      setInviteDialogFriendId(friendId);
+                      setInviteGameId("splendor");
+                      setInvitePlayerCount(2);
+                      setInviteHumanPlayers(2);
+                      setInviteTurnTime(45);
                     }}
                   >
                     <Gamepad2 className="h-4 w-4" />
@@ -309,6 +319,9 @@ export default function Friends() {
                 <div>
                   <p className="font-medium">{getUserDisplayName(invite.fromUserId)}</p>
                   <p className="text-xs text-muted-foreground">{t("incomingGameInvite")}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {getGameById(invite.gameId).name} | {invite.playerCount} players | {invite.humanPlayers} human | {invite.turnTime}s
+                  </p>
                 </div>
                 <div className="flex gap-2">
                   <Button
@@ -322,9 +335,25 @@ export default function Friends() {
                   </Button>
                   <Button
                     onClick={() => {
-                      respondToGameInvite(invite.id, true);
+                      const acceptedInvite = respondToGameInvite(invite.id, true);
                       refresh();
-                      navigate(`/online-lobby?players=2&friend=${invite.fromUserId}`);
+                      if (!acceptedInvite || !user?.username) return;
+                      const playerId = generateClientId();
+                      localStorage.setItem(
+                        "splendor-online-room",
+                        JSON.stringify({
+                          roomId: acceptedInvite.roomId,
+                          playerId,
+                          playerName: user.username,
+                          isHost: false,
+                          playerCount: acceptedInvite.playerCount,
+                          turnTime: acceptedInvite.turnTime,
+                          gameId: acceptedInvite.gameId,
+                          humans: acceptedInvite.humanPlayers,
+                          invitedBy: acceptedInvite.fromUserId,
+                        }),
+                      );
+                      navigate(`/online-game/${acceptedInvite.roomId}?player=${playerId}&game=${acceptedInvite.gameId}`);
                     }}
                   >
                     {t("playWithFriend")}
@@ -407,6 +436,97 @@ export default function Friends() {
           </DialogHeader>
           <p className={dir === "rtl" ? "text-right" : ""}>{requestFeedback?.message}</p>
           <Button onClick={() => setRequestFeedback(null)}>{t("continueLabel")}</Button>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={Boolean(inviteDialogFriendId)} onOpenChange={(open) => !open && setInviteDialogFriendId(null)}>
+        <DialogContent className="max-w-md rounded-[28px]" dir={dir}>
+          <DialogHeader className={dir === "rtl" ? "text-right" : ""}>
+            <DialogTitle>Send Game Invite to {inviteFriendName}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <label className="text-sm font-medium">Game</label>
+            <select
+              value={inviteGameId}
+              onChange={(event) => setInviteGameId(event.target.value)}
+              className="w-full rounded-xl border border-primary/20 bg-background/60 px-3 py-2 text-sm"
+            >
+              {GAME_CATALOG.map((game) => (
+                <option key={game.id} value={game.id}>
+                  {game.name}
+                </option>
+              ))}
+            </select>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Total players</label>
+                <select
+                  value={invitePlayerCount}
+                  onChange={(event) => {
+                    const nextPlayers = Number(event.target.value);
+                    setInvitePlayerCount(nextPlayers);
+                    setInviteHumanPlayers((current) => Math.min(nextPlayers, Math.max(1, current)));
+                  }}
+                  className="w-full rounded-xl border border-primary/20 bg-background/60 px-3 py-2 text-sm"
+                >
+                  {[2, 3, 4].map((count) => (
+                    <option key={count} value={count}>
+                      {count}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Human players</label>
+                <select
+                  value={inviteHumanPlayers}
+                  onChange={(event) => setInviteHumanPlayers(Number(event.target.value))}
+                  className="w-full rounded-xl border border-primary/20 bg-background/60 px-3 py-2 text-sm"
+                >
+                  {Array.from({ length: invitePlayerCount }, (_, i) => i + 1).map((count) => (
+                    <option key={count} value={count}>
+                      {count}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Turn time limit</label>
+              <select
+                value={inviteTurnTime}
+                onChange={(event) => setInviteTurnTime(Number(event.target.value) as 15 | 30 | 45 | 60)}
+                className="w-full rounded-xl border border-primary/20 bg-background/60 px-3 py-2 text-sm"
+              >
+                {[15, 30, 45, 60].map((seconds) => (
+                  <option key={seconds} value={seconds}>
+                    {seconds} seconds
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <Button
+              className="w-full"
+              onClick={() => {
+                if (!user || !inviteDialogFriendId) return;
+                sendGameInvite({
+                  fromUserId: user.id,
+                  toUserId: inviteDialogFriendId,
+                  gameId: inviteGameId,
+                  playerCount: invitePlayerCount,
+                  humanPlayers: inviteHumanPlayers,
+                  turnTime: inviteTurnTime,
+                });
+                setInviteDialogFriendId(null);
+                refresh();
+              }}
+            >
+              {t("sendGameInvite")}
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </AppPageShell>

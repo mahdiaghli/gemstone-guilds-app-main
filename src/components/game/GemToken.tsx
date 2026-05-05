@@ -15,9 +15,10 @@ interface GemTokenProps {
   selected?: boolean;
   disabled?: boolean;
   size?: 'sm' | 'md' | 'lg';
+  dataTokenPool?: string;
 }
 
-const gemImages: Record<GemType | 'gold', string> = {
+export const gemTokenImages: Record<GemType | 'gold', string> = {
   diamond: gemDiamondImg,
   sapphire: gemSapphireImg,
   emerald: gemEmeraldImg,
@@ -26,7 +27,7 @@ const gemImages: Record<GemType | 'gold', string> = {
   gold: gemGoldImg,
 };
 
-export default function GemToken({ type, count, onClick, selected, disabled, size = 'md' }: GemTokenProps) {
+export default function GemToken({ type, count, onClick, selected, disabled, size = 'md', dataTokenPool }: GemTokenProps) {
   const info = GEM_INFO[type];
   const sizeClasses = {
     sm: 'h-8 gap-1 px-2 text-[10px]',
@@ -58,8 +59,9 @@ export default function GemToken({ type, count, onClick, selected, disabled, siz
         border: `2px solid ${info.color}`,
         color: '#fff',
       }}
+      data-token-pool={dataTokenPool}
     >
-      <img src={gemImages[type]} alt={info.name} className={imageClasses[size]} />
+      <img src={gemTokenImages[type]} alt={info.name} className={imageClasses[size]} />
       {count !== undefined && <span className="min-w-[0.75rem] text-center">{count}</span>}
     </motion.button>
   );

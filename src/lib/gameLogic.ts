@@ -238,11 +238,11 @@ function checkNobles(state: GameState): GameState {
   return { ...state, players: newPlayers, nobles: newNobles };
 }
 
-export function advanceTurn(state: GameState): GameState {
+export function advanceTurn(state: GameState, targetScore = 15): GameState {
   let s = checkNobles(state);
   const score = getPlayerScore(s.players[s.currentPlayerIndex]);
 
-  if (score >= 15 && !s.isLastRound) {
+  if (score >= targetScore && !s.isLastRound) {
     s = {
       ...s,
       isLastRound: true,

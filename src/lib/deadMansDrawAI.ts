@@ -110,6 +110,10 @@ export function chooseDeadMansDrawAIAction(state: DeadMansDrawState): DeadMansDr
     return choosePendingEffectAction(state, state.pendingEffect);
   }
 
+  if (state.forcedRevealRemaining > 0) {
+    return { kind: "reveal" };
+  }
+
   if (!state.treasureArea.length) {
     return { kind: "reveal" };
   }

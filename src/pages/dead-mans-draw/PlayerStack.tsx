@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-import { getDeadMansDrawScore, getPlayerCardCount, type DeadMansDrawPlayer, type DeadMansDrawSuit } from "@/lib/deadMansDraw";
+import { getDeadMansDrawScore, getPlayerCardCount, type DeadMansDrawPendingEffect, type DeadMansDrawPlayer, type DeadMansDrawSuit } from "@/lib/deadMansDraw";
 import { cn } from "@/lib/utils";
 import zirkhakiBackground from "@/assets/background-zirkhaki.png";
 
@@ -13,15 +13,34 @@ export function PlayerStack({
   displayName,
   t,
   markedOpponentName,
+  targetEffect,
+  ownChoiceEffect,
+  playerIndex,
+  activePlayerIndex,
+  targetSelectionDisabled,
+  onTargetCard,
+  onOwnChoiceCard,
 }: {
   player: DeadMansDrawPlayer;
   isActive: boolean;
   displayName: string;
   t: Translate;
   markedOpponentName?: string | null;
+  targetEffect?: Extract<DeadMansDrawPendingEffect, { kind: "pistol" | "dagger" }> | null;
+  ownChoiceEffect?: Extract<DeadMansDrawPendingEffect, { kind: "horseshoe" }> | null;
+  playerIndex?: number;
+  activePlayerIndex?: number;
+  targetSelectionDisabled?: boolean;
+  onTargetCard?: (targetPlayerIndex: number, suit: DeadMansDrawSuit) => void;
+  onOwnChoiceCard?: (suit: DeadMansDrawSuit) => void;
 }) {
   const ringVisual = player.ring ? POWER_VISUALS[player.ring] : null;
   const [showPowerHelp, setShowPowerHelp] = useState(false);
+  const targetOption = targetEffect?.options.find((option) => option.playerIndex === playerIndex);
+  const targetableSuits = new Set(targetOption?.cards.map((card) => card.suit) ?? []);
+  const ownChoiceSuits = new Set(
+    playerIndex === activePlayerIndex ? ownChoiceEffect?.options.map((card) => card.suit) ?? [] : [],
+  );
 
   return (
     <div
@@ -72,8 +91,10 @@ export function PlayerStack({
             );
           }
 
-          return (
-            <div key={suit} className="rounded-2xl border border-white/10 bg-black/15 p-1.5">
+          const isTargetable = targetableSuits.has(suit as DeadMansDrawSuit);
+          const isOwnChoice = ownChoiceSuits.has(suit as DeadMansDrawSuit);
+          const content = (
+            <>
               <div className="relative h-14">
                 <div className="relative h-12 w-10">
                   {cards.slice(Math.max(0, cards.length - 3)).map((stackCard, stackIndex) => (
@@ -89,6 +110,26 @@ export function PlayerStack({
                 <span className="absolute right-0 top-0 rounded-full bg-black/70 px-1.5 py-0.5 font-cinzel text-xs text-white">{topCard.value}</span>
               </div>
               <p className="mt-1 text-[10px] leading-3 text-amber-100/85">{cards.map((card) => card.value).join(", ")}</p>
+            </>
+          );
+
+          if ((isTargetable || isOwnChoice) && typeof playerIndex === "number") {
+            return (
+              <button
+                key={suit}
+                type="button"
+                disabled={targetSelectionDisabled}
+                onClick={() => isOwnChoice ? onOwnChoiceCard?.(suit as DeadMansDrawSuit) : onTargetCard?.(playerIndex, suit as DeadMansDrawSuit)}
+                className="rounded-2xl border border-red-400 bg-red-500/10 p-1.5 text-left shadow-[0_0_18px_rgba(248,113,113,0.45)] transition hover:bg-red-500/20 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {content}
+              </button>
+            );
+          }
+
+          return (
+            <div key={suit} className="rounded-2xl border border-white/10 bg-black/15 p-1.5">
+              {content}
             </div>
           );
         })}

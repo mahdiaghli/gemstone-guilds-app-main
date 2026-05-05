@@ -81,6 +81,25 @@ export default function Events() {
 
   const isRtl = dir === "rtl";
 
+  const handleActiveEventClick = (eventId: string) => {
+    if (eventId === "blitz") {
+      sessionStorage.setItem("matchmaking-players", "2");
+      sessionStorage.setItem("matchmaking-turnTime", "15");
+      sessionStorage.setItem("matchmaking-game", "splendor");
+      sessionStorage.removeItem("matchmaking-targetScore");
+      navigate("/online-matchmaking?game=splendor&event=blitz");
+      return;
+    }
+
+    if (eventId === "marathon") {
+      sessionStorage.setItem("matchmaking-players", "2");
+      sessionStorage.setItem("matchmaking-turnTime", "45");
+      sessionStorage.setItem("matchmaking-targetScore", "9");
+      sessionStorage.setItem("matchmaking-game", "splendor");
+      navigate("/online-matchmaking?game=splendor&event=marathon");
+    }
+  };
+
   return (
     <AppPageShell currentPath="/events" backgroundImage={shellBackgrounds.events}>
       <div className="mx-auto w-full max-w-4xl space-y-6 pb-20 pt-4">
@@ -141,7 +160,8 @@ export default function Events() {
                       initial={{ opacity: 0, x: isRtl ? -20 : 20 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ delay: index * 0.06 }}
-                      className="group relative overflow-hidden rounded-[30px] border border-primary/20 bg-[linear-gradient(145deg,rgba(17,33,40,0.95),rgba(19,27,48,0.88))] p-6 shadow-xl transition-all hover:-translate-y-1 hover:shadow-primary/20"
+                      onClick={() => handleActiveEventClick(event.id)}
+                      className="group relative cursor-pointer overflow-hidden rounded-[30px] border border-primary/20 bg-[linear-gradient(145deg,rgba(17,33,40,0.95),rgba(19,27,48,0.88))] p-6 shadow-xl transition-all hover:-translate-y-1 hover:shadow-primary/20"
                     >
                       <div className={`flex items-start justify-between gap-4 ${isRtl ? "flex-row-reverse" : ""}`}>
                         <div className={`rounded-2xl p-3 ${event.bg} ${event.color}`}>

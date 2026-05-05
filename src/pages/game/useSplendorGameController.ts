@@ -9,6 +9,8 @@ import {
   Card,
   GameState,
   GEM_TYPES,
+  GEM_INFO,
+  TOKEN_TYPES,
 } from "@/lib/gameData";
 import {
   getPlayerScore,
@@ -22,6 +24,8 @@ import {
 } from "@/lib/gameLogic";
 import { getAIActionCandidates, AIDifficulty, type AIAction } from "@/lib/aiPlayer";
 import { audioManager } from "@/lib/audioManager";
+import { gemTokenImages } from "@/components/game/GemToken";
+import { nobleImages } from "@/components/game/NobleDisplay";
 // import { useLanguage } from '@/hooks/useLanguage';
 import { useAuth } from "@/hooks/useAuth";
 import { readPlayerExtras } from "@/lib/playerExtras";
@@ -62,6 +66,7 @@ export default function useSplendorGameController(props: GameProps = {}) {
     Math.max(2, parseInt(searchParams.get("players") || "2")),
   );
   const gameMode = props.mode || searchParams.get("mode") || "local";
+  const interactiveTutorialEnabled = searchParams.get("tutorial") === "1" && gameMode !== "online";
   const humanPlayerCount = Math.min(
     playerCount,
     Math.max(
@@ -89,6 +94,18 @@ export default function useSplendorGameController(props: GameProps = {}) {
     } catch {}
 
     return 45;
+  })();
+  const targetScore = (() => {
+    const paramValue = Number(searchParams.get("targetScore"));
+    if (paramValue > 0) return paramValue;
+
+    try {
+      const storedRoom = JSON.parse(localStorage.getItem("splendor-online-room") || "{}");
+      const storedValue = Number(storedRoom?.targetScore);
+      if (storedValue > 0) return storedValue;
+    } catch {}
+
+    return 15;
   })();
   const navigate = useNavigate();
   const selectedGame = getGameById(searchParams.get("game"));
@@ -151,6 +168,10 @@ export default function useSplendorGameController(props: GameProps = {}) {
   const state = displayState;
   const panelCount = gameMode === "online" ? state.players.length : playerCount;
 
+  useEffect(() => {
+    setActionSubmitting(false);
+  }, [state.currentPlayerIndex]);
+
   const isAIPlayer = useCallback(
     (index: number) => {
       if (gameMode === "ai") return index !== 0;
@@ -200,6 +221,10 @@ export default function useSplendorGameController(props: GameProps = {}) {
   const [waitingForRematch, setWaitingForRematch] = useState(false);
   const [dailyPuzzleStep, setDailyPuzzleStep] = useState(0);
   const [turnLimitTurnsUsed, setTurnLimitTurnsUsed] = useState(0);
+  const [tutorialStep, setTutorialStep] = useState(0);
+  const [manualTutorialOpen, setManualTutorialOpen] = useState(false);
+  const [flightAnimations, setFlightAnimations] = useState<SplendorGameSceneProps["flightAnimations"]>([]);
+  const [actionSubmitting, setActionSubmitting] = useState(false);
   const previousPlayerIndexRef = useRef(0);
 
   const currentPlayer = state.players[state.currentPlayerIndex];
@@ -213,6 +238,72 @@ export default function useSplendorGameController(props: GameProps = {}) {
     setSystemNotice(message);
     window.setTimeout(() => setSystemNotice(""), duration);
   }, []);
+
+  const getCenterBySelector = useCallback((selector: string) => {
+    const element = document.querySelector(selector) as HTMLElement | null;
+    if (!element) return null;
+    const rect = element.getBoundingClientRect();
+    return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+  }, []);
+
+  const getCardCenter = useCallback((cardId: string | number) => {
+    return getCenterBySelector(`[data-card-id="${String(cardId)}"]`);
+  }, [getCenterBySelector]);
+
+  const spawnFlight = useCallback((flight: Omit<SplendorGameSceneProps["flightAnimations"][number], "id">) => {
+    const id = `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+    setFlightAnimations((current) => [...current, { ...flight, id }]);
+    window.setTimeout(() => {
+      setFlightAnimations((current) => current.filter((item) => item.id !== id));
+    }, flight.durationMs + 40);
+  }, []);
+
+  const lockActionUntilTurnChanges = useCallback(() => {
+    setActionSubmitting(true);
+  }, []);
+
+  const interactiveTutorialSteps = [
+    {
+      title: "Goal: reach 15 points",
+      description: "Buy development cards and attract nobles to score. When a player reaches 15 points, everyone finishes the round and the highest score wins.",
+      focus: "goal" as const,
+    },
+    {
+      title: "Choose one action",
+      description: "On your turn, pick exactly one action: take gems, buy a card, reserve a visible card, or reserve blindly from a deck.",
+      focus: "actions" as const,
+    },
+    {
+      title: "Gem token pool",
+      description: "Click gems here, then press Take. You can take 3 different gems, or 2 matching gems if at least 4 of that color remain.",
+      focus: "tokens" as const,
+    },
+    {
+      title: "Buy or reserve cards",
+      description: "Click any face-up card. Buying sends it to your permanent bonus color; reserving sends it to your reserved row and may give a gold token.",
+      focus: "card" as const,
+    },
+    {
+      title: "Three card levels",
+      description: "Level 1 cards are cheaper. Level 2 and 3 cards cost more, but they usually give more points and stronger progress.",
+      focus: "cards" as const,
+    },
+    {
+      title: "Noble visitors",
+      description: "Nobles wait here. If your permanent card bonuses match a noble requirement after buying, that noble automatically moves to your panel.",
+      focus: "nobles" as const,
+    },
+    {
+      title: "Your player panel",
+      description: "Your panel shows score, owned gems, permanent card bonuses by color, reserved cards, and nobles you have attracted.",
+      focus: "panel" as const,
+    },
+    {
+      title: "Turn timer",
+      description: "Watch the timer in the header. Finish your action before it reaches zero, especially in online or timed games.",
+      focus: "timer" as const,
+    },
+  ];
 
   const isExpectedDailyPuzzleAction = useCallback(
     (action: DailyPuzzleAction | null) => {
@@ -450,6 +541,7 @@ export default function useSplendorGameController(props: GameProps = {}) {
     setPhase("idle");
     setDailyPuzzleStep(0);
     setTurnLimitTurnsUsed(0);
+    setTutorialStep(0);
     setShowQuickRules(false);
     setShowExitConfirm(false);
     setShowRematchRequest(false);
@@ -463,6 +555,12 @@ export default function useSplendorGameController(props: GameProps = {}) {
     lastServerStateRef.current = null;
     lastSyncedStateRef.current = null;
   }, [resetGame, turnDurationSeconds]);
+
+  useEffect(() => {
+    if (!interactiveTutorialEnabled && !manualTutorialOpen) {
+      setTutorialStep(0);
+    }
+  }, [interactiveTutorialEnabled, manualTutorialOpen]);
 
   useEffect(() => {
     if (gameMode !== "online" || !props.socket) return;
@@ -566,7 +664,7 @@ export default function useSplendorGameController(props: GameProps = {}) {
       phase === "mustReturnTokens" &&
       getTotalTokens(state.players[state.currentPlayerIndex]) <= 10
     ) {
-      endTurn();
+      endTurn(targetScore);
       setPhase("idle");
     }
   }, [state, phase, endTurn, gameMode]);
@@ -600,7 +698,7 @@ export default function useSplendorGameController(props: GameProps = {}) {
     setSelectedGems([]);
     setSelectedCard(null);
     setTurnWarning("");
-    endTurn();
+    endTurn(targetScore);
     setPhase("idle");
   }, [
     endTurn,
@@ -813,6 +911,7 @@ export default function useSplendorGameController(props: GameProps = {}) {
   );
 
   const handleConfirmTokens = useCallback(() => {
+    if (actionSubmitting) return;
     if (gameMode === "online" && !isCurrentPlayerMe()) return;
     if (
       challengeId === "daily-puzzle" &&
@@ -823,6 +922,7 @@ export default function useSplendorGameController(props: GameProps = {}) {
       return;
     }
 
+    lockActionUntilTurnChanges();
     audioManager.playSound("takeTokens");
     const gemsList = selectedGems.join(", ");
     console.log(
@@ -830,6 +930,19 @@ export default function useSplendorGameController(props: GameProps = {}) {
     );
 
     if (gameMode === "online") {
+      selectedGems.forEach((gem, index) => {
+        const start = getCenterBySelector(`[data-token-pool="${gem}"]`);
+        const end = getCenterBySelector(`[data-player-token-slot="${state.currentPlayerIndex}-${gem}"]`);
+        if (!start || !end) return;
+        spawnFlight({
+          kind: "token",
+          color: GEM_INFO[gem].color,
+          imageUrl: gemTokenImages[gem],
+          start,
+          end,
+          durationMs: 420 + index * 70,
+        });
+      });
       const afterTake = performTakeTokens(state, selectedGems);
       setSelectedGems([]);
       setTempPoolDisplay(null);
@@ -846,7 +959,7 @@ export default function useSplendorGameController(props: GameProps = {}) {
       if (total > 10) {
         setPhase("mustReturnTokens");
       } else {
-        nextState = advanceTurn(afterTake);
+        nextState = advanceTurn(afterTake, targetScore);
         setPhase("idle");
       }
       syncOnlineState(nextState);
@@ -855,6 +968,19 @@ export default function useSplendorGameController(props: GameProps = {}) {
 
     const currentTotal = getTotalTokens(currentPlayer);
     const adding = selectedGems.length;
+    selectedGems.forEach((gem, index) => {
+      const start = getCenterBySelector(`[data-token-pool="${gem}"]`);
+      const end = getCenterBySelector(`[data-player-token-slot="${state.currentPlayerIndex}-${gem}"]`);
+      if (!start || !end) return;
+      spawnFlight({
+        kind: "token",
+        color: GEM_INFO[gem].color,
+        imageUrl: gemTokenImages[gem],
+        start,
+        end,
+        durationMs: 420 + index * 70,
+      });
+    });
     takeTokens(selectedGems);
     setSelectedGems([]);
     setTempPoolDisplay(null);
@@ -869,7 +995,7 @@ export default function useSplendorGameController(props: GameProps = {}) {
     if (currentTotal + adding > 10) {
       setPhase("mustReturnTokens");
     } else {
-      endTurn();
+      endTurn(targetScore);
       setPhase("idle");
     }
   }, [
@@ -884,6 +1010,11 @@ export default function useSplendorGameController(props: GameProps = {}) {
     challengeId,
     isExpectedDailyPuzzleAction,
     showSystemNotice,
+    getCenterBySelector,
+    spawnFlight,
+    actionSubmitting,
+    lockActionUntilTurnChanges,
+    targetScore,
   ]);
 
   const handleCancelTokens = useCallback(() => {
@@ -930,6 +1061,7 @@ export default function useSplendorGameController(props: GameProps = {}) {
   );
 
   const handleBuyCard = useCallback(() => {
+    if (actionSubmitting) return;
     if (gameMode === "online" && !isCurrentPlayerMe()) return;
     if (!selectedCard) return;
     if (
@@ -940,22 +1072,113 @@ export default function useSplendorGameController(props: GameProps = {}) {
       showSystemNotice("Wrong move.");
       return;
     }
+    lockActionUntilTurnChanges();
     audioManager.playSound("buyCard");
     console.log(
       `💳 [CARD] Player ${state.currentPlayerIndex} purchasing card ${selectedCard.id} | خرید کارت`,
     );
     if (gameMode === "online") {
       const afterPurchase = performPurchaseCard(state, selectedCard.id);
+      const cardStart = getCardCenter(selectedCard.id);
+      const cardEnd = getCenterBySelector(`[data-player-bonus-slot="${state.currentPlayerIndex}-${selectedCard.gemBonus}"]`);
+      if (cardStart && cardEnd) {
+        spawnFlight({
+          kind: "card",
+          color: GEM_INFO[selectedCard.gemBonus].color,
+          label: selectedCard.points ? String(selectedCard.points) : "+",
+          start: cardStart,
+          end: cardEnd,
+          durationMs: 520,
+        });
+      }
+      TOKEN_TYPES.forEach((tokenType, tokenIndex) => {
+        const paid = state.players[state.currentPlayerIndex].tokens[tokenType] - afterPurchase.players[afterPurchase.currentPlayerIndex].tokens[tokenType];
+        if (paid <= 0) return;
+        for (let i = 0; i < paid; i += 1) {
+          const start = getCenterBySelector(`[data-player-token-slot="${state.currentPlayerIndex}-${tokenType}"]`);
+          const end = getCenterBySelector(`[data-token-pool="${tokenType}"]`);
+          if (!start || !end) continue;
+          spawnFlight({
+            kind: "token",
+            color: GEM_INFO[tokenType].color,
+            imageUrl: gemTokenImages[tokenType],
+            start,
+            end,
+            durationMs: 400 + tokenIndex * 30,
+          });
+        }
+      });
+      const beforeNobleIds = new Set(state.players[state.currentPlayerIndex].nobles.map((n) => String(n.id)));
+      const newNoble = afterPurchase.players[afterPurchase.currentPlayerIndex].nobles.find((n) => !beforeNobleIds.has(String(n.id)));
+      if (newNoble) {
+        const start = getCenterBySelector(`[data-noble-id="${String(newNoble.id)}"]`);
+        const end = getCenterBySelector(`[data-player-nobles-slot="${state.currentPlayerIndex}"]`);
+        if (start && end) {
+          spawnFlight({
+            kind: "noble",
+            color: "#f5d47a",
+            imageUrl: nobleImages[(Math.max(1, Number(newNoble.id)) - 1) % nobleImages.length],
+            start,
+            end,
+            durationMs: 650,
+          });
+        }
+      }
       setSelectedCard(null);
       setPhase("idle");
       if (afterPurchase === state) return;
-      const nextState = advanceTurn(afterPurchase);
+      const nextState = advanceTurn(afterPurchase, targetScore);
       syncOnlineState(nextState);
       return;
     }
 
-    purchaseCard(selectedCard.id);
     const purchasedState = performPurchaseCard(state, selectedCard.id);
+    const cardStart = getCardCenter(selectedCard.id);
+    const cardEnd = getCenterBySelector(`[data-player-bonus-slot="${state.currentPlayerIndex}-${selectedCard.gemBonus}"]`);
+    if (cardStart && cardEnd) {
+      spawnFlight({
+        kind: "card",
+        color: GEM_INFO[selectedCard.gemBonus].color,
+        label: selectedCard.points ? String(selectedCard.points) : "+",
+        start: cardStart,
+        end: cardEnd,
+        durationMs: 520,
+      });
+    }
+    TOKEN_TYPES.forEach((tokenType, tokenIndex) => {
+      const paid = state.players[state.currentPlayerIndex].tokens[tokenType] - purchasedState.players[purchasedState.currentPlayerIndex].tokens[tokenType];
+      if (paid <= 0) return;
+      for (let i = 0; i < paid; i += 1) {
+        const start = getCenterBySelector(`[data-player-token-slot="${state.currentPlayerIndex}-${tokenType}"]`);
+        const end = getCenterBySelector(`[data-token-pool="${tokenType}"]`);
+        if (!start || !end) continue;
+        spawnFlight({
+          kind: "token",
+          color: GEM_INFO[tokenType].color,
+          imageUrl: gemTokenImages[tokenType],
+          start,
+          end,
+          durationMs: 400 + tokenIndex * 30,
+        });
+      }
+    });
+    const beforeNobleIds = new Set(state.players[state.currentPlayerIndex].nobles.map((n) => String(n.id)));
+    const newNoble = purchasedState.players[purchasedState.currentPlayerIndex].nobles.find((n) => !beforeNobleIds.has(String(n.id)));
+    if (newNoble) {
+      const start = getCenterBySelector(`[data-noble-id="${String(newNoble.id)}"]`);
+      const end = getCenterBySelector(`[data-player-nobles-slot="${state.currentPlayerIndex}"]`);
+      if (start && end) {
+        spawnFlight({
+          kind: "noble",
+          color: "#f5d47a",
+          imageUrl: nobleImages[(Math.max(1, Number(newNoble.id)) - 1) % nobleImages.length],
+          start,
+          end,
+          durationMs: 650,
+        });
+      }
+    }
+    purchaseCard(selectedCard.id);
     setSelectedCard(null);
 
     if (challengeId === "daily-puzzle" && gameMode !== "online") {
@@ -989,25 +1212,58 @@ export default function useSplendorGameController(props: GameProps = {}) {
     selectedCard,
     purchaseCard,
     endTurn,
-    gameMode,
     state.currentPlayerIndex,
     state,
     syncOnlineState,
+    getCenterBySelector,
+    getCardCenter,
+    spawnFlight,
+    actionSubmitting,
+    lockActionUntilTurnChanges,
+    targetScore,
   ]);
 
   const handleReserveCard = useCallback(() => {
+    if (actionSubmitting) return;
     if (gameMode === "online" && !isCurrentPlayerMe()) return;
     if (challengeId === "daily-puzzle" && gameMode !== "online") {
       showSystemNotice("Wrong move.");
       return;
     }
     if (!selectedCard) return;
+    lockActionUntilTurnChanges();
     audioManager.playSound("reserveCard");
     console.log(
       `🔖 [CARD] Player ${state.currentPlayerIndex} reserving card ${selectedCard.id} | رزرو کارت`,
     );
     if (gameMode === "online") {
       const afterReserve = performReserveCard(state, selectedCard.id);
+      const cardStart = getCardCenter(selectedCard.id);
+      const cardEnd = getCenterBySelector(`[data-player-reserved-slot="${state.currentPlayerIndex}"]`);
+      if (cardStart && cardEnd) {
+        spawnFlight({
+          kind: "card",
+          color: "#cbd5e1",
+          label: "R",
+          start: cardStart,
+          end: cardEnd,
+          durationMs: 520,
+        });
+      }
+      if (state.tokenPool.gold > 0) {
+        const goldStart = getCenterBySelector('[data-token-pool="gold"]');
+        const goldEnd = getCenterBySelector(`[data-player-token-slot="${state.currentPlayerIndex}-gold"]`);
+        if (goldStart && goldEnd) {
+          spawnFlight({
+            kind: "token",
+            color: GEM_INFO.gold.color,
+            imageUrl: gemTokenImages.gold,
+            start: goldStart,
+            end: goldEnd,
+            durationMs: 460,
+          });
+        }
+      }
       setSelectedCard(null);
       if (afterReserve === state) {
         setPhase("idle");
@@ -1020,7 +1276,7 @@ export default function useSplendorGameController(props: GameProps = {}) {
       if (total > 10) {
         setPhase("mustReturnTokens");
       } else {
-        nextState = advanceTurn(afterReserve);
+        nextState = advanceTurn(afterReserve, targetScore);
         setPhase("idle");
       }
       syncOnlineState(nextState);
@@ -1029,6 +1285,32 @@ export default function useSplendorGameController(props: GameProps = {}) {
 
     const currentTotal = getTotalTokens(currentPlayer);
     const getsGold = state.tokenPool.gold > 0;
+    const cardStart = getCardCenter(selectedCard.id);
+    const cardEnd = getCenterBySelector(`[data-player-reserved-slot="${state.currentPlayerIndex}"]`);
+    if (cardStart && cardEnd) {
+      spawnFlight({
+        kind: "card",
+        color: "#cbd5e1",
+        label: "R",
+        start: cardStart,
+        end: cardEnd,
+        durationMs: 520,
+      });
+    }
+    if (getsGold) {
+      const goldStart = getCenterBySelector('[data-token-pool="gold"]');
+      const goldEnd = getCenterBySelector(`[data-player-token-slot="${state.currentPlayerIndex}-gold"]`);
+      if (goldStart && goldEnd) {
+        spawnFlight({
+          kind: "token",
+          color: GEM_INFO.gold.color,
+          imageUrl: gemTokenImages.gold,
+          start: goldStart,
+          end: goldEnd,
+          durationMs: 460,
+        });
+      }
+    }
     reserveCard(selectedCard.id);
     setSelectedCard(null);
 
@@ -1049,10 +1331,17 @@ export default function useSplendorGameController(props: GameProps = {}) {
     syncOnlineState,
     challengeId,
     showSystemNotice,
+    getCenterBySelector,
+    getCardCenter,
+    spawnFlight,
+    actionSubmitting,
+    lockActionUntilTurnChanges,
+    targetScore,
   ]);
 
   const handleReserveDeck = useCallback(
     (level: 1 | 2 | 3) => {
+      if (actionSubmitting) return;
       if (gameMode === "online" && !isCurrentPlayerMe()) return;
       if (challengeId === "daily-puzzle" && gameMode !== "online") {
         showSystemNotice("Wrong move.");
@@ -1064,11 +1353,40 @@ export default function useSplendorGameController(props: GameProps = {}) {
         state.decks[level].length === 0
       )
         return;
+      lockActionUntilTurnChanges();
+      const deckStart = getCenterBySelector(`[data-deck-level="${level}"]`);
+      const reservedEnd = getCenterBySelector(`[data-player-reserved-slot="${state.currentPlayerIndex}"]`);
+      const getsGold = state.tokenPool.gold > 0;
+
       if (gameMode === "online") {
         const afterReserve = performReserveCard(state, 0, level);
         if (afterReserve === state) {
           setPhase("idle");
           return;
+        }
+        if (deckStart && reservedEnd) {
+          spawnFlight({
+            kind: "card",
+            color: "#1e293b",
+            label: String(level),
+            start: deckStart,
+            end: reservedEnd,
+            durationMs: 560,
+          });
+        }
+        if (getsGold) {
+          const goldStart = getCenterBySelector('[data-token-pool="gold"]');
+          const goldEnd = getCenterBySelector(`[data-player-token-slot="${state.currentPlayerIndex}-gold"]`);
+          if (goldStart && goldEnd) {
+            spawnFlight({
+              kind: "token",
+              color: GEM_INFO.gold.color,
+              imageUrl: gemTokenImages.gold,
+              start: goldStart,
+              end: goldEnd,
+              durationMs: 460,
+            });
+          }
         }
         const total = getTotalTokens(
           afterReserve.players[afterReserve.currentPlayerIndex],
@@ -1077,7 +1395,7 @@ export default function useSplendorGameController(props: GameProps = {}) {
         if (total > 10) {
           setPhase("mustReturnTokens");
         } else {
-          nextState = advanceTurn(afterReserve);
+          nextState = advanceTurn(afterReserve, targetScore);
           setPhase("idle");
         }
         syncOnlineState(nextState);
@@ -1085,7 +1403,30 @@ export default function useSplendorGameController(props: GameProps = {}) {
       }
 
       const currentTotal = getTotalTokens(currentPlayer);
-      const getsGold = state.tokenPool.gold > 0;
+      if (deckStart && reservedEnd) {
+        spawnFlight({
+          kind: "card",
+          color: "#1e293b",
+          label: String(level),
+          start: deckStart,
+          end: reservedEnd,
+          durationMs: 560,
+        });
+      }
+      if (getsGold) {
+        const goldStart = getCenterBySelector('[data-token-pool="gold"]');
+        const goldEnd = getCenterBySelector(`[data-player-token-slot="${state.currentPlayerIndex}-gold"]`);
+        if (goldStart && goldEnd) {
+          spawnFlight({
+            kind: "token",
+            color: GEM_INFO.gold.color,
+            imageUrl: gemTokenImages.gold,
+            start: goldStart,
+            end: goldEnd,
+            durationMs: 460,
+          });
+        }
+      }
       reserveCard(0, level);
 
       if (currentTotal + (getsGold ? 1 : 0) > 10) {
@@ -1105,6 +1446,11 @@ export default function useSplendorGameController(props: GameProps = {}) {
       syncOnlineState,
       challengeId,
       showSystemNotice,
+      getCenterBySelector,
+      spawnFlight,
+      actionSubmitting,
+      lockActionUntilTurnChanges,
+      targetScore,
     ],
   );
 
@@ -1122,7 +1468,7 @@ export default function useSplendorGameController(props: GameProps = {}) {
         );
         let nextState = afterReturn;
         if (total <= 10) {
-          nextState = advanceTurn(afterReturn);
+          nextState = advanceTurn(afterReturn, targetScore);
           setPhase("idle");
         }
         syncOnlineState(nextState);
@@ -1137,6 +1483,7 @@ export default function useSplendorGameController(props: GameProps = {}) {
       returnToken,
       gameMode,
       syncOnlineState,
+      targetScore,
     ],
   );
 
@@ -1158,7 +1505,7 @@ export default function useSplendorGameController(props: GameProps = {}) {
     phase,
     lang,
     t,
-    gameTitle: selectedGame.name,
+    gameTitle: challengeId === "turn-limit" ? `${Math.max(0, 25 - turnLimitTurnsUsed)} turns left` : selectedGame.name,
     state,
     currentPlayer,
     humanPlayerCount,
@@ -1166,7 +1513,10 @@ export default function useSplendorGameController(props: GameProps = {}) {
     getPlayerDisplayName,
     isCurrentPlayerMe,
     isAIPlayer,
-    onShowQuickRules: () => setShowQuickRules(true),
+    onShowQuickRules: () => {
+      setTutorialStep(0);
+      setManualTutorialOpen(true);
+    },
     onExit: () => {
       if (state.gameOver) {
         navigate(menuPath);
@@ -1192,6 +1542,7 @@ export default function useSplendorGameController(props: GameProps = {}) {
     onCancelCardAction: handleCancel,
     onBuyCard: handleBuyCard,
     onReserveCard: handleReserveCard,
+    actionSubmitting,
     onLeaveGame: handleLeaveGame,
     onCloseExitConfirm: setShowExitConfirm,
     onCloseRematchRequest: setShowRematchRequest,
@@ -1264,6 +1615,24 @@ export default function useSplendorGameController(props: GameProps = {}) {
     handleConfirmTokens,
     handleCancel,
     backCardsByLevel,
+    flightAnimations,
+    interactiveTutorial: {
+      enabled: interactiveTutorialEnabled || manualTutorialOpen,
+      step: tutorialStep,
+      totalSteps: interactiveTutorialSteps.length,
+      title: interactiveTutorialSteps[tutorialStep]?.title || interactiveTutorialSteps[0].title,
+      description: interactiveTutorialSteps[tutorialStep]?.description || interactiveTutorialSteps[0].description,
+      focus: interactiveTutorialSteps[tutorialStep]?.focus || "goal",
+    },
+    onNextTutorialStep: () => {
+      setTutorialStep((prev) => Math.min(interactiveTutorialSteps.length - 1, prev + 1));
+    },
+    onPrevTutorialStep: () => {
+      setTutorialStep((prev) => Math.max(0, prev - 1));
+    },
+    onCloseTutorial: () => {
+      setManualTutorialOpen(false);
+    },
   };
 
   return { sceneProps };

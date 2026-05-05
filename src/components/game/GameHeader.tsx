@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import Chat from "@/components/game/Chat";
 import VoiceChatControl from "@/components/game/VoiceChatControl";
+import { cn } from "@/lib/utils";
 
 type GameHeaderProps = {
   gameMode: "local" | "ai" | "online";
@@ -23,6 +24,7 @@ type GameHeaderProps = {
   playerId: string;
   playerName: string;
   roomPlayers: Record<string, any>;
+  highlightTimer?: boolean;
 };
 
 export default function GameHeader({
@@ -44,6 +46,7 @@ export default function GameHeader({
   playerId,
   playerName,
   roomPlayers,
+  highlightTimer,
 }: GameHeaderProps) {
   return (
     <div className="mb-3 flex items-center justify-between gap-4">
@@ -86,7 +89,7 @@ export default function GameHeader({
             </>
           )}
         </span>
-        <span className="text-xs text-muted-foreground">
+        <span className={cn("text-xs text-muted-foreground rounded-md px-2 py-1", highlightTimer && "ring-2 ring-amber-400/80 bg-amber-500/10")}>
           {t("turnTimeLeft")}: {turnSecondsLeft} {t("secondsShort")}
         </span>
       </div>

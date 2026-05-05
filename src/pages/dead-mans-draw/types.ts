@@ -80,6 +80,11 @@ export type DeadMansDrawBoardViewProps = {
   onToggleTreasureHelp: (cardId: string) => void;
   getPlayerDisplayName: (index: number) => string;
   activePlayerIndex: number;
+  pendingEffect: DeadMansDrawPendingEffect | null;
+  onPistolTarget: (targetPlayerIndex: number, suit: any) => void;
+  onDaggerTarget: (targetPlayerIndex: number, suit: any) => void;
+  onHorseshoeTarget: (suit: any) => void;
+  targetSelectionDisabled: boolean;
   onOpenSummary: () => void;
   onOpenExit: () => void;
 };
@@ -88,6 +93,9 @@ export type DeadMansDrawSummaryModalProps = {
   open: boolean;
   t: Translate;
   tutorialSteps: number[];
+  tutorialStep: number;
+  onNext: () => void;
+  onPrev: () => void;
   onClose: () => void;
 };
 
@@ -110,6 +118,7 @@ export type DeadMansDrawPendingDrawerProps = {
   onHorseshoe: (suit: any) => void;
   onMap: (cardId: string) => void;
   onMisfire: (suit: any) => void;
+  top?: boolean;
 };
 
 export type DeadMansDrawPowerTargetViewProps = {

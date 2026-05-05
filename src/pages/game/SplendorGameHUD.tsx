@@ -37,6 +37,7 @@ export default function SplendorGameHUD(props: Pick<
   | "onCancelCardAction"
   | "onBuyCard"
   | "onReserveCard"
+  | "actionSubmitting"
   | "onLeaveGame"
   | "onCloseExitConfirm"
   | "onCloseRematchRequest"
@@ -45,6 +46,7 @@ export default function SplendorGameHUD(props: Pick<
   | "onAcceptRematch"
   | "onPlayAgain"
   | "onMenu"
+  | "interactiveTutorial"
 >) {
   return (
     <>
@@ -67,6 +69,7 @@ export default function SplendorGameHUD(props: Pick<
         playerId={props.playerId}
         playerName={props.playerName}
         roomPlayers={props.roomPlayers}
+        highlightTimer={props.interactiveTutorial.enabled && props.interactiveTutorial.focus === "timer"}
       />
 
       <GameOverlays
@@ -91,6 +94,7 @@ export default function SplendorGameHUD(props: Pick<
         onCancelCardAction={props.onCancelCardAction}
         onBuyCard={props.onBuyCard}
         onReserveCard={props.onReserveCard}
+        actionSubmitting={props.actionSubmitting}
         onLeaveGame={props.onLeaveGame}
         onCloseExitConfirm={props.onCloseExitConfirm}
         onCloseRematchRequest={props.onCloseRematchRequest}

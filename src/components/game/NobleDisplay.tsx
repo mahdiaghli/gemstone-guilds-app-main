@@ -30,7 +30,7 @@ const gemNameMap: Record<string, string> = {
   onyx: 'onyx',
 };
 
-const nobleImages = [
+export const nobleImages = [
   noble1Img,
   noble2Img,
   noble3Img,
@@ -67,6 +67,7 @@ export default function NobleDisplay({ noble, compact }: NobleDisplayProps) {
         backgroundSize: 'cover',
         backgroundPosition: 'center',
       }}
+      data-noble-id={String(noble.id)}
     >
       {/* <div className="absolute inset-x-0 top-0 h-[32%] bg-[linear-gradient(180deg,rgba(247,244,236,0.55),rgba(226,221,211,0.25))]" />
       <div className="absolute inset-x-0 top-[32%] h-px bg-black/10" /> */}

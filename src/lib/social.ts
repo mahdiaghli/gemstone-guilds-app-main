@@ -77,6 +77,11 @@ export interface GameInvite {
   toUserId: string;
   createdAt: string;
   status: "pending" | "accepted" | "declined";
+  gameId: string;
+  playerCount: number;
+  humanPlayers: number;
+  turnTime: 15 | 30 | 45 | 60;
+  roomId: string;
 }
 
 interface SocialStore {
@@ -121,6 +126,22 @@ function normalizeGroup(entry: Partial<GroupEntry> & { id: string; creatorId: st
   };
 }
 
+function normalizeGameInvite(invite: Partial<GameInvite> & Pick<GameInvite, "id" | "fromUserId" | "toUserId" | "createdAt" | "status">): GameInvite {
+  const playerCount = normalizePlayerCount(Number(invite.playerCount) || 2);
+  return {
+    id: invite.id,
+    fromUserId: invite.fromUserId,
+    toUserId: invite.toUserId,
+    createdAt: invite.createdAt,
+    status: invite.status,
+    gameId: typeof invite.gameId === "string" && invite.gameId ? invite.gameId : "splendor",
+    playerCount,
+    humanPlayers: normalizeHumanPlayers(Number(invite.humanPlayers) || playerCount, playerCount),
+    turnTime: normalizeTurnTime(Number(invite.turnTime) || 45),
+    roomId: typeof invite.roomId === "string" && invite.roomId ? invite.roomId : `FR-${invite.id.slice(-6).toUpperCase()}`,
+  };
+}
+
 function readStore(): SocialStore {
   if (typeof window === "undefined") return DEFAULT_STORE;
   const raw = localStorage.getItem(STORAGE_KEY);
@@ -135,7 +156,7 @@ function readStore(): SocialStore {
       ...DEFAULT_STORE,
       ...parsed,
       groups: Array.isArray(parsed.groups) ? parsed.groups.map((group) => normalizeGroup(group as any)) : [],
-      gameInvites: Array.isArray(parsed.gameInvites) ? parsed.gameInvites : [],
+      gameInvites: Array.isArray(parsed.gameInvites) ? parsed.gameInvites.map((invite) => normalizeGameInvite(invite as any)) : [],
     };
   } catch {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(DEFAULT_STORE));
@@ -167,7 +188,7 @@ function mergeStore(partial: Partial<SocialStore>) {
     friendRequests: Array.isArray(partial.friendRequests) ? partial.friendRequests : store.friendRequests,
     messages: Array.isArray(partial.messages) ? partial.messages : store.messages,
     groupMessages: Array.isArray(partial.groupMessages) ? partial.groupMessages : store.groupMessages,
-    gameInvites: Array.isArray(partial.gameInvites) ? partial.gameInvites : store.gameInvites,
+    gameInvites: Array.isArray(partial.gameInvites) ? partial.gameInvites.map((invite) => normalizeGameInvite(invite as any)) : store.gameInvites,
     friends: partial.friends && typeof partial.friends === "object" ? partial.friends : store.friends,
   };
   writeStore(next);
@@ -411,8 +432,33 @@ export function getPendingGameInvites(userId: string) {
   return readStore().gameInvites.filter((invite) => invite.toUserId === userId && invite.status === "pending");
 }
 
-export function sendGameInvite(fromUserId: string, toUserId: string) {
+type SendGameInviteInput = {
+  fromUserId: string;
+  toUserId: string;
+  gameId: string;
+  playerCount: number;
+  humanPlayers: number;
+  turnTime: 15 | 30 | 45 | 60;
+};
+
+function normalizePlayerCount(playerCount: number) {
+  return Math.max(2, Math.min(4, Math.floor(playerCount || 2)));
+}
+
+function normalizeHumanPlayers(humanPlayers: number, playerCount: number) {
+  return Math.max(1, Math.min(playerCount, Math.floor(humanPlayers || 2)));
+}
+
+function normalizeTurnTime(turnTime: number): 15 | 30 | 45 | 60 {
+  return turnTime === 15 || turnTime === 30 || turnTime === 45 || turnTime === 60 ? turnTime : 45;
+}
+
+export function sendGameInvite(input: SendGameInviteInput) {
+  const { fromUserId, toUserId, gameId } = input;
   const store = readStore();
+  const playerCount = normalizePlayerCount(input.playerCount);
+  const humanPlayers = normalizeHumanPlayers(input.humanPlayers, playerCount);
+  const turnTime = normalizeTurnTime(input.turnTime);
   const exists = store.gameInvites.some(
     (invite) =>
       invite.status === "pending" &&
@@ -420,15 +466,21 @@ export function sendGameInvite(fromUserId: string, toUserId: string) {
         (invite.fromUserId === toUserId && invite.toUserId === fromUserId)),
   );
   if (exists) return false;
+  const roomId = `FR-${Date.now().toString(36).toUpperCase()}${Math.random().toString(36).slice(2, 5).toUpperCase()}`;
   store.gameInvites.unshift({
     id: `invite-${Date.now()}-${fromUserId}-${toUserId}`,
     fromUserId,
     toUserId,
     createdAt: new Date().toISOString(),
     status: "pending",
+    gameId: gameId || "splendor",
+    playerCount,
+    humanPlayers,
+    turnTime,
+    roomId,
   });
   persistStore(store);
-  postRemote("/social/game-invites", { fromUserId, toUserId }).then(() => syncSocialStateRemote());
+  postRemote("/social/game-invites", { fromUserId, toUserId, gameId, playerCount, humanPlayers, turnTime, roomId }).then(() => syncSocialStateRemote());
   return true;
 }
 

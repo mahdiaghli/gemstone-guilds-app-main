@@ -40,6 +40,10 @@ export default function OnlineLobby() {
     const raw = Number(searchParams.get("turnTime"));
     return raw === 15 || raw === 30 || raw === 45 || raw === 60 ? raw : 45;
   })();
+  const targetScore = (() => {
+    const raw = Number(searchParams.get("targetScore"));
+    return raw > 0 ? raw : undefined;
+  })();
 
   useEffect(() => {
     localStorage.removeItem("splendor-online-room");
@@ -94,6 +98,7 @@ export default function OnlineLobby() {
         isHost: true,
         playerCount,
         turnTime,
+        targetScore,
         gameId: selectedGame.id,
       })
     );
@@ -122,6 +127,7 @@ export default function OnlineLobby() {
         playerName,
         isHost: false,
         turnTime,
+        targetScore,
         gameId: selectedGame.id,
       })
     );

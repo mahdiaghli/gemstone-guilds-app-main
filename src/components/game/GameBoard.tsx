@@ -33,8 +33,10 @@ type GameBoardProps = {
   handleCardClick: (card: Card) => void;
   handleGemClick: (gem: GemType) => void;
   handleConfirmTokens: () => void;
+  actionSubmitting?: boolean;
   handleCancel: () => void;
   backCardsByLevel: Record<1 | 2 | 3, string>;
+  tutorialFocus?: "tokens" | "card" | "cards" | "nobles" | "panel";
 };
 
 export default function GameBoard({
@@ -53,12 +55,14 @@ export default function GameBoard({
   handleCardClick,
   handleGemClick,
   handleConfirmTokens,
+  actionSubmitting,
   handleCancel,
   backCardsByLevel,
+  tutorialFocus,
 }: GameBoardProps) {
   return (
     <>
-      <div className="mb-3 flex gap-2 overflow-x-auto pb-1">
+      <div className={cn("mb-3 flex gap-2 overflow-x-auto pb-1 rounded-xl transition-all", tutorialFocus === "nobles" && "ring-4 ring-amber-300 bg-amber-500/15 p-2 shadow-[0_0_28px_rgba(251,191,36,0.45)]")}>
         <span className="mr-1 self-center font-cinzel text-[10px] tracking-wider text-muted-foreground">
           {t("nobles")}
         </span>
@@ -67,7 +71,7 @@ export default function GameBoard({
         ))}
       </div>
 
-      <div className="mb-3 space-y-2">
+      <div className={cn("mb-3 space-y-2 rounded-xl transition-all", (tutorialFocus === "cards" || tutorialFocus === "card") && "ring-4 ring-amber-300 bg-amber-500/15 p-2 shadow-[0_0_28px_rgba(251,191,36,0.45)]")}>
         {([3, 2, 1] as const).map((level) => (
           <div key={level} className="flex items-center gap-1.5 md:gap-2">
             <motion.button
@@ -76,6 +80,7 @@ export default function GameBoard({
               onClick={() => handleReserveDeck(level)}
               className="relative h-24 w-[4.5rem] shrink-0 overflow-hidden rounded-lg border-2 transition-colors hover:border-primary/40 md:h-28 md:w-20"
               style={{ borderColor: `${LEVEL_COLORS[level]}60` }}
+              data-deck-level={level}
             >
               <div
                 className="absolute inset-0"
@@ -99,6 +104,8 @@ export default function GameBoard({
                   card={card}
                   onClick={() => handleCardClick(card)}
                   affordable={canPlayerAffordCard(currentPlayer, card)}
+                  dataCardId={card.id}
+                  animateIn
                 />
               ) : (
                 <div
@@ -111,7 +118,7 @@ export default function GameBoard({
         ))}
       </div>
 
-      <div className="mb-3 rounded-xl border border-border/30 bg-card/50 p-3">
+      <div className={cn("mb-3 rounded-xl border border-border/30 bg-card/50 p-3 transition-all", tutorialFocus === "tokens" && "ring-4 ring-amber-300 shadow-[0_0_28px_rgba(251,191,36,0.45)]")}>
         <div className="flex flex-wrap items-center justify-center gap-2 md:gap-3">
           {GEM_TYPES.map((gem) => {
             const displayCount = tempPoolDisplay ? tempPoolDisplay[gem] : state.tokenPool[gem];
@@ -124,11 +131,12 @@ export default function GameBoard({
                 selected={selectedGems.includes(gem)}
                 disabled={state.tokenPool[gem] <= 0 && !selectedGems.includes(gem)}
                 size="md"
+                dataTokenPool={gem}
               />
             );
           })}
           <div className="mx-1 h-8 w-px bg-border/50" />
-          <GemToken type="gold" count={state.tokenPool.gold} size="md" />
+          <GemToken type="gold" count={state.tokenPool.gold} size="md" dataTokenPool="gold" />
         </div>
 
         <AnimatePresence>
@@ -136,13 +144,14 @@ export default function GameBoard({
             <motion.div
               initial={{ opacity: 0, y: -8 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -8 }}
+              exit={{ opacity: 0, y: -8, scale: 0.96 }}
+              transition={{ duration: 0.2 }}
               className="mt-3 flex justify-center gap-2"
             >
-              <Button variant="game" size="sm" onClick={handleConfirmTokens}>
+              <Button variant="game" size="sm" onClick={handleConfirmTokens} disabled={actionSubmitting}>
                 {t("take")} {selectedGems.length === 2 && selectedGems[0] === selectedGems[1] ? t("takeSame") : selectedGems.length}
               </Button>
-              <Button variant="game-secondary" size="sm" onClick={handleCancel}>
+              <Button variant="game-secondary" size="sm" onClick={handleCancel} disabled={actionSubmitting}>
                 {t("cancel")}
               </Button>
             </motion.div>
@@ -158,6 +167,7 @@ export default function GameBoard({
             : panelCount === 3
               ? "grid-cols-2"
               : "grid-cols-2 md:grid-cols-4",
+          tutorialFocus === "panel" && "rounded-xl ring-4 ring-amber-300 bg-amber-500/15 p-2 shadow-[0_0_28px_rgba(251,191,36,0.45)]",
         )}
       >
         {state.players.map((player, index) => (

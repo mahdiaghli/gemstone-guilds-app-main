@@ -52,29 +52,21 @@ export function PendingChoices({
 
   if (pendingEffect.kind === "pistol" || pendingEffect.kind === "dagger") {
     return (
-      <div className="space-y-4">
-        {pendingEffect.options.map((option) => (
-          <div key={option.playerIndex} className="rounded-2xl border border-white/10 bg-black/15 p-3">
-            <p className="mb-3 font-cinzel text-sm tracking-[0.2em] text-white/75">{t("deadMansDrawTargetPlayer", { player: option.playerIndex + 1 })}</p>
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-              {option.cards.map((card) => (
-                <button
-                  key={card.id}
-                  type="button"
-                  disabled={disabled}
-                  onClick={() => pendingEffect.kind === "pistol" ? onPistol(option.playerIndex, card.suit) : onDagger(option.playerIndex, card.suit)}
-                >
-                  <CardChip card={card} compact />
-                </button>
-              ))}
-            </div>
-          </div>
-        ))}
+      <div className="rounded-2xl border border-red-300/30 bg-red-500/10 p-3 text-sm leading-6 text-red-50">
+        Choose a red-bordered card directly from a player panel.
       </div>
     );
   }
 
   if (pendingEffect.kind === "horseshoe" || pendingEffect.kind === "misfire") {
+    if (pendingEffect.kind === "horseshoe") {
+      return (
+        <div className="rounded-2xl border border-red-300/30 bg-red-500/10 p-3 text-sm leading-6 text-red-50">
+          Choose a red-bordered Hook card directly from your player panel.
+        </div>
+      );
+    }
+
     return (
       <div className="space-y-3">
         <p className="text-sm text-white/70">{pendingEffect.kind === "horseshoe" ? t("deadMansDrawChooseStashCard") : t("deadMansDrawChooseMisfireCard")}</p>

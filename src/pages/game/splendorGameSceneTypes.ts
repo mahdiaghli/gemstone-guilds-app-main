@@ -2,6 +2,16 @@ import type { Card, GameState, GemType, TokenType } from "@/lib/gameData";
 import type { Phase } from "@/pages/game/gamePageUtils";
 
 export type SplendorGameSceneProps = {
+  flightAnimations: Array<{
+    id: string;
+    kind: "token" | "card" | "noble";
+    color?: string;
+    label?: string;
+    imageUrl?: string;
+    start: { x: number; y: number };
+    end: { x: number; y: number };
+    durationMs: number;
+  }>;
   dir: "ltr" | "rtl";
   backgroundImage: string;
   gameMode: "local" | "ai" | "online";
@@ -36,6 +46,7 @@ export type SplendorGameSceneProps = {
   onCancelCardAction: () => void;
   onBuyCard: () => void;
   onReserveCard: () => void;
+  actionSubmitting: boolean;
   onLeaveGame: () => void;
   onCloseExitConfirm: (open: boolean) => void;
   onCloseRematchRequest: (open: boolean) => void;
@@ -55,4 +66,15 @@ export type SplendorGameSceneProps = {
   handleConfirmTokens: () => void;
   handleCancel: () => void;
   backCardsByLevel: Record<1 | 2 | 3, string>;
+  interactiveTutorial: {
+    enabled: boolean;
+    step: number;
+    totalSteps: number;
+    title: string;
+    description: string;
+    focus: "goal" | "actions" | "tokens" | "card" | "cards" | "nobles" | "panel" | "timer";
+  };
+  onNextTutorialStep: () => void;
+  onPrevTutorialStep: () => void;
+  onCloseTutorial: () => void;
 };

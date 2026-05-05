@@ -34,8 +34,8 @@ export function useGame(playerCount: number, initialState?: GameState) {
     setState(s => performReturnToken(s, playerIndex, tokenType));
   }, []);
 
-  const endTurn = useCallback(() => {
-    setState(s => advanceTurn(s));
+  const endTurn = useCallback((targetScore?: number) => {
+    setState(s => advanceTurn(s, targetScore));
   }, []);
 
   const resetGame = useCallback((nextState?: GameState) => {

@@ -40,6 +40,7 @@ type GameOverlaysProps = {
   onCancelCardAction: () => void;
   onBuyCard: () => void;
   onReserveCard: () => void;
+  actionSubmitting: boolean;
   onLeaveGame: () => void;
   onCloseExitConfirm: (open: boolean) => void;
   onCloseRematchRequest: (open: boolean) => void;
@@ -72,6 +73,7 @@ export default function GameOverlays({
   onCancelCardAction,
   onBuyCard,
   onReserveCard,
+  actionSubmitting,
   onLeaveGame,
   onCloseExitConfirm,
   onCloseRematchRequest,
@@ -247,6 +249,7 @@ export default function GameOverlays({
                     affordable={canPlayerAffordCard(currentPlayer, selectedCard)}
                     emphasizeAffordableCosts
                     costStatus={selectedCardCostStatus}
+                    dataCardId={`modal-${selectedCard.id}`}
                   />
                 </div>
               </motion.div>
@@ -271,14 +274,14 @@ export default function GameOverlays({
               >
                 {canPlayerAffordCard(currentPlayer, selectedCard) && (
                   <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-                    <Button variant="game" onClick={onBuyCard} className="w-full font-cinzel">
+                    <Button variant="game" onClick={onBuyCard} disabled={actionSubmitting} className="w-full font-cinzel">
                       ✨ {t("purchase")}
                     </Button>
                   </motion.div>
                 )}
                 {!isReserved && currentPlayer.reservedCards.length < 3 && (
                   <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-                    <Button variant="game-secondary" onClick={onReserveCard} className="w-full font-cinzel">
+                    <Button variant="game-secondary" onClick={onReserveCard} disabled={actionSubmitting} className="w-full font-cinzel">
                       📌 {t("reserve")}
                     </Button>
                   </motion.div>

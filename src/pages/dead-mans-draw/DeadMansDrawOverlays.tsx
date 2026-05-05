@@ -10,7 +10,6 @@ import type {
   DeadMansDrawSummaryModalProps,
 } from "./types";
 import {
-  type DeadMansDrawTutorialSummaryKey,
   type DeadMansDrawTutorialTitleKey,
 } from "./shared";
 
@@ -18,9 +17,13 @@ export function DeadMansDrawSummaryModal({
   open,
   t,
   tutorialSteps,
+  tutorialStep,
+  onNext,
+  onPrev,
   onClose,
 }: DeadMansDrawSummaryModalProps) {
   if (!open) return null;
+  const currentStep = tutorialSteps[tutorialStep] ?? tutorialSteps[0];
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-sm" onClick={onClose}>
@@ -41,20 +44,21 @@ export function DeadMansDrawSummaryModal({
         >
           x
         </button>
-        <p className="font-cinzel text-xs uppercase tracking-[0.35em] text-teal-100/55">{t("gameSummary")}</p>
-        <h2 className="mt-2 font-cinzel text-3xl text-white">{t("deadMansDrawTutorialTitle")}</h2>
-        <p className="mt-3 text-sm leading-5 text-slate-300/80">{t("deadMansDrawTutorialSummaryIntro")}</p>
-        <div className="mt-6 space-y-3">
-          {tutorialSteps.map((step) => (
-            <div key={step} className="rounded-2xl border border-white/10 bg-white/5 p-3">
-              <p className="font-cinzel text-sm text-amber-100">
-                {t(`deadMansDrawTutorialStep${step}Title` as DeadMansDrawTutorialTitleKey)}
-              </p>
-              <p className="mt-1 text-xs leading-5 text-slate-200/85">
-                {t(`deadMansDrawTutorialStep${step}Summary` as DeadMansDrawTutorialSummaryKey)}
-              </p>
-            </div>
-          ))}
+        <p className="font-cinzel text-xs uppercase tracking-[0.35em] text-teal-100/55">
+          Walkthrough {tutorialStep + 1} / {tutorialSteps.length}
+        </p>
+        <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-slate-700">
+          <div className="h-full rounded-full bg-teal-300 transition-all" style={{ width: `${((tutorialStep + 1) / tutorialSteps.length) * 100}%` }} />
+        </div>
+        <h2 className="mt-4 font-cinzel text-3xl text-white">
+          {t(`deadMansDrawTutorialStep${currentStep}Title` as DeadMansDrawTutorialTitleKey)}
+        </h2>
+        <p className="mt-3 text-sm leading-6 text-slate-200/85">
+          {t(`deadMansDrawTutorialStep${currentStep}Body` as any)}
+        </p>
+        <div className="mt-6 flex flex-wrap gap-3">
+          <Button variant="outline" onClick={onPrev} disabled={tutorialStep === 0}>Back</Button>
+          <Button variant="game" onClick={onNext} disabled={tutorialStep === tutorialSteps.length - 1}>Next</Button>
         </div>
       </motion.div>
     </div>
@@ -112,11 +116,12 @@ export function DeadMansDrawPendingDrawer({
   onHorseshoe,
   onMap,
   onMisfire,
+  top,
 }: DeadMansDrawPendingDrawerProps) {
   if (!pendingEffect) return null;
 
   return (
-    <div className="fixed inset-x-0 bottom-0 z-40 px-3 pb-3 sm:px-4">
+    <div className={top ? "fixed inset-x-0 top-0 z-40 px-3 pt-3 sm:px-4" : "fixed inset-x-0 bottom-0 z-40 px-3 pb-3 sm:px-4"}>
       <motion.div
         layout
         className="mx-auto max-w-md rounded-[30px] border border-white/10 bg-cover bg-center p-4 shadow-[0_-12px_40px_rgba(2,6,23,0.55)] backdrop-blur sm:max-w-lg"

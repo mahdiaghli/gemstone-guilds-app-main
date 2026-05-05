@@ -49,6 +49,10 @@ export default function OnlineMatchmaking() {
     const parsed = savedTurnTime ? parseInt(savedTurnTime, 10) : 45;
     return parsed === 15 || parsed === 30 || parsed === 45 || parsed === 60 ? parsed : 45;
   });
+  const targetScore = (() => {
+    const parsed = Number(sessionStorage.getItem("matchmaking-targetScore"));
+    return parsed > 0 ? parsed : undefined;
+  })();
   const autoStartRef = useRef(false); // Prevent duplicate starts
   const playerNameRef = useRef(playerName);
   const playerCountRef = useRef(playerCount);
@@ -173,6 +177,7 @@ export default function OnlineMatchmaking() {
           isHost: false,
           playerCount,
           turnTime,
+          targetScore,
           gameId: selectedGame.id,
         }));
 

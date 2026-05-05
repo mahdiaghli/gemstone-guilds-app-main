@@ -57,6 +57,7 @@ export default function DeadMansDrawGame(props: DeadMansDrawGameProps = {}) {
   const [localState, setLocalState] = useState<DeadMansDrawState>(initialState);
   const [choicesCollapsed, setChoicesCollapsed] = useState(false);
   const [showTutorialSummary, setShowTutorialSummary] = useState(false);
+  const [tutorialStep, setTutorialStep] = useState(0);
   const [showExitConfirm, setShowExitConfirm] = useState(false);
   const [selectedTreasureHelpId, setSelectedTreasureHelpId] = useState<string | null>(null);
   const [bustPreview, setBustPreview] = useState<{ cards: DeadMansDrawCard[]; highlightIds: string[] } | null>(null);
@@ -117,7 +118,7 @@ export default function DeadMansDrawGame(props: DeadMansDrawGameProps = {}) {
   }, [gameMode, humanPlayerCount]);
   const activePlayerIsAI = isAIPlayer(activePlayerIndex);
   const isCurrentPlayerMe = gameMode === "online" ? activePlayerIndex === localPlayerIndex : !activePlayerIsAI;
-  const tutorialSteps = DEAD_MANS_DRAW_TUTORIAL_STEPS.filter((step) => [1, 3, 4, 6].includes(step));
+  const tutorialSteps = DEAD_MANS_DRAW_TUTORIAL_STEPS;
 
   useEffect(() => {
     if (!currentState.pendingEffect) {
@@ -358,14 +359,28 @@ export default function DeadMansDrawGame(props: DeadMansDrawGameProps = {}) {
         }
         getPlayerDisplayName={getPlayerDisplayName}
         activePlayerIndex={activePlayerIndex}
+        pendingEffect={currentState.pendingEffect}
+        targetSelectionDisabled={interactionLocked || (gameMode === "online" && !isCurrentPlayerMe)}
+        onPistolTarget={(targetPlayerIndex, suit) => runAction(() => resolvePistolChoice(currentState, targetPlayerIndex, suit))}
+        onDaggerTarget={(targetPlayerIndex, suit) => {
+          const previewCard = currentState.players[targetPlayerIndex]?.collected[suit].slice(-1)[0] ?? null;
+          runActionWithBustPreview(previewCard, () => resolveDaggerChoice(currentState, targetPlayerIndex, suit));
+        }}
+        onHorseshoeTarget={(suit) => {
+          const previewCard = currentState.players[currentState.currentPlayerIndex]?.collected[suit].slice(-1)[0] ?? null;
+          runActionWithBustPreview(previewCard, () => resolveHorseshoeChoice(currentState, suit));
+        }}
         onOpenSummary={() => setShowTutorialSummary(true)}
         onOpenExit={() => setShowExitConfirm(true)}
       />
-      {drawerOpen ? <div className={choicesCollapsed ? "h-20" : "h-80"} aria-hidden="true" /> : null}
+      {drawerOpen && !["pistol", "dagger", "horseshoe"].includes(currentState.pendingEffect?.kind ?? "") ? <div className={choicesCollapsed ? "h-20" : "h-80"} aria-hidden="true" /> : null}
       <DeadMansDrawSummaryModal
         open={showTutorialSummary}
         t={t}
         tutorialSteps={tutorialSteps}
+        tutorialStep={tutorialStep}
+        onNext={() => setTutorialStep((step) => Math.min(tutorialSteps.length - 1, step + 1))}
+        onPrev={() => setTutorialStep((step) => Math.max(0, step - 1))}
         onClose={() => setShowTutorialSummary(false)}
       />
       <DeadMansDrawExitModal
@@ -400,6 +415,7 @@ export default function DeadMansDrawGame(props: DeadMansDrawGameProps = {}) {
           runActionWithBustPreview(previewCard, () => resolveMapChoice(currentState, cardId));
         }}
         onMisfire={(suit) => runAction(() => resolveMisfireChoice(currentState, suit))}
+        top={currentState.pendingEffect?.kind === "astrolabe" || currentState.pendingEffect?.kind === "map"}
       />
     </>
   );

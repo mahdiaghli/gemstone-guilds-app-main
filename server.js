@@ -68,6 +68,14 @@ function normalizeTurnTimeSeconds(value) {
   return value === 15 || value === 30 || value === 45 || value === 60 ? value : 45;
 }
 
+function normalizePlayerCount(value) {
+  return Math.max(2, Math.min(4, Number(value) || 2));
+}
+
+function normalizeHumanPlayers(value, playerCount) {
+  return Math.max(1, Math.min(playerCount, Number(value) || playerCount));
+}
+
 function normalizeGroup(entry) {
   const visibility =
     entry.visibility === "private" || entry.visibility === "closed"
@@ -515,12 +523,18 @@ const httpServer = createServer(async (req, res) => {
     );
 
     if (!exists) {
+      const playerCount = normalizePlayerCount(payload.playerCount);
       state.gameInvites.unshift({
         id: `invite-${Date.now()}-${payload.fromUserId}-${payload.toUserId}`,
         fromUserId: payload.fromUserId,
         toUserId: payload.toUserId,
         createdAt: new Date().toISOString(),
         status: "pending",
+        gameId: typeof payload.gameId === "string" && payload.gameId ? payload.gameId : "splendor",
+        playerCount,
+        humanPlayers: normalizeHumanPlayers(payload.humanPlayers, playerCount),
+        turnTime: normalizeTurnTimeSeconds(payload.turnTime),
+        roomId: typeof payload.roomId === "string" && payload.roomId ? payload.roomId : `FR-${Date.now().toString(36).toUpperCase()}`,
       });
       writeSharedState(state);
     }
@@ -543,7 +557,7 @@ const httpServer = createServer(async (req, res) => {
     writeSharedState(state);
 
     res.writeHead(200, { "Content-Type": "application/json" });
-    res.end(JSON.stringify({ ok: true }));
+    res.end(JSON.stringify({ ok: true, invite }));
     return;
   }
 

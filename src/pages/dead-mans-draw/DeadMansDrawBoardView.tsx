@@ -24,6 +24,11 @@ export function DeadMansDrawBoardView({
   onToggleTreasureHelp,
   getPlayerDisplayName,
   activePlayerIndex,
+  pendingEffect,
+  onPistolTarget,
+  onDaggerTarget,
+  onHorseshoeTarget,
+  targetSelectionDisabled,
   onOpenSummary,
   onOpenExit,
 }: DeadMansDrawBoardViewProps) {
@@ -56,6 +61,26 @@ export function DeadMansDrawBoardView({
               </button>
             </div>
           </div>
+
+          {currentState.players[1] ? (
+            <PlayerStack
+              player={currentState.players[1]}
+              isActive={activePlayerIndex === 1}
+              displayName={getPlayerDisplayName(1)}
+              t={t}
+              markedOpponentName={currentState.players[1].markedOpponentIndex !== null ? getPlayerDisplayName(currentState.players[1].markedOpponentIndex) : null}
+              targetEffect={pendingEffect?.kind === "pistol" || pendingEffect?.kind === "dagger" ? pendingEffect : null}
+              ownChoiceEffect={pendingEffect?.kind === "horseshoe" ? pendingEffect : null}
+              playerIndex={1}
+              activePlayerIndex={activePlayerIndex}
+              targetSelectionDisabled={targetSelectionDisabled}
+              onTargetCard={(targetPlayerIndex, suit) => {
+                if (pendingEffect?.kind === "pistol") onPistolTarget(targetPlayerIndex, suit);
+                if (pendingEffect?.kind === "dagger") onDaggerTarget(targetPlayerIndex, suit);
+              }}
+              onOwnChoiceCard={onHorseshoeTarget}
+            />
+          ) : null}
 
           <div className="">
             <div className="grid grid-cols-3 gap-3">
@@ -114,7 +139,7 @@ export function DeadMansDrawBoardView({
           </div>
 
           <div className="space-y-3">
-            {currentState.players.map((player, index) => (
+            {currentState.players.map((player, index) => index === 1 ? null : (
               <PlayerStack
                 key={player.id}
                 player={player}
@@ -122,6 +147,16 @@ export function DeadMansDrawBoardView({
                 displayName={getPlayerDisplayName(index)}
                 t={t}
                 markedOpponentName={player.markedOpponentIndex !== null ? getPlayerDisplayName(player.markedOpponentIndex) : null}
+                targetEffect={pendingEffect?.kind === "pistol" || pendingEffect?.kind === "dagger" ? pendingEffect : null}
+                ownChoiceEffect={pendingEffect?.kind === "horseshoe" ? pendingEffect : null}
+                playerIndex={index}
+                activePlayerIndex={activePlayerIndex}
+                targetSelectionDisabled={targetSelectionDisabled}
+                onTargetCard={(targetPlayerIndex, suit) => {
+                  if (pendingEffect?.kind === "pistol") onPistolTarget(targetPlayerIndex, suit);
+                  if (pendingEffect?.kind === "dagger") onDaggerTarget(targetPlayerIndex, suit);
+                }}
+                onOwnChoiceCard={onHorseshoeTarget}
               />
             ))}
           </div>

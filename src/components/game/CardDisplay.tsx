@@ -52,6 +52,8 @@ interface CardDisplayProps {
   showBack?: boolean;
   emphasizeAffordableCosts?: boolean;
   costStatus?: Partial<Record<GemType, boolean>>;
+  dataCardId?: string | number;
+  animateIn?: boolean;
 }
 
 const backCardImages = [backcard1Img, backcard2Img, backcard3Img];
@@ -126,6 +128,8 @@ export default function CardDisplay({
   showBack,
   emphasizeAffordableCosts,
   costStatus,
+  dataCardId,
+  animateIn,
 }: CardDisplayProps) {
   const { t } = useLanguage();
   const cardImagePath = getCardFaceImage(card);
@@ -137,6 +141,9 @@ export default function CardDisplay({
 
   return (
     <motion.div
+      initial={animateIn ? { opacity: 0, rotateY: -90, scale: 0.96 } : undefined}
+      animate={animateIn ? { opacity: 1, rotateY: 0, scale: 1 } : undefined}
+      transition={animateIn ? { duration: 0.28, ease: "easeOut" } : undefined}
       whileHover={onClick ? { y: -4, scale: 1.02 } : undefined}
       onClick={onClick}
       className={cn(
@@ -151,6 +158,7 @@ export default function CardDisplay({
         backgroundSize: 'cover',
         backgroundPosition: 'center',
       }}
+      data-card-id={String(dataCardId ?? card.id)}
     >
       {!showBack ? (
         <>
