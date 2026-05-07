@@ -311,9 +311,9 @@ export function DeadMansDrawBoardView({
                     </div>
                   </motion.div>
                   <motion.div
-                    initial={{ opacity: 0, y: -20, scale: 0.8 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    transition={{ duration: 0.3, delay: index * 0.05 }}
+                    initial={{ opacity: 0, y: -50, scale: 0.5, x: -100 }}
+                    animate={{ opacity: 1, y: 0, scale: 1, x: 0 }}
+                    transition={{ duration: 0.5, delay: index * 0.05, type: "spring", stiffness: 200 }}
                     className="w-full"
                   >
                     <CardChip

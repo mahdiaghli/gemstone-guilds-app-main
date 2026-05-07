@@ -3,6 +3,8 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { useGame } from "@/hooks/useGame";
 import { setGlobalMusicTrack } from "@/hooks/useBackgroundMusic";
 import { useLanguage } from "@/hooks/useLanguage";
+import { useSplendorTutorial } from "./useSplendorTutorial";
+import { useSplendorSocket } from "./useSplendorSocket";
 import {
   GemType,
   TokenType,
@@ -183,22 +185,24 @@ export default function useSplendorGameController(props: GameProps = {}) {
 
   const getPlayerDisplayName = useCallback(
     (index: number) => {
+      let displayName: string;
       if (gameMode === "online") {
-        return props.playerNamesList?.[index] || `${t("player")} ${index + 1}`;
+        displayName = props.playerNamesList?.[index] || `${t("player")} ${index + 1}`;
+      } else {
+        if (gameMode === "ai" && index !== 0) {
+          displayName = t("deadMansDrawRivalAI", { number: index });
+        } else if (index === 0 && user?.username) {
+          displayName = user.username;
+        } else {
+          displayName = t("deadMansDrawPlayerName", { number: index + 1 });
+        }
       }
-
-      if (isAIPlayer(index)) {
-        return `${t("bot")} ${index - humanPlayerCount + 1}`;
+      // Truncate names longer than 10 letters
+      if (displayName.length > 10) {
+        displayName = displayName.slice(0, 10);
       }
-
-      if (index === 0 && user?.username) {
-        return user.username;
-      }
-
-      return `${t("player")} ${index + 1}`;
-    },
-    [gameMode, humanPlayerCount, isAIPlayer, props.playerNamesList, t, user?.username],
-  );
+      return displayName;
+    }, [gameMode, props.playerNamesList, t, user?.username]);
 
   const getTimeoutReturnTokenForPlayer = useCallback(
     (playerIndex: number) => getTimeoutReturnToken(state, playerIndex),
@@ -265,63 +269,13 @@ export default function useSplendorGameController(props: GameProps = {}) {
   // Debounce ref to prevent rapid clicks
   const actionDebounceRef = useRef<number | null>(null);
 
-  const interactiveTutorialSteps = useMemo(() => [
-    {
-      title: lang === "fa" ? "هدف: رسیدن به ۱۵ امتیاز" : "Goal: reach 15 points",
-      description: lang === "fa" ? "کارت‌های توسعه را بخرید و نجبا را جذب کنید تا امتیاز بگیرید. وقتی بازیکنی به ۱۵ امتیاز می‌رسد، همه دور را تمام می‌کنند و بالاترین امتیاز برنده است." : "Buy development cards and attract nobles to score. When a player reaches 15 points, everyone finishes the round and the highest score wins.",
-      focus: "goal" as const,
-    },
-    {
-      title: lang === "fa" ? "یک عمل را انتخاب کنید" : "Choose one action",
-      description: lang === "fa" ? "در نوبت خود، دقیقاً یک عمل را انتخاب کنید: گرفتن جواهرات، خرید کارت، رزرو کارت قابل مشاهده، یا رزرو کور از یک دسته." : "On your turn, pick exactly one action: take gems, buy a card, reserve a visible card, or reserve blindly from a deck.",
-      focus: "actions" as const,
-    },
-    {
-      title: lang === "fa" ? "جواهرات مختلف را انتخاب کنید" : "Take different gems",
-      description: lang === "fa" ? "روی سه جواهر متفاوت (الماس، آبی، سبز) کلیک کنید، سپس دکمه بگیر را فشار دهید." : "Click three different gems (diamond, blue, green), then press Take.",
-      focus: "tokens" as const,
-    },
-    {
-      title: lang === "fa" ? "کارت سطح اول را خریدار" : "Buy a level 1 card",
-      description: lang === "fa" ? "یک کارت سطح ۱ کلیک کنید که شما می‌توانید با جواهرات خود خریداری کنید. جواهرات خود برای پرداخت استفاده خواهند شد و یک کارت قرمز دائمی جایزه دریافت خواهید کرد." : "Click a level 1 card you can afford with your gems. Your gems will be used for payment and you'll get a red permanent bonus.",
-      focus: "card" as const,
-    },
-    {
-      title: lang === "fa" ? "دو توکن همرنگ بگیرید" : "Take matching gems",
-      description: lang === "fa" ? "روی دو توکن Onyx (سیاه) کلیک کنید تا درک کنید می‌توانید توکن‌های همرنگ بگیرید اگر حداقل ۴ توکن از آن رنگ باقی باشد." : "Click two onyx tokens to understand you can take matching gems if at least 4 remain of that color.",
-      focus: "tokens" as const,
-    },
-    {
-      title: lang === "fa" ? "یک کارت رزرو کنید" : "Reserve a card",
-      description: lang === "fa" ? "یک کارت بلندمدت کلیک کنید که نیاز به دو Onyx و دو توکن قرمز دارد و آن را رزرو کنید. شما یک توکن طلا دریافت خواهید کرد." : "Click a card requiring two onyxs and two red tokens and reserve it. You'll get a gold token.",
-      focus: "card" as const,
-    },
-    {
-      title: lang === "fa" ? "کارت رزرو شده را خریدار" : "Buy reserved card",
-      description: lang === "fa" ? "کارت رزرو شده را از پنل خود خریداری کنید. توکن طلا می‌تواند هر رنگ را جایگزین کند و به شما کمک می‌کند بدون نیاز به همه جواهرات خریداری کنید." : "Buy the reserved card from your panel. The gold token can substitute any color, helping you afford cards without exact gems.",
-      focus: "panel" as const,
-    },
-    {
-      title: lang === "fa" ? "سه سطح کارتی" : "Three card levels",
-      description: lang === "fa" ? "کارت‌های سطح ۱ ارزان‌تر هستند. کارت‌های سطح ۲ و ۳ گران‌تر هستند، اما معمولاً امتیاز بیشتر و پیشرفت قوی‌تری می‌دهند." : "Level 1 cards are cheaper. Level 2 and 3 cards cost more, but they usually give more points and stronger progress.",
-      focus: "cards" as const,
-    },
-    {
-      title: lang === "fa" ? "بازدیدکنندگان نجیب" : "Noble visitors",
-      description: lang === "fa" ? "نجبا اینجا منتظر می‌مانند. اگر جایزه‌های کارت دائمی شما با نیاز یک نجیب پس از خرید مطابقت داشته باشد، آن نجیب به طور خودکار به پنل شما منتقل می‌شود." : "Nobles wait here. If your permanent card bonuses match a noble requirement after buying, that noble automatically moves to your panel.",
-      focus: "nobles" as const,
-    },
-    {
-      title: lang === "fa" ? "پنل بازیکن شما" : "Your player panel",
-      description: lang === "fa" ? "پنل شما امتیاز، جواهرات متعلق به شما، جایزه‌های کارت دائمی بر اساس رنگ، کارت‌های رزرو شده و نجبایی که جذب کرده‌اید را نشان می‌دهد." : "Your panel shows score, owned gems, permanent card bonuses by color, reserved cards, and nobles you have attracted.",
-      focus: "panel" as const,
-    },
-    {
-      title: lang === "fa" ? "تایمر نوبت" : "Turn timer",
-      description: lang === "fa" ? "به تایمر در هدر نگاه کنید. عمل خود را قبل از رسیدن به صفر تمام کنید، به خصوص در بازی‌های آنلاین یا زمان‌دار." : "Watch the timer in the header. Finish your action before it reaches zero, especially in online or timed games.",
-      focus: "timer" as const,
-    },
-  ], [lang]);
+  const { interactiveTutorialSteps, isTutorialActionAllowed } = useSplendorTutorial({
+    lang,
+    tutorialStep,
+    interactiveTutorialEnabled,
+    manualTutorialOpen,
+    state,
+  });
 
   const isExpectedDailyPuzzleAction = useCallback(
     (action: DailyPuzzleAction | null) => {
@@ -580,26 +534,16 @@ export default function useSplendorGameController(props: GameProps = {}) {
     }
   }, [interactiveTutorialEnabled, manualTutorialOpen]);
 
-  useEffect(() => {
-    if (gameMode !== "online" || !props.socket) return;
-
-    const handleGameStateUpdate = (newGameState: GameState) => {
+  useSplendorSocket({
+    socket: props.socket,
+    gameMode,
+    menuPath,
+    turnDurationSeconds,
+    t,
+    onGameStateUpdate: (newGameState: GameState) => {
       console.log("📡 Received game state update from server");
-      // The display state is already updated via props.serverGameState by the parent
-      // No need to do anything here - just acknowledge receipt
-    };
-
-    props.socket.on("game-state-updated", handleGameStateUpdate);
-
-    return () => {
-      props.socket?.off("game-state-updated", handleGameStateUpdate);
-    };
-  }, [gameMode, props.socket]);
-
-  useEffect(() => {
-    if (gameMode !== "online" || !props.socket) return;
-
-    const handlePlayerRemoved = (data: any) => {
+    },
+    onPlayerRemoved: (data: any) => {
       const index =
         typeof data?.playerIndex === "number" ? data.playerIndex + 1 : null;
       const name = data?.playerName || (index ? `${t("player")} ${index}` : "");
@@ -608,48 +552,25 @@ export default function useSplendorGameController(props: GameProps = {}) {
         data?.reason === "afk" ? `${base} - ${t("playerRemovedAfk")}` : base;
       setSystemNotice(message);
       setTimeout(() => setSystemNotice(""), 4000);
-    };
-
-    props.socket.on("player-removed", handlePlayerRemoved);
-
-    return () => {
-      props.socket?.off("player-removed", handlePlayerRemoved);
-    };
-  }, [gameMode, props.socket, t]);
-
-  useEffect(() => {
-    if (gameMode !== "online" || !props.socket) return;
-
-    const onTurnTimer = (data: any) => {
+    },
+    onTurnTimerUpdated: (data: any) => {
       const endsAt = Number(data?.endsAt);
       if (!Number.isFinite(endsAt)) return;
       const remaining = Math.max(0, Math.ceil((endsAt - Date.now()) / 1000));
       setTurnSecondsLeft(Math.min(turnDurationSeconds, remaining));
-    };
-
-    const onRematchRequested = () => {
+    },
+    onRematchRequested: () => {
       setShowRematchRequest(true);
       setWaitingForRematch(false);
-    };
-
-    const onRematchResult = (data: any) => {
+    },
+    onRematchResult: (data: any) => {
       setShowRematchRequest(false);
       setWaitingForRematch(false);
       if (!data?.accepted) {
         navigate(menuPath);
       }
-    };
-
-    props.socket.on("turn-timer-updated", onTurnTimer);
-    props.socket.on("rematch-requested", onRematchRequested);
-    props.socket.on("rematch-result", onRematchResult);
-
-    return () => {
-      props.socket?.off("turn-timer-updated", onTurnTimer);
-      props.socket?.off("rematch-requested", onRematchRequested);
-      props.socket?.off("rematch-result", onRematchResult);
-    };
-  }, [gameMode, menuPath, navigate, props.socket, turnDurationSeconds]);
+    },
+  });
 
   useEffect(() => {
     setTurnSecondsLeft(turnDurationSeconds);
@@ -1057,63 +978,6 @@ export default function useSplendorGameController(props: GameProps = {}) {
     reserveCard,
     endTurn,
   ]);
-
-  const isTutorialActionAllowed = useCallback(
-    (actionType: "takeTokens" | "buyCard" | "reserveCard", actionData?: any): boolean => {
-      // If tutorial is not enabled, all actions are allowed
-      if (!(interactiveTutorialEnabled || manualTutorialOpen)) {
-        return true;
-      }
-
-      // Tutorial step restrictions:
-      // Step 0-1: Informational only
-      // Step 2: Take 3 different gems (diamond, blue, green)
-      // Step 3: Buy a level 1 card
-      // Step 4: Take 2 same onyx tokens
-      // Step 5: Reserve a card
-      // Step 6: Buy reserved card
-      // Step 7+: All actions allowed
-
-      switch (tutorialStep) {
-        case 0:
-        case 1:
-          // Informational slides - don't allow actions yet
-          return false;
-        case 2:
-          // Take 3 different gems: ensure it's token selection with 3 different gems
-          if (actionType !== "takeTokens") return false;
-          if (!actionData?.gems || actionData.gems.length !== 3) return false;
-          const gemSet = new Set(actionData.gems);
-          return gemSet.size === 3; // Must be 3 different gems
-        case 3:
-          // Buy a level 1 card
-          if (actionType !== "buyCard") return false;
-          if (!actionData?.card) return false;
-          return actionData.card.level === 1; // Must be level 1
-        case 4:
-          // Take 2 same onyx tokens
-          if (actionType !== "takeTokens") return false;
-          if (!actionData?.gems || actionData.gems.length !== 2) return false;
-          return actionData.gems[0] === actionData.gems[1] && actionData.gems[0] === "onyx";
-        case 5:
-          // Reserve a card
-          if (actionType === "buyCard") return false; // Don't allow buying at this step
-          if (actionType === "takeTokens") return false; // Don't allow tokens
-          return actionType === "reserveCard"; // Only allow reserving
-        case 6:
-          // Buy reserved card
-          if (actionType !== "buyCard") return false;
-          if (!actionData?.card) return false;
-          // Check if card is in reserved list
-          const currentPlayer = state.players[state.currentPlayerIndex];
-          return currentPlayer.reserved.some((c) => c.id === actionData.card.id);
-        default:
-          // Step 7+: All actions allowed
-          return true;
-      }
-    },
-    [tutorialStep, interactiveTutorialEnabled, manualTutorialOpen, state],
-  );
 
   const handleGemClick = useCallback(
     (gem: GemType) => {
