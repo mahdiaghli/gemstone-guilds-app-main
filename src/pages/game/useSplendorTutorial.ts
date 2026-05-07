@@ -16,6 +16,11 @@ export interface SplendorTutorialStep {
   action: "take-tokens-different" | "buy-card" | "take-tokens-same" | "reserve-card" | "buy-reserved" | null;
 }
 
+export interface SplendorTutorialData {
+  steps: SplendorTutorialStep[];
+  dir: "rtl" | "ltr";
+}
+
 export function useSplendorTutorial(props: SplendorTutorialProps) {
   const { lang, tutorialStep, interactiveTutorialEnabled, manualTutorialOpen, state } = props;
 
@@ -145,8 +150,14 @@ export function useSplendorTutorial(props: SplendorTutorialProps) {
     [tutorialStep, interactiveTutorialEnabled, manualTutorialOpen, state],
   );
 
+  const tutorialData = useMemo((): SplendorTutorialData => ({
+    steps: interactiveTutorialSteps,
+    dir: lang === "fa" ? "rtl" : "ltr",
+  }), [interactiveTutorialSteps, lang]);
+
   return {
     interactiveTutorialSteps,
     isTutorialActionAllowed,
+    tutorialData,
   };
 }

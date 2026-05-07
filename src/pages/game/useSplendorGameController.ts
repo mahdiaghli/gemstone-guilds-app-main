@@ -68,7 +68,19 @@ export default function useSplendorGameController(props: GameProps = {}) {
     Math.max(2, parseInt(searchParams.get("players") || "2")),
   );
   const gameMode = props.mode || searchParams.get("mode") || "local";
-  const interactiveTutorialEnabled = searchParams.get("tutorial") === "1" && gameMode !== "online";
+  
+  // Check if it's first time playing Splendor
+  const hasPlayedSplendorBefore = useMemo(() => {
+    try {
+      return localStorage.getItem("splendor-tutorial-completed") === "true";
+    } catch {
+      return false;
+    }
+  }, []);
+  
+  const isFirstTimePlayer = !hasPlayedSplendorBefore && gameMode !== "online" && !challengeId;
+  
+  const interactiveTutorialEnabled = (searchParams.get("tutorial") === "1" || isFirstTimePlayer) && gameMode !== "online";
   const humanPlayerCount = Math.min(
     playerCount,
     Math.max(
@@ -269,7 +281,7 @@ export default function useSplendorGameController(props: GameProps = {}) {
   // Debounce ref to prevent rapid clicks
   const actionDebounceRef = useRef<number | null>(null);
 
-  const { interactiveTutorialSteps, isTutorialActionAllowed } = useSplendorTutorial({
+  const { interactiveTutorialSteps, isTutorialActionAllowed, tutorialData } = useSplendorTutorial({
     lang,
     tutorialStep,
     interactiveTutorialEnabled,
@@ -355,6 +367,9 @@ export default function useSplendorGameController(props: GameProps = {}) {
   useEffect(() => {
     if (!state.gameOver || state.winner === null) return;
 
+    // Prevent game over handling during interactive tutorial
+    if (interactiveTutorialEnabled || manualTutorialOpen) return;
+
     const rewardKey = buildWinnerRewardKey(state);
     if (awardedWinnerRef.current === rewardKey) return;
     awardedWinnerRef.current = rewardKey;
@@ -374,6 +389,10 @@ export default function useSplendorGameController(props: GameProps = {}) {
   useEffect(() => {
     if (!state.gameOver || state.winner === null) return;
     if (state.winner === localPlayerIndex) return;
+    
+    // Prevent game over handling during interactive tutorial
+    if (interactiveTutorialEnabled || manualTutorialOpen) return;
+    
     const lossKey = `${state.winner}-${localPlayerIndex}-${state.players.length}`;
     if (awardedLossRef.current === lossKey) return;
     awardedLossRef.current = lossKey;
@@ -384,6 +403,10 @@ export default function useSplendorGameController(props: GameProps = {}) {
 
   useEffect(() => {
     if (!state.gameOver || state.winner === null) return;
+    
+    // Prevent game over handling during interactive tutorial
+    if (interactiveTutorialEnabled || manualTutorialOpen) return;
+    
     const analyticsKey = `${selectedGame.id}-${gameMode}-${state.winner}-${state.players.length}`;
     if (recordedAnalyticsRef.current === analyticsKey) return;
     recordedAnalyticsRef.current = analyticsKey;
@@ -661,10 +684,14 @@ export default function useSplendorGameController(props: GameProps = {}) {
   ]);
 
   // AI turn - automatic execution with proper state tracking
+  // Disable AI during interactive tutorial
   useEffect(() => {
     if (state.gameOver) return;
     if (phase !== "idle") return;
     if (!isAIPlayer(state.currentPlayerIndex)) return;
+    
+    // Skip AI execution during interactive tutorial
+    if (interactiveTutorialEnabled || manualTutorialOpen) return;
 
     let isMounted = true;
 
@@ -990,6 +1017,11 @@ export default function useSplendorGameController(props: GameProps = {}) {
         return;
       }
 
+      // Check if it's AI's turn (for local/AI modes) - silently block without popup
+      if (gameMode !== "online" && isAIPlayer(state.currentPlayerIndex)) {
+        return;
+      }
+
       if (
         challengeId === "daily-puzzle" &&
         gameMode !== "online" &&
@@ -1062,6 +1094,12 @@ export default function useSplendorGameController(props: GameProps = {}) {
   const handleConfirmTokens = useCallback(() => {
     if (actionSubmitting) return;
     if (gameMode === "online" && !isCurrentPlayerMe()) return;
+    
+    // Check if it's AI's turn (for local/AI modes) - silently block without popup
+    if (gameMode !== "online" && isAIPlayer(state.currentPlayerIndex)) {
+      return;
+    }
+    
     if (
       challengeId === "daily-puzzle" &&
       gameMode !== "online" &&
@@ -1198,6 +1236,11 @@ export default function useSplendorGameController(props: GameProps = {}) {
         return;
       }
 
+      // Check if it's AI's turn (for local/AI modes) - silently block without popup
+      if (gameMode !== "online" && isAIPlayer(state.currentPlayerIndex)) {
+        return;
+      }
+
       if (
         challengeId === "daily-puzzle" &&
         gameMode !== "online" &&
@@ -1237,6 +1280,12 @@ export default function useSplendorGameController(props: GameProps = {}) {
   const handleBuyCard = useCallback(() => {
     if (actionSubmitting) return;
     if (gameMode === "online" && !isCurrentPlayerMe()) return;
+    
+    // Check if it's AI's turn (for local/AI modes) - silently block without popup
+    if (gameMode !== "online" && isAIPlayer(state.currentPlayerIndex)) {
+      return;
+    }
+    
     if (!selectedCard) return;
     if (
       challengeId === "daily-puzzle" &&
@@ -1416,6 +1465,12 @@ export default function useSplendorGameController(props: GameProps = {}) {
   const handleReserveCard = useCallback(() => {
     if (actionSubmitting) return;
     if (gameMode === "online" && !isCurrentPlayerMe()) return;
+    
+    // Check if it's AI's turn (for local/AI modes) - silently block without popup
+    if (gameMode !== "online" && isAIPlayer(state.currentPlayerIndex)) {
+      return;
+    }
+    
     if (challengeId === "daily-puzzle" && gameMode !== "online") {
       showSystemNotice("Wrong move.");
       return;
@@ -1552,6 +1607,12 @@ export default function useSplendorGameController(props: GameProps = {}) {
     (level: 1 | 2 | 3) => {
       if (actionSubmitting) return;
       if (gameMode === "online" && !isCurrentPlayerMe()) return;
+      
+      // Check if it's AI's turn (for local/AI modes) - silently block without popup
+      if (gameMode !== "online" && isAIPlayer(state.currentPlayerIndex)) {
+        return;
+      }
+      
       if (challengeId === "daily-puzzle" && gameMode !== "online") {
         showSystemNotice("Wrong move.");
         return;
@@ -1857,6 +1918,9 @@ export default function useSplendorGameController(props: GameProps = {}) {
       title: interactiveTutorialSteps[tutorialStep]?.title || interactiveTutorialSteps[0].title,
       description: interactiveTutorialSteps[tutorialStep]?.description || interactiveTutorialSteps[0].description,
       focus: interactiveTutorialSteps[tutorialStep]?.focus || "goal",
+      dir: tutorialData.dir,
+      isFirstTime: isFirstTimePlayer,
+      isLastStep: tutorialStep === interactiveTutorialSteps.length - 1,
     },
     onNextTutorialStep: () => {
       setTutorialStep((prev) => Math.min(interactiveTutorialSteps.length - 1, prev + 1));
@@ -1866,6 +1930,12 @@ export default function useSplendorGameController(props: GameProps = {}) {
     },
     onCloseTutorial: () => {
       setManualTutorialOpen(false);
+      // Mark tutorial as completed when closed
+      try {
+        localStorage.setItem("splendor-tutorial-completed", "true");
+      } catch (e) {
+        console.error("Failed to save tutorial completion:", e);
+      }
     },
   };
 

@@ -73,6 +73,9 @@ export type SplendorGameSceneProps = {
     title: string;
     description: string;
     focus: "goal" | "actions" | "tokens" | "card" | "cards" | "nobles" | "panel" | "timer";
+    dir: "rtl" | "ltr";
+    isFirstTime: boolean;
+    isLastStep: boolean;
   };
   onNextTutorialStep: () => void;
   onPrevTutorialStep: () => void;
