@@ -30,17 +30,15 @@ import { recordFinishedGame } from "@/lib/playerAnalytics";
 import { DeadMansDrawBoardView } from "./dead-mans-draw/DeadMansDrawBoardView";
 import {
   DeadMansDrawExitModal,
-  DeadMansDrawPendingDrawer,
-  DeadMansDrawSummaryModal,
 } from "./dead-mans-draw/DeadMansDrawOverlays";
 import { PowerChoiceScreen } from "./dead-mans-draw/PowerChoiceScreen";
 import { PowerTargetScreen } from "./dead-mans-draw/PowerTargetScreen";
-import { DEAD_MANS_DRAW_TUTORIAL_STEPS } from "./dead-mans-draw/shared";
+import { type DeadMansDrawInteractiveTutorialStep } from "./dead-mans-draw/shared";
 import {
   DeadMansDrawGameOverView,
   DeadMansDrawBonusPreviewView,
 } from "./dead-mans-draw/DeadMansDrawStatusViews";
-import type { DeadMansDrawGameProps } from "./dead-mans-draw/types";
+import type { DeadMansDrawFlightAnimation, DeadMansDrawGameProps } from "./dead-mans-draw/types";
 
 export default function DeadMansDrawGame(props: DeadMansDrawGameProps = {}) {
   const navigate = useNavigate();
@@ -55,21 +53,74 @@ export default function DeadMansDrawGame(props: DeadMansDrawGameProps = {}) {
 
   const initialState = useMemo(() => initializeDeadMansDrawGame(playerCount, true), [playerCount]);
   const [localState, setLocalState] = useState<DeadMansDrawState>(initialState);
-  const [choicesCollapsed, setChoicesCollapsed] = useState(false);
-  const [showTutorialSummary, setShowTutorialSummary] = useState(false);
-  const [tutorialStep, setTutorialStep] = useState(0);
+  const [tutorialStep, setTutorialStep] = useState(-1);
   const [showExitConfirm, setShowExitConfirm] = useState(false);
   const [selectedTreasureHelpId, setSelectedTreasureHelpId] = useState<string | null>(null);
   const [bustPreview, setBustPreview] = useState<{ cards: DeadMansDrawCard[]; highlightIds: string[] } | null>(null);
   const bustPreviewTimerRef = useRef<number | null>(null);
-
+  const transitionTimerRefs = useRef<number[]>([]);
+  const [cardFlights, setCardFlights] = useState<DeadMansDrawFlightAnimation[]>([]);
+  const [transitionLocked, setTransitionLocked] = useState(false);
   const currentState = gameMode === "online" && props.serverGameState ? (props.serverGameState as DeadMansDrawState) : localState;
+
+  // Check if first time playing
+  const isFirstTime = useMemo(() => {
+    const hasPlayed = localStorage.getItem('deadmansdraw-has-played');
+    return !hasPlayed;
+  }, []);
+
+  // Show tutorial on first time
+  useEffect(() => {
+    if (
+      isFirstTime
+      && gameMode !== "online"
+      && currentState.ringSelectionIndex === null
+      && !currentState.powerTargetSelection
+    ) {
+      setTutorialStep(0);
+      localStorage.setItem('deadmansdraw-has-played', 'true');
+    }
+  }, [currentState.powerTargetSelection, currentState.ringSelectionIndex, gameMode, isFirstTime]);
+
+  const interactiveTutorialSteps = useMemo((): DeadMansDrawInteractiveTutorialStep[] => [
+    {
+      title: dir === "rtl" ? "خلاصه بازی" : "Game Overview",
+      description: dir === "rtl" ? "در Deadman's Draw، شما کارت‌ها را از دسته می‌کشید و سعی می‌کنید تا زمانی که بُست نمی‌شوید، امتیاز جمع کنید. هر کارت قدرت خاصی دارد. اگر کارتی با دسته‌ای که قبلاً دارید بکشید، بُست می‌شوید و کارت‌های کشیده شده را از دست می‌دهید. بالاترین امتیاز برنده است." : "In Deadman's Draw, you draw cards from the deck and try to collect points before you bust. Each card has a special power. If you draw a card with a suit you already have, you bust and lose the drawn cards. The highest score wins.",
+      focus: "intro",
+    },
+    {
+      title: dir === "rtl" ? "بخش دسته و جمع‌آوری" : "Deck and Collect Section",
+      description: dir === "rtl" ? "در گوشه سمت چپ، دسته کارت‌ها قرار دارد که می‌توانید از آن کارت بکشید. در وسط، دکمه جمع‌آوری گنج قرار دارد که کارت‌های کشیده شده را به مجموعه شما اضافه می‌کند. در گوشه سمت راست، پشته سوخته قرار دارد که کارت‌های بُست شده به آن می‌روند." : "In the left corner is the draw deck where you can draw cards. In the center is the Collect Treasure button that adds drawn cards to your collection. In the right corner is the burn pile where busted cards go.",
+      focus: "deck-section",
+    },
+    {
+      title: dir === "rtl" ? "پنل بازیکن" : "Player Panel",
+      description: dir === "rtl" ? "پنل بازیکن امتیاز و کارت‌های جمع‌آوری شده شما را نشان می‌دهد. کارت‌ها بر اساس دسته‌بندی دسته‌ها گروه‌بندی شده‌اند و فقط بالاترین کارت هر دسته امتیاز می‌دهد." : "The player panel shows your score and collected cards. Cards are grouped by suit, and only the highest card in each suit scores.",
+      focus: "player-panel",
+    },
+    {
+      title: dir === "rtl" ? "منطقه گنج" : "Treasure Area",
+      description: dir === "rtl" ? "کارت‌های کشیده شده در این منطقه نمایش داده می‌شوند. هر کارت قدرت خاصی دارد که می‌تواند به شما کمک کند. روی کارت‌ها کلیک کنید تا توضیحات آن‌ها را ببینید." : "Drawn cards appear in this area. Each card has a special power that can help you. Click on cards to see their descriptions.",
+      focus: "treasure-area",
+    },
+    {
+      title: dir === "rtl" ? "انواع کارت‌ها" : "Card Types",
+      description: dir === "rtl" ? "انواع مختلفی از کارت‌ها وجود دارد: Eye (چشم) کارت بعدی را نشان می‌دهد، Cannon (توپ) از حریف کم می‌کند، Sword (شمشیر) می‌دزدد، Hook (قلاب) از بانک خودت بازی می‌کند، Map (نقشه) از سوخته برمی‌گرداند، Kraken کارت‌های اجباری اضافه می‌کشد، Coin امتیاز مستقیم است و Chest + Key جایزه می‌دهد." : "There are different card types: Eye lets you peek at the next card, Cannon removes from opponent, Sword steals, Hook plays from your bank, Map recovers from burn pile, Kraken forces extra draws, Coin gives direct points, and Chest + Key gives a bonus.",
+      focus: "cards",
+    },
+    {
+      title: dir === "rtl" ? "قدرت‌های ویژه" : "Special Powers",
+      description: dir === "rtl" ? "این ۹ قدرت ویژه بازی پایه را تغییر می‌دهند. قبل از فشار دادن برای کارت بعدی، حتما نگاه کن چه قدرتی روی میز فعال است، چون بعضی از آن‌ها هجومی هستند و بعضی دفاعی." : "These 9 special powers change the base game. Before pushing your luck, check which powers are active, as some are offensive and others defensive.",
+      focus: "powers",
+    },
+  ], [dir]);
 
   useEffect(() => {
     return () => {
       if (bustPreviewTimerRef.current !== null) {
         window.clearTimeout(bustPreviewTimerRef.current);
       }
+      transitionTimerRefs.current.forEach((timerId) => window.clearTimeout(timerId));
     };
   }, []);
 
@@ -105,6 +156,53 @@ export default function DeadMansDrawGame(props: DeadMansDrawGameProps = {}) {
     return t("deadMansDrawPlayerName", { number: index + 1 });
   }, [gameMode, props.playerNamesList, t, user?.username]);
 
+  const setManagedTimeout = useCallback((callback: () => void, delayMs: number) => {
+    const timerId = window.setTimeout(() => {
+      transitionTimerRefs.current = transitionTimerRefs.current.filter((id) => id !== timerId);
+      callback();
+    }, delayMs);
+    transitionTimerRefs.current.push(timerId);
+    return timerId;
+  }, []);
+
+  const getElementCenter = useCallback((selector: string) => {
+    const element = document.querySelector(selector) as HTMLElement | null;
+    if (!element) return null;
+    const rect = element.getBoundingClientRect();
+    return {
+      x: rect.left + rect.width / 2,
+      y: rect.top + rect.height / 2,
+    };
+  }, []);
+
+  const getTreasureSlotCenter = useCallback((slotIndex: number) => {
+    const grid = document.querySelector('[data-dead-draw-treasure-grid="true"]') as HTMLElement | null;
+    if (!grid) return null;
+
+    const gridRect = grid.getBoundingClientRect();
+    const firstCard = grid.querySelector("[data-dead-draw-treasure-card]") as HTMLElement | null;
+    const fallbackWidth = 82;
+    const fallbackHeight = 112;
+    const gap = 8;
+    const cardWidth = firstCard?.getBoundingClientRect().width ?? fallbackWidth;
+    const cardHeight = firstCard?.getBoundingClientRect().height ?? fallbackHeight;
+    const column = slotIndex % 3;
+    const row = Math.floor(slotIndex / 3);
+
+    return {
+      x: gridRect.left + column * (cardWidth + gap) + cardWidth / 2,
+      y: gridRect.top + row * (cardHeight + gap) + cardHeight / 2,
+    };
+  }, []);
+
+  const spawnCardFlight = useCallback((flight: Omit<DeadMansDrawFlightAnimation, "id">) => {
+    const id = `${flight.kind}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+    setCardFlights((current) => [...current, { ...flight, id }]);
+    setManagedTimeout(() => {
+      setCardFlights((current) => current.filter((item) => item.id !== id));
+    }, flight.durationMs + 40);
+  }, [setManagedTimeout]);
+
   const [bonusPreview, setBonusPreview] = useState<{ playerIndex: number; cards: DeadMansDrawCard[] } | null>(null);
   const previousStateRef = useRef<DeadMansDrawState | null>(null);
   const recordedAnalyticsRef = useRef<string | null>(null);
@@ -118,13 +216,6 @@ export default function DeadMansDrawGame(props: DeadMansDrawGameProps = {}) {
   }, [gameMode, humanPlayerCount]);
   const activePlayerIsAI = isAIPlayer(activePlayerIndex);
   const isCurrentPlayerMe = gameMode === "online" ? activePlayerIndex === localPlayerIndex : !activePlayerIsAI;
-  const tutorialSteps = DEAD_MANS_DRAW_TUTORIAL_STEPS;
-
-  useEffect(() => {
-    if (!currentState.pendingEffect) {
-      setChoicesCollapsed(false);
-    }
-  }, [currentState.pendingEffect]);
 
   useEffect(() => {
     setGlobalMusicTrack("game");
@@ -171,7 +262,8 @@ export default function DeadMansDrawGame(props: DeadMansDrawGameProps = {}) {
 
   const actionState = getDeadMansDrawActionState(currentState);
   const previewLocked = Boolean(bustPreview);
-  const overlayLocked = Boolean(bonusPreview) || previewLocked;
+  const tutorialOpen = tutorialStep >= 0;
+  const overlayLocked = Boolean(bonusPreview) || previewLocked || transitionLocked || tutorialOpen;
   const interactionLocked = overlayLocked || !isCurrentPlayerMe;
   const scoreBoard = currentState.players.map((player, index) => ({ index, score: getDeadMansDrawScore(player), cardCount: getPlayerCardCount(player) }));
   const highestScore = Math.max(...scoreBoard.map((entry) => entry.score));
@@ -179,18 +271,139 @@ export default function DeadMansDrawGame(props: DeadMansDrawGameProps = {}) {
   const topCardCount = tiedForScore.length ? Math.max(...tiedForScore.map((entry) => entry.cardCount)) : 0;
   const tiebreakWinner = tiedForScore.length > 1 ? tiedForScore.filter((entry) => entry.cardCount === topCardCount) : [];
 
+  const getCollectedOwnerMap = useCallback((state: DeadMansDrawState) => {
+    const collectedMap = new Map<string, { playerIndex: number; card: DeadMansDrawCard }>();
+    state.players.forEach((player, playerIndex) => {
+      Object.values(player.collected).flat().forEach((card) => {
+        collectedMap.set(card.id, { playerIndex, card });
+      });
+    });
+    return collectedMap;
+  }, []);
+
+  const animateCardsLeavingTreasure = useCallback((
+    beforeState: DeadMansDrawState,
+    afterState: DeadMansDrawState,
+    cards: DeadMansDrawCard[],
+  ) => {
+    const nextCollectedOwners = getCollectedOwnerMap(afterState);
+    cards.forEach((card) => {
+      const start = getElementCenter(`[data-dead-draw-treasure-card="${card.id}"]`);
+      const collectedOwner = nextCollectedOwners.get(card.id);
+      const end = collectedOwner
+        ? getElementCenter(`[data-dead-draw-player-slot="${collectedOwner.playerIndex}-${card.suit}"]`)
+        : getElementCenter('[data-dead-draw-deck="discard"]');
+      if (!start || !end) return;
+      spawnCardFlight({
+        card,
+        kind: collectedOwner ? "collect" : "burn",
+        start,
+        end,
+        durationMs: collectedOwner ? 520 : 500,
+      });
+    });
+
+    const previousCollectedOwners = getCollectedOwnerMap(beforeState);
+    const treasureIds = new Set(cards.map((card) => card.id));
+    nextCollectedOwners.forEach(({ playerIndex, card }, cardId) => {
+      if (treasureIds.has(cardId)) return;
+      const previousOwner = previousCollectedOwners.get(cardId);
+      const start = previousOwner
+        ? getElementCenter(`[data-dead-draw-player-slot="${previousOwner.playerIndex}-${card.suit}"]`)
+        : getElementCenter('[data-dead-draw-deck="discard"]');
+      const end = getElementCenter(`[data-dead-draw-player-slot="${playerIndex}-${card.suit}"]`);
+      if (!start || !end) return;
+      if (previousOwner?.playerIndex === playerIndex) return;
+      spawnCardFlight({
+        card,
+        kind: "collect",
+        start,
+        end,
+        durationMs: 560,
+      });
+    });
+  }, [getCollectedOwnerMap, getElementCenter, spawnCardFlight]);
+
+  const runZoneTransferAnimation = useCallback((
+    cards: DeadMansDrawCard[],
+    action: () => DeadMansDrawState,
+    options: {
+      originSelector: string;
+      destinationSelector: string;
+      kind: "collect" | "burn";
+      durationMs?: number;
+    },
+  ) => {
+    if (!cards.length) {
+      applyState(action());
+      return;
+    }
+
+    const nextState = action();
+    const start = getElementCenter(options.originSelector);
+    const end = getElementCenter(options.destinationSelector);
+
+    if (!start || !end) {
+      applyState(nextState);
+      return;
+    }
+
+    setTransitionLocked(true);
+    cards.forEach((card, index) => {
+      spawnCardFlight({
+        card,
+        kind: options.kind,
+        start,
+        end,
+        durationMs: (options.durationMs ?? 520) + index * 45,
+      });
+    });
+
+    setManagedTimeout(() => {
+      applyState(nextState);
+      setTransitionLocked(false);
+    }, (options.durationMs ?? 520) + Math.max(0, cards.length - 1) * 45 + 40);
+  }, [applyState, getElementCenter, setManagedTimeout, spawnCardFlight]);
+
   const runAction = useCallback((action: () => DeadMansDrawState) => {
     const nextState = action();
     applyState(nextState);
   }, [applyState]);
 
-  const runActionWithBustPreview = useCallback((previewCard: DeadMansDrawCard | null, action: () => DeadMansDrawState) => {
+  const runActionWithPreview = useCallback((
+    previewCard: DeadMansDrawCard | null,
+    action: () => DeadMansDrawState,
+    options?: {
+      originSelector?: string;
+    },
+  ) => {
+    const nextState = action();
     const duplicateCards = previewCard
       ? currentState.treasureArea.filter((card) => card.suit === previewCard.suit)
       : [];
+    const targetCenter = previewCard ? getTreasureSlotCenter(currentState.treasureArea.length) : null;
+    const startCenter = options?.originSelector ? getElementCenter(options.originSelector) : null;
+
+    if (previewCard && startCenter && targetCenter) {
+      spawnCardFlight({
+        card: previewCard,
+        kind: "reveal",
+        start: startCenter,
+        end: targetCenter,
+        durationMs: 380,
+      });
+    }
 
     if (!previewCard || duplicateCards.length === 0) {
-      runAction(action);
+      if (startCenter && targetCenter) {
+        setTransitionLocked(true);
+        setManagedTimeout(() => {
+          applyState(nextState);
+          setTransitionLocked(false);
+        }, 390);
+        return;
+      }
+      applyState(nextState);
       return;
     }
 
@@ -204,23 +417,53 @@ export default function DeadMansDrawGame(props: DeadMansDrawGameProps = {}) {
       window.clearTimeout(bustPreviewTimerRef.current);
     }
 
+    setTransitionLocked(true);
     bustPreviewTimerRef.current = window.setTimeout(() => {
-      setBustPreview(null);
-      runAction(action);
+      animateCardsLeavingTreasure(currentState, nextState, previewStateCards);
+      setManagedTimeout(() => {
+        setBustPreview(null);
+        applyState(nextState);
+        setTransitionLocked(false);
+      }, 520);
       bustPreviewTimerRef.current = null;
     }, 800);
-  }, [currentState.treasureArea, runAction]);
+  }, [
+    animateCardsLeavingTreasure,
+    applyState,
+    currentState,
+    getElementCenter,
+    getTreasureSlotCenter,
+    setManagedTimeout,
+    spawnCardFlight,
+  ]);
+
+  const runCollectWithAnimation = useCallback((action: () => DeadMansDrawState) => {
+    const nextState = action();
+    if (nextState === currentState || !currentState.treasureArea.length) {
+      applyState(nextState);
+      return;
+    }
+
+    setTransitionLocked(true);
+    animateCardsLeavingTreasure(currentState, nextState, currentState.treasureArea);
+    setManagedTimeout(() => {
+      applyState(nextState);
+      setTransitionLocked(false);
+    }, 560);
+  }, [animateCardsLeavingTreasure, applyState, currentState, setManagedTimeout]);
 
   const handleReveal = useCallback(() => {
     if (interactionLocked || (gameMode === "online" && !isCurrentPlayerMe)) return;
     const previewCard = currentState.drawPile[currentState.drawPile.length - 1] ?? null;
-    runActionWithBustPreview(previewCard, () => revealCard(currentState));
-  }, [currentState, gameMode, interactionLocked, isCurrentPlayerMe, runActionWithBustPreview]);
+    runActionWithPreview(previewCard, () => revealCard(currentState), {
+      originSelector: '[data-dead-draw-deck="draw"]',
+    });
+  }, [currentState, gameMode, interactionLocked, isCurrentPlayerMe, runActionWithPreview]);
 
   const handleCollect = useCallback(() => {
     if (interactionLocked || (gameMode === "online" && !isCurrentPlayerMe)) return;
-    runAction(() => collectTreasure(currentState));
-  }, [currentState, gameMode, interactionLocked, isCurrentPlayerMe, runAction]);
+    runCollectWithAnimation(() => collectTreasure(currentState));
+  }, [currentState, gameMode, interactionLocked, isCurrentPlayerMe, runCollectWithAnimation]);
 
   const handlePowerSelect = useCallback((ring: DeadMansDrawRing) => {
     if (interactionLocked) return;
@@ -241,6 +484,8 @@ export default function DeadMansDrawGame(props: DeadMansDrawGameProps = {}) {
   const resetLocalGame = useCallback(() => {
     setBonusPreview(null);
     setBustPreview(null);
+    setCardFlights([]);
+    setTransitionLocked(false);
     setSelectedTreasureHelpId(null);
     previousStateRef.current = null;
     applyState(initializeDeadMansDrawGame(playerCount, true));
@@ -266,23 +511,74 @@ export default function DeadMansDrawGame(props: DeadMansDrawGameProps = {}) {
         return;
       }
       const action = chooseDeadMansDrawAIAction(currentState);
-      if (action.kind === "reveal") return applyState(revealCard(currentState));
-      if (action.kind === "collect") return applyState(collectTreasure(currentState));
-      if (action.kind === "astrolabe") return applyState(resolveAstrolabeChoice(currentState, action.revealPeekedCard));
-      if (action.kind === "pistol") return applyState(resolvePistolChoice(currentState, action.targetPlayerIndex, action.suit));
-      if (action.kind === "dagger") return applyState(resolveDaggerChoice(currentState, action.targetPlayerIndex, action.suit));
-      if (action.kind === "horseshoe") return applyState(resolveHorseshoeChoice(currentState, action.suit));
-      if (action.kind === "map") return applyState(resolveMapChoice(currentState, action.cardId));
-      if (action.kind === "misfire") return applyState(resolveMisfireChoice(currentState, action.suit));
+      if (action.kind === "reveal") {
+        const previewCard = currentState.drawPile[currentState.drawPile.length - 1] ?? null;
+        return runActionWithPreview(previewCard, () => revealCard(currentState), {
+          originSelector: '[data-dead-draw-deck="draw"]',
+        });
+      }
+      if (action.kind === "collect") return runCollectWithAnimation(() => collectTreasure(currentState));
+      if (action.kind === "astrolabe") {
+        const previewCard = action.revealPeekedCard ? currentState.drawPile[currentState.drawPile.length - 1] ?? null : null;
+        if (!action.revealPeekedCard) {
+          return runCollectWithAnimation(() => resolveAstrolabeChoice(currentState, false));
+        }
+        return runActionWithPreview(previewCard, () => resolveAstrolabeChoice(currentState, true), {
+          originSelector: '[data-dead-draw-deck="draw"]',
+        });
+      }
+      if (action.kind === "pistol") {
+        const isGunnie = currentState.players[currentState.currentPlayerIndex]?.ring === "gunnie";
+        const removedCards = isGunnie
+          ? [...(currentState.players[action.targetPlayerIndex]?.collected[action.suit] ?? [])]
+          : (currentState.players[action.targetPlayerIndex]?.collected[action.suit].slice(-1) ?? []);
+        return runZoneTransferAnimation(removedCards, () => resolvePistolChoice(currentState, action.targetPlayerIndex, action.suit), {
+          originSelector: `[data-dead-draw-player-slot="${action.targetPlayerIndex}-${action.suit}"]`,
+          destinationSelector: '[data-dead-draw-deck="discard"]',
+          kind: "burn",
+          durationMs: 500,
+        });
+      }
+      if (action.kind === "dagger") {
+        const previewCard = currentState.players[action.targetPlayerIndex]?.collected[action.suit].slice(-1)[0] ?? null;
+        return runActionWithPreview(previewCard, () => resolveDaggerChoice(currentState, action.targetPlayerIndex, action.suit), {
+          originSelector: `[data-dead-draw-player-slot="${action.targetPlayerIndex}-${action.suit}"]`,
+        });
+      }
+      if (action.kind === "horseshoe") {
+        const previewCard = currentState.players[currentState.currentPlayerIndex]?.collected[action.suit].slice(-1)[0] ?? null;
+        return runActionWithPreview(previewCard, () => resolveHorseshoeChoice(currentState, action.suit), {
+          originSelector: `[data-dead-draw-player-slot="${currentState.currentPlayerIndex}-${action.suit}"]`,
+        });
+      }
+      if (action.kind === "map") {
+        const previewCard = currentState.pendingEffect?.kind === "map"
+          ? currentState.pendingEffect.options.find((card) => card.id === action.cardId) ?? null
+          : null;
+        return runActionWithPreview(previewCard, () => resolveMapChoice(currentState, action.cardId), {
+          originSelector: '[data-dead-draw-deck="discard"]',
+        });
+      }
+      if (action.kind === "misfire") {
+        const removedCard = currentState.players[currentState.currentPlayerIndex]?.collected[action.suit].slice(-1) ?? [];
+        return runZoneTransferAnimation(removedCard, () => resolveMisfireChoice(currentState, action.suit), {
+          originSelector: `[data-dead-draw-player-slot="${currentState.currentPlayerIndex}-${action.suit}"]`,
+          destinationSelector: '[data-dead-draw-deck="discard"]',
+          kind: "burn",
+          durationMs: 500,
+        });
+      }
     }, 1600);
 
     return () => window.clearTimeout(timer);
-  }, [activePlayerIsAI, applyState, currentState, gameMode, overlayLocked]);
+  }, [activePlayerIsAI, applyState, currentState, gameMode, overlayLocked, runCollectWithAnimation, runActionWithPreview, runZoneTransferAnimation]);
 
   const winnerNames = currentState.winnerIndices.map((index) => getPlayerDisplayName(index));
   const ringSelectionPlayer = currentState.ringSelectionIndex !== null ? currentState.players[currentState.ringSelectionIndex] : null;
   const visibleTreasureArea = bustPreview?.cards ?? currentState.treasureArea;
   const highlightedTreasureIds = new Set(bustPreview?.highlightIds ?? []);
+  const allHighlightedIds = highlightedTreasureIds;
+
   useEffect(() => {
     if (selectedTreasureHelpId && !visibleTreasureArea.some((card) => card.id === selectedTreasureHelpId)) {
       setSelectedTreasureHelpId(null);
@@ -337,7 +633,6 @@ export default function DeadMansDrawGame(props: DeadMansDrawGameProps = {}) {
     );
   }
 
-  const drawerOpen = Boolean(currentState.pendingEffect);
   const canReveal = actionState.canReveal && !interactionLocked && !(gameMode === "online" && !isCurrentPlayerMe);
   const canCollect = actionState.canCollect && !interactionLocked && !(gameMode === "online" && !isCurrentPlayerMe);
 
@@ -351,8 +646,9 @@ export default function DeadMansDrawGame(props: DeadMansDrawGameProps = {}) {
         canCollect={canCollect}
         onReveal={handleReveal}
         onCollect={handleCollect}
+        cardFlights={cardFlights}
         visibleTreasureArea={visibleTreasureArea}
-        highlightedTreasureIds={highlightedTreasureIds}
+        highlightedTreasureIds={allHighlightedIds}
         selectedTreasureHelpId={selectedTreasureHelpId}
         onToggleTreasureHelp={(cardId) =>
           setSelectedTreasureHelpId((current) => current === cardId ? null : cardId)
@@ -360,62 +656,69 @@ export default function DeadMansDrawGame(props: DeadMansDrawGameProps = {}) {
         getPlayerDisplayName={getPlayerDisplayName}
         activePlayerIndex={activePlayerIndex}
         pendingEffect={currentState.pendingEffect}
+        decisionDisabled={interactionLocked || (gameMode === "online" && !isCurrentPlayerMe)}
+        onAstrolabeReveal={() => {
+          const previewCard = currentState.drawPile[currentState.drawPile.length - 1] ?? null;
+          runActionWithPreview(previewCard, () => resolveAstrolabeChoice(currentState, true), {
+            originSelector: '[data-dead-draw-deck="draw"]',
+          });
+        }}
+        onAstrolabeCollect={() => runCollectWithAnimation(() => resolveAstrolabeChoice(currentState, false))}
+        onMapChoice={(cardId) => {
+          const previewCard = currentState.pendingEffect?.kind === "map"
+            ? currentState.pendingEffect.options.find((card) => card.id === cardId) ?? null
+            : null;
+          runActionWithPreview(previewCard, () => resolveMapChoice(currentState, cardId), {
+            originSelector: '[data-dead-draw-deck="discard"]',
+          });
+        }}
+        onMisfireChoice={(suit) => {
+          const removedCard = currentState.players[currentState.currentPlayerIndex]?.collected[suit].slice(-1) ?? [];
+          runZoneTransferAnimation(removedCard, () => resolveMisfireChoice(currentState, suit), {
+            originSelector: `[data-dead-draw-player-slot="${currentState.currentPlayerIndex}-${suit}"]`,
+            destinationSelector: '[data-dead-draw-deck="discard"]',
+            kind: "burn",
+            durationMs: 500,
+          });
+        }}
         targetSelectionDisabled={interactionLocked || (gameMode === "online" && !isCurrentPlayerMe)}
-        onPistolTarget={(targetPlayerIndex, suit) => runAction(() => resolvePistolChoice(currentState, targetPlayerIndex, suit))}
+        onPistolTarget={(targetPlayerIndex, suit) => {
+          const isGunnie = currentState.players[currentState.currentPlayerIndex]?.ring === "gunnie";
+          const removedCards = isGunnie
+            ? [...(currentState.players[targetPlayerIndex]?.collected[suit] ?? [])]
+            : (currentState.players[targetPlayerIndex]?.collected[suit].slice(-1) ?? []);
+          runZoneTransferAnimation(removedCards, () => resolvePistolChoice(currentState, targetPlayerIndex, suit), {
+            originSelector: `[data-dead-draw-player-slot="${targetPlayerIndex}-${suit}"]`,
+            destinationSelector: '[data-dead-draw-deck="discard"]',
+            kind: "burn",
+            durationMs: 500,
+          });
+        }}
         onDaggerTarget={(targetPlayerIndex, suit) => {
           const previewCard = currentState.players[targetPlayerIndex]?.collected[suit].slice(-1)[0] ?? null;
-          runActionWithBustPreview(previewCard, () => resolveDaggerChoice(currentState, targetPlayerIndex, suit));
+          runActionWithPreview(previewCard, () => resolveDaggerChoice(currentState, targetPlayerIndex, suit), {
+            originSelector: `[data-dead-draw-player-slot="${targetPlayerIndex}-${suit}"]`,
+          });
         }}
         onHorseshoeTarget={(suit) => {
           const previewCard = currentState.players[currentState.currentPlayerIndex]?.collected[suit].slice(-1)[0] ?? null;
-          runActionWithBustPreview(previewCard, () => resolveHorseshoeChoice(currentState, suit));
+          runActionWithPreview(previewCard, () => resolveHorseshoeChoice(currentState, suit), {
+            originSelector: `[data-dead-draw-player-slot="${currentState.currentPlayerIndex}-${suit}"]`,
+          });
         }}
-        onOpenSummary={() => setShowTutorialSummary(true)}
+        onOpenSummary={() => setTutorialStep(0)}
         onOpenExit={() => setShowExitConfirm(true)}
-      />
-      {drawerOpen && !["pistol", "dagger", "horseshoe"].includes(currentState.pendingEffect?.kind ?? "") ? <div className={choicesCollapsed ? "h-20" : "h-80"} aria-hidden="true" /> : null}
-      <DeadMansDrawSummaryModal
-        open={showTutorialSummary}
-        t={t}
-        tutorialSteps={tutorialSteps}
         tutorialStep={tutorialStep}
-        onNext={() => setTutorialStep((step) => Math.min(tutorialSteps.length - 1, step + 1))}
-        onPrev={() => setTutorialStep((step) => Math.max(0, step - 1))}
-        onClose={() => setShowTutorialSummary(false)}
+        tutorialSteps={interactiveTutorialSteps}
+        onNextTutorial={() => setTutorialStep((step) => Math.min(interactiveTutorialSteps.length - 1, step + 1))}
+        onPrevTutorial={() => setTutorialStep((step) => Math.max(0, step - 1))}
+        onCloseTutorial={() => setTutorialStep(-1)}
       />
       <DeadMansDrawExitModal
         open={showExitConfirm}
         t={t}
         onClose={() => setShowExitConfirm(false)}
         onLeave={handleMenu}
-      />
-      <DeadMansDrawPendingDrawer
-        pendingEffect={currentState.pendingEffect}
-        t={t}
-        collapsed={choicesCollapsed}
-        onToggleCollapsed={() => setChoicesCollapsed((value) => !value)}
-        disabled={interactionLocked || (gameMode === "online" && !isCurrentPlayerMe)}
-        onAstrolabe={(revealPeekedCard) => {
-          const previewCard = revealPeekedCard ? currentState.drawPile[currentState.drawPile.length - 1] ?? null : null;
-          runActionWithBustPreview(previewCard, () => resolveAstrolabeChoice(currentState, revealPeekedCard));
-        }}
-        onPistol={(targetPlayerIndex, suit) => runAction(() => resolvePistolChoice(currentState, targetPlayerIndex, suit))}
-        onDagger={(targetPlayerIndex, suit) => {
-          const previewCard = currentState.players[targetPlayerIndex]?.collected[suit].slice(-1)[0] ?? null;
-          runActionWithBustPreview(previewCard, () => resolveDaggerChoice(currentState, targetPlayerIndex, suit));
-        }}
-        onHorseshoe={(suit) => {
-          const previewCard = currentState.players[currentState.currentPlayerIndex]?.collected[suit].slice(-1)[0] ?? null;
-          runActionWithBustPreview(previewCard, () => resolveHorseshoeChoice(currentState, suit));
-        }}
-        onMap={(cardId) => {
-          const previewCard = currentState.pendingEffect?.kind === "map"
-            ? currentState.pendingEffect.options.find((card) => card.id === cardId) ?? null
-            : null;
-          runActionWithBustPreview(previewCard, () => resolveMapChoice(currentState, cardId));
-        }}
-        onMisfire={(suit) => runAction(() => resolveMisfireChoice(currentState, suit))}
-        top={currentState.pendingEffect?.kind === "astrolabe" || currentState.pendingEffect?.kind === "map"}
       />
     </>
   );

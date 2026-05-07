@@ -1,22 +1,22 @@
-# Software Requirements Specification (SRS)
-## Gemstone Guilds - Multiplayer Card Game Platform
+ Software Requirements Specification (SRS)
+ Gemstone Guilds - Multiplayer Card Game Platform
 
-**Document Version:** 1.0  
-**Last Updated:** April 29, 2026  
-**Project Name:** Gemstone Guilds App  
-**Status:** Active Development  
+Document Version: 1.0  
+Last Updated: April 29, 2026  
+Project Name: Gemstone Guilds App  
+Status: Active Development  
 
 ---
 
-## 1. Executive Summary
+ 1. Executive Summary
 
 Gemstone Guilds(Expert) is a comprehensive web-based multiplayer card gaming platform that provides players with engaging turn-based card games including Splendor, Dead Man's Draw, and additional games in development. The platform features single-player gameplay against AI opponents, competitive multiplayer modes with real-time synchronization, a progression system with ranks and rewards, and a social ecosystem with friends, groups/guilds, and events. The application emphasizes accessibility through bilingual support (English and Persian), responsive mobile design, and an intuitive user interface.
 
 ---
 
-## 2. Purpose and Scope
+ 2. Purpose and Scope
 
-### 2.1 Purpose
+ 2.1 Purpose
 The Gemstone Guilds application aims to deliver an accessible, engaging multiplayer gaming experience that:
 - Provides entertaining card games playable in various modes
 - Creates a sense of progression and achievement through ranks and rewards
@@ -24,9 +24,9 @@ The Gemstone Guilds application aims to deliver an accessible, engaging multipla
 - Generates monetization opportunities through cosmetics and in-game currency packs
 - Delivers a seamless experience across desktop and mobile devices(iOS, Android etc.)
 
-### 2.2 Scope
+ 2.2 Scope
 
-#### In Scope
+ In Scope
 - Core game logic for multiple card games (Splendor and Dead Man's Draw fully implemented; room for  additional games)
 - Single-player gameplay with AI opponents at multiple difficulty levels
 - Real-time multiplayer matchmaking and gameplay
@@ -41,7 +41,7 @@ The Gemstone Guilds application aims to deliver an accessible, engaging multipla
 - Audio system with background music and sound effects
 - Mobile-responsive UI
 
-#### Out of Scope (Future Considerations)
+ Out of Scope (Future Considerations)
 - Cross-platform mobile apps (native iOS/Android)
 - Voice chat beyond basic implementation (optional)
 - Advanced AI with machine learning
@@ -51,14 +51,14 @@ The Gemstone Guilds application aims to deliver an accessible, engaging multipla
 
 ---
 
-## 3. Functional Requirements
+ 3. Functional Requirements
 
-### 3.1 Game Core Requirements
+ 3.1 Game Core Requirements
 
-#### FR-3.1.1: Splendor Game Implementation
-**Description:** Implement complete Splendor card game with all official rules and mechanics.
+ FR-3.1.1: Splendor Game Implementation
+Description: Implement complete Splendor card game with all official rules and mechanics.
 
-**Requirements:**
+Requirements:
 - Players collect gem tokens (diamond, sapphire, emerald, ruby, onyx, gold)
 - Initial state provides 4 tokens of each color, 5 gold tokens (for 2 player game) 
     if there are 3 players, there are 5 tokens for each token and 5 gold tokens
@@ -77,17 +77,17 @@ The Gemstone Guilds application aims to deliver an accessible, engaging multipla
 - Game ends when a player reaches 15 victory points
 - Score = victory points + prestige bonuses
 
-**Acceptance Criteria:**
+Acceptance Criteria:
 - All turn actions can be performed without constraint violations
 - Token pool and player tokens accurately track state
 - Card purchasing correctly deducts tokens
 - Noble requirements properly validate
 - Game correctly identifies and announces winner
 
-#### FR-3.1.2: Dead Man's Draw Game Implementation
-**Description:** Implement complete Dead Man's Draw push-your-luck card game.
+ FR-3.1.2: Dead Man's Draw Game Implementation
+Description: Implement complete Dead Man's Draw push-your-luck card game.
 
-**Requirements:**
+Requirements:
 - Players plunder a deck of treasure cards, pushing luck to maximize score
 - Each turn:
   - Player draws a card from deck
@@ -98,33 +98,33 @@ The Gemstone Guilds application aims to deliver an accessible, engaging multipla
 - Game ends when someone collect the last treasures in treasure area and no cards are left in draw cards
 - Winner determined by highest banked treasure points and if players have same point, player with more cards will win, and if they have equal amount of points and cards, they all win
 
-**Acceptance Criteria:**
+Acceptance Criteria:
 - Card draw mechanics execute correctly
 - Hazard detection and treasure cancellation works properly
 - Banking mechanism separates active from secure treasures
 - Win condition correctly identifies highest score
 - Game state persists across turns
 
-#### FR-3.1.3: Additional Game Catalog Support
-**Description:** System architecture must support adding new games without major refactoring.
+ FR-3.1.3: Additional Game Catalog Support
+Description: System architecture must support adding new games without major refactoring.
 
-**Requirements:**
+Requirements:
 - Placeholder games in catalog: Totem, Azul, Coup, Ticket to Ride
 - Extensible game configuration system
 - Pluggable game logic modules
 - Unified game state interface for different game types
 
-**Acceptance Criteria:**
+Acceptance Criteria:
 - New games can be added via game catalog configuration
 - Game-specific logic isolated from core platform
 - Routing and UI automatically support new games
 
-### 3.2 Game Modes
+ 3.2 Game Modes
 
-#### FR-3.2.1: Solo/Single-Player Mode
-**Description:** Player plays against AI opponent controlled by the application.
+ FR-3.2.1: Solo/Single-Player Mode
+Description: Player plays against AI opponent controlled by the application.
 
-**Requirements:**
+Requirements:
 - AI opponents available at 3 difficulty levels: Easy, Medium, Hard
 - AI difficulty affects decision quality but not rule interpretation
 - Easy: Random valid moves with basic heuristics
@@ -133,15 +133,15 @@ The Gemstone Guilds application aims to deliver an accessible, engaging multipla
 - Players can set AI difficulty before starting
 - Game logic determines AI moves based on difficulty
 
-**Acceptance Criteria:**
+Acceptance Criteria:
 - AI executes valid moves at all difficulty levels
 - Difficulty levels produce noticeably different gameplay
 - Game completes without requiring player input after their turn
 
-#### FR-3.2.2: Online Multiplayer Mode
-**Description:** Real-time synchronous gameplay between 2+ human players via Internet.
+ FR-3.2.2: Online Multiplayer Mode
+Description: Real-time synchronous gameplay between 2+ human players via Internet.
 
-**Requirements:**
+Requirements:
 - Players matchmake into available lobbies or create new lobbies
 - Real-time game state synchronization using Socket.io events
 - Turn-based play with timeout protection (auto-pass after idle)
@@ -150,7 +150,7 @@ The Gemstone Guilds application aims to deliver an accessible, engaging multipla
 - Game entry fee: 5 coins per player (deducted before game starts)
 - Reconnection support if connection drops mid-game
 
-**Acceptance Criteria:**
+Acceptance Criteria:
 - Multiple players can connect to same game instance
 - Game state remains consistent across all clients
 - Moves execute in proper turn order
@@ -158,10 +158,10 @@ The Gemstone Guilds application aims to deliver an accessible, engaging multipla
 - Entry fees properly deducted and refunded on cancellation
 - Chat messages sent to all game participants
 
-#### FR-3.2.3: Match Entry Fee System
-**Description:** Online games require payment to enter.
+ FR-3.2.3: Match Entry Fee System
+Description: Online games require payment to enter.
 
-**Requirements:**
+Requirements:
 - Fee amount: 5 coins per player
 - Fees charged when entering matchmaking
 - Fees refunded if game doesn't start (e.g., other player disconnects)
@@ -169,18 +169,18 @@ The Gemstone Guilds application aims to deliver an accessible, engaging multipla
 - Player warning displayed before entering matchmaking
 - Insufficient coins error message prevents entry
 
-**Acceptance Criteria:**
+Acceptance Criteria:
 - Coins deducted correctly on entry
 - Entry fees prevent play with insufficient coins
 - Refunds issued when game fails to start
 - Fee structure adjustable via progression configuration
 
-### 3.3 Challenge Modes (not implemented and not complete yet)
+ 3.3 Challenge Modes (not implemented and not complete yet)
 
-#### FR-3.3.1: Daily Puzzle Challenge
-**Description:** Puzzle-based challenges that reset daily for all players.
+ FR-3.3.1: Daily Puzzle Challenge
+Description: Puzzle-based challenges that reset daily for all players.
 
-**Requirements:**
+Requirements:
 - New puzzle available every calendar day (UTC timezone)
 - Puzzle provides: starting game state, target objective, move limit
 - Player solves puzzle by taking specific action sequence
@@ -189,16 +189,16 @@ The Gemstone Guilds application aims to deliver an accessible, engaging multipla
 - Cannot replay same day's puzzle for additional rewards
 - Display countdown timer until next puzzle available
 
-**Acceptance Criteria:**
+Acceptance Criteria:
 - Puzzle resets at proper daily interval
 - Solution submission validates correctly
 - Rewards granted only once per player per day
 - Puzzle state persists between sessions
 
-#### FR-3.3.2: Bot Survival Challenge
-**Description:** Progressive difficulty challenge with increasing AI difficulty.
+ FR-3.3.2: Bot Survival Challenge
+Description: Progressive difficulty challenge with increasing AI difficulty.
 
-**Requirements:**
+Requirements:
 - Three stages: Easy, Medium, Hard
 - Player advances by defeating AI at current stage
 - Completing all stages marks challenge as "completed"
@@ -206,35 +206,35 @@ The Gemstone Guilds application aims to deliver an accessible, engaging multipla
 - Coin rewards for each stage completion
 - Visual progress indicator shows current stage
 
-**Acceptance Criteria:**
+Acceptance Criteria:
 - Stages unlock sequentially
 - Victory conditions for each stage clear
 - Progression properly saved and restored
 - Coin rewards granted on stage completion
 
-#### FR-3.3.3: Turn Limit Challenge
-**Description:** Complete a game within a specified turn limit.
+ FR-3.3.3: Turn Limit Challenge
+Description: Complete a game within a specified turn limit.
 
-**Requirements:**
+Requirements:
 - Fixed turn limit (e.g., must win in 12 turns)
 - Turn counter displayed during gameplay
 - Loss if turn limit exceeded without winning
 - Completion grants bonus coins
 - High score tracking for multiple completions
 
-**Acceptance Criteria:**
+Acceptance Criteria:
 - Turn counter accurately increments
 - Game loss triggered on limit exceeded
 - Rewards issued on completion
 - Score tracking functional
 
-### 3.4 Progression and Economy Requirements
+ 3.4 Progression and Economy Requirements
 
-#### FR-3.4.1: Player Progression System
-**Description:** Track player advancement through multiple progression metrics.
+ FR-3.4.1: Player Progression System
+Description: Track player advancement through multiple progression metrics.
 
-**Requirements:**
-- **Coins (primary currency):**
+Requirements:
+- Coins (primary currency):
   - Starting amount: 1,000 coins
   - Win in solo game: +10 coins
   - Win in online matchmaking: +20 coins
@@ -242,14 +242,14 @@ The Gemstone Guilds application aims to deliver an accessible, engaging multipla
   - Coins purchasable in shop with real money
   - Minimum coins required to enter online play ≥ 5
   
-- **Gems (premium currency):**
+- Gems (premium currency):
   - Starting amount: 150 gems
   - Purchasable via shop
   - Weekly rewards: 10-50 gems
   - Group creation cost: -100 gems
   - Cosmetics purchasable with gems
   
-- **Rank Points (ELO-style rating):**
+- Rank Points (ELO-style rating):
   - Starting: 0 points
   - Win reward: 12 points + prestige bonus
   - Loss penalty: Varies by opponent rank
@@ -257,21 +257,21 @@ The Gemstone Guilds application aims to deliver an accessible, engaging multipla
   - Prestige points earned per card in Splendor counted toward rank
   - Matchmaking multiplier: prestige × 2 in online mode
   
-- **Experience/Levels (future expansion):**
+- Experience/Levels (future expansion):
   - Tracks total player activity
   - May unlock cosmetics or badges at certain levels
 
-**Acceptance Criteria:**
+Acceptance Criteria:
 - All progression metrics update correctly after games
 - Currency balances persist across sessions
 - Progression requirements gate available features
 - Rewards calculated per game rules
 
-#### FR-3.4.2: Shop System
-**Description:** Marketplace for purchasing in-game items with coins or gems.
+ FR-3.4.2: Shop System
+Description: Marketplace for purchasing in-game items with coins or gems.
 
-**Requirements:**
-- **Coin Packs:**
+Requirements:
+- Coin Packs:
   - Free offer: 50 coins (ad-supported)
   - $0.49 → 200 coins (10% discount)
   - $0.89 → 450 coins (15% discount)
@@ -279,33 +279,33 @@ The Gemstone Guilds application aims to deliver an accessible, engaging multipla
   - $2.39 → 1,500 coins (25% discount)
   - $3.99 → 3,000 coins (35% discount)
   
-- **Gem Packs:**
+- Gem Packs:
   - $0.99 → 30 gems
   - $4.99 → 170 gems (5% discount)
   - $9.99 → 380 gems (10% discount)
   - Free weekly reward: 10-50 gems
   
-- **Cosmetics (Avatars & Stickers):**
+- Cosmetics (Avatars & Stickers):
   - Avatars: purchasable with coins or gems
   - Stickers: text/emote reactions
   - Set as "active" for display in games
   
-- **Weekly Rewards:**
+- Weekly Rewards:
   - 3-5 different rotating offers per week
   - Limited-time nature creates purchase urgency
   - One reward per account per week
 
-**Acceptance Criteria:**
+Acceptance Criteria:
 - Purchases correctly transfer items to inventory
 - Currency properly deducted
 - Active cosmetic displays in game
 - Weekly reset occurs at proper time
 - Pricing structure correctly reflects discounts
 
-#### FR-3.4.3: Rank System
-**Description:** Visible player ranking based on competitive performance.
+ FR-3.4.3: Rank System
+Description: Visible player ranking based on competitive performance.
 
-**Requirements:**
+Requirements:
 - Ranks displayed in player profile
 - Leaderboard shows top players by rank points
 - Group rankings show top players in that group
@@ -313,17 +313,17 @@ The Gemstone Guilds application aims to deliver an accessible, engaging multipla
 - Rank points not affected by solo play (only online matches)
 - Win/Loss ratio displayed on profile
 
-**Acceptance Criteria:**
+Acceptance Criteria:
 - Leaderboards update after each ranked game
 - Rank calculations correct
 - Visual tier indicators accurate to point ranges
 
-### 3.5 Authentication & Account Management
+ 3.5 Authentication & Account Management
 
-#### FR-3.5.1: User Registration
-**Description:** Allow new users to create accounts.
+ FR-3.5.1: User Registration
+Description: Allow new users to create accounts.
 
-**Requirements:**
+Requirements:
 - Email-based registration with username
 - Password requirements: minimum 8 characters
 - Email verification before account activation
@@ -331,17 +331,17 @@ The Gemstone Guilds application aims to deliver an accessible, engaging multipla
 - Default progression/inventory assigned on account creation
 - Account creation modal from landing page
 
-**Acceptance Criteria:**
+Acceptance Criteria:
 - Duplicate email prevention
 - Password strength validated
 - Verification email sent to provided address
 - Verified accounts ready for login
 - Default values applied to new accounts
 
-#### FR-3.5.2: User Login
-**Description:** Authenticate users and establish sessions.
+ FR-3.5.2: User Login
+Description: Authenticate users and establish sessions.
 
-**Requirements:**
+Requirements:
 - Login via email + password or social OAuth (optional)
 - Session tokens stored securely (httpOnly cookies)
 - Session persistence across server restarts
@@ -349,17 +349,17 @@ The Gemstone Guilds application aims to deliver an accessible, engaging multipla
 - "Remember me" option extends session to 60 days
 - Login page requires unverified users to verify email first
 
-**Acceptance Criteria:**
+Acceptance Criteria:
 - Valid credentials grant access
 - Invalid credentials show error message
 - Sessions persist across page refreshes
 - Logout clears session data
 - Expired sessions redirect to login
 
-#### FR-3.5.3: Account Center
-**Description:** User management and profile customization hub.
+ FR-3.5.3: Account Center
+Description: User management and profile customization hub.
 
-**Requirements:**
+Requirements:
 - Display current profile: username, email, level, rank, coins, gems
 - Change password functionality
 - Change display name (username)
@@ -369,17 +369,17 @@ The Gemstone Guilds application aims to deliver an accessible, engaging multipla
 - Delete account option (with confirmation)
 - Privacy settings (show/hide stats, friend requests)
 
-**Acceptance Criteria:**
+Acceptance Criteria:
 - Profile information displays correctly
 - Password change requires current password
 - Language change applies immediately to UI
 - Statistics calculate correctly
 - Account deletion removes all user data upon confirmation
 
-#### FR-3.5.4: Bilingual Support
-**Description:** Application interface available in English and Persian.
+ FR-3.5.4: Bilingual Support
+Description: Application interface available in English and Persian.
 
-**Requirements:**
+Requirements:
 - All user-facing text translated to Persian and English
 - Language switch available on every page (top-right toggle)
 - Language preference saved to account
@@ -390,7 +390,7 @@ The Gemstone Guilds application aims to deliver an accessible, engaging multipla
 - Date/time formats localized
 - Number formats localized (comma vs period as thousands separator)
 
-**Acceptance Criteria:**
+Acceptance Criteria:
 - All UI text displays in selected language
 - RTL formatting correct for Persian
 - Persian font renders properly
@@ -398,12 +398,12 @@ The Gemstone Guilds application aims to deliver an accessible, engaging multipla
 - Game chat supports both languages
 - All error messages localized
 
-### 3.6 Social Features
+ 3.6 Social Features
 
-#### FR-3.6.1: Friends List
-**Description:** Manage player relationships and online status.
+ FR-3.6.1: Friends List
+Description: Manage player relationships and online status.
 
-**Requirements:**
+Requirements:
 - Add friends by username or search
 - Accept/decline friend requests
 - Online status shown (online/offline/in-game)
@@ -413,17 +413,17 @@ The Gemstone Guilds application aims to deliver an accessible, engaging multipla
 - Invite friends to games directly
 - Block player functionality
 
-**Acceptance Criteria:**
+Acceptance Criteria:
 - Friend requests sent and received correctly
 - Online status updates in real-time
 - Friend search returns accurate results
 - Blocked players cannot message or invite
 - Friend counts display correctly
 
-#### FR-3.6.2: Groups/Guilds
-**Description:** Groups of players with shared progression tracking.
+ FR-3.6.2: Groups/Guilds
+Description: Groups of players with shared progression tracking.
 
-**Requirements:**
+Requirements:
 - Create group: costs 100 gems, requires minimum 5 characters in name
 - Join group: via invitation or public browsing
 - Group roles: Leader, Officer, Member
@@ -435,17 +435,17 @@ The Gemstone Guilds application aims to deliver an accessible, engaging multipla
 - Group chat channel for members
 - Group-specific cosmetics (group badge)
 
-**Acceptance Criteria:**
+Acceptance Criteria:
 - Groups create successfully with proper cost deduction
 - Members added/removed correctly
 - Leaderboards calculate per-group
 - Chat messages visible to group members only
 - Group deletion clears all group data
 
-#### FR-3.6.3: Chat System
-**Description:** In-game and lobby messaging.
+ FR-3.6.3: Chat System
+Description: In-game and lobby messaging.
 
-**Requirements:**
+Requirements:
 - In-game chat: visible to all players in current game
 - Group chat: visible to group members only
 - Friend chat: direct messaging between friends
@@ -456,17 +456,17 @@ The Gemstone Guilds application aims to deliver an accessible, engaging multipla
 - Timestamps on messages
 - Mute individual players or all chat
 
-**Acceptance Criteria:**
+Acceptance Criteria:
 - Messages delivered to correct recipients
 - Chat history loads on page load
 - Profanity filter executes on send
 - Muted players' messages hidden locally
 - @mentions notify targeted player
 
-#### FR-3.6.4: Events System
-**Description:** Time-limited events with special challenges and rewards.
+ FR-3.6.4: Events System
+Description: Time-limited events with special challenges and rewards.
 
-**Requirements:**
+Requirements:
 - Event calendar showing planned events
 - Special challenges during event period
 - Event-specific cosmetics (limited availability)
@@ -478,49 +478,49 @@ The Gemstone Guilds application aims to deliver an accessible, engaging multipla
   - One-time special events
 - Event notifications on login
 
-**Acceptance Criteria:**
+Acceptance Criteria:
 - Events display with correct timing
 - Rewards issued correctly to participants
 - Event leaderboards calculate properly
 - Limited cosmetics become unavailable after event ends
 
-### 3.7 Audio System
+ 3.7 Audio System
 
-#### FR-3.7.1: Background Music
-**Description:** Ambient music throughout application.
+ FR-3.7.1: Background Music
+Description: Ambient music throughout application.
 
-**Requirements:**
+Requirements:
 - Background music plays in menus and lobby
 - Music changes during gameplay
 - Music persists across page navigation
 - Supports multiple tracks with auto-crossfade
 - Controls: Play, Pause
 
-**Acceptance Criteria:**
+Acceptance Criteria:
 - Music plays without stuttering
 - Mute toggles work correctly
 - Preferences persist after refresh
 
-#### FR-3.7.2: Sound Effects
-**Description:** Audio feedback for game actions.
+ FR-3.7.2: Sound Effects
+Description: Audio feedback for game actions.
 
-**Requirements:**
+Requirements:
 - Sound for: card plays, tokens taken, game win/loss, UI buttons
 - Sound volume independent of music volume
 - Sound toggle on/off
 - Respects system audio permissions
 - No audio plays if device muted
 
-**Acceptance Criteria:**
+Acceptance Criteria:
 - Sounds play at appropriate moments
 - Mute setting honored
 
-### 3.8 Tutorial & Learning
+ 3.8 Tutorial & Learning
 
-#### FR-3.8.1: Game Tutorial
-**Description:** Interactive tutorial for new players.
+ FR-3.8.1: Game Tutorial
+Description: Interactive tutorial for new players.
 
-**Requirements:**
+Requirements:
 - Mandatory tutorial on first game
 - Step-by-step walkthroughs for:
   - Game rules
@@ -532,7 +532,7 @@ The Gemstone Guilds application aims to deliver an accessible, engaging multipla
 - Language-specific tutorials
 - Tooltips for complex mechanics
 
-**Acceptance Criteria:**
+Acceptance Criteria:
 - Tutorial launches for new accounts
 - Skip button available throughout
 - Replay accessible from menus
@@ -541,32 +541,32 @@ The Gemstone Guilds application aims to deliver an accessible, engaging multipla
 
 ---
 
-## 4. Non-Functional Requirements
+ 4. Non-Functional Requirements
 
-### 4.1 Performance Requirements
+ 4.1 Performance Requirements
 
-#### NFR-4.1.1: Response Time
+ NFR-4.1.1: Response Time
 - UI responsive within 100ms for user actions
 - Game state updates within 200ms across network
 - Page load time < 3 seconds (on 4G connection)
 - Database queries return within 500ms
 
-#### NFR-4.1.2: Scalability
+ NFR-4.1.2: Scalability
 - Support up to 10,000 concurrent users
 - Support up to 1,000 concurrent games
 - Horizontal scaling via load balancer
 - Database sharding for large data volumes
 - Content delivery via CDN for static assets
 
-#### NFR-4.1.3: Reliability
+ NFR-4.1.3: Reliability
 - 99.5% uptime SLA (target)
 - Automatic failover to backup instances
 - Database replication for disaster recovery
 - Session recovery on server restart
 
-### 4.2 Security Requirements
+ 4.2 Security Requirements
 
-#### NFR-4.2.1: Authentication & Authorization
+ NFR-4.2.1: Authentication & Authorization
 - HTTPS encryption for all communication
 - Password hashing via bcrypt (minimum 10 rounds)
 - Session tokens use secure random generation
@@ -575,7 +575,7 @@ The Gemstone Guilds application aims to deliver an accessible, engaging multipla
 - CSRF protection on state-changing operations
 - Role-based access control (user, moderator, admin)
 
-#### NFR-4.2.2: Data Protection
+ NFR-4.2.2: Data Protection
 - Personally identifiable information encrypted at rest
 - Database encryption (e.g., AES-256)
 - No hardcoded credentials in source code
@@ -583,28 +583,28 @@ The Gemstone Guilds application aims to deliver an accessible, engaging multipla
 - Regular security audits (quarterly)
 - Vulnerability scanning on dependencies
 
-#### NFR-4.2.3: Cheating Prevention
+ NFR-4.2.3: Cheating Prevention
 - Server-side validation of all moves (never trust client)
 - Replay detection for rapid-fire move spam
 - Account flagging for anomalous behavior
 - Automatic rollback of suspicious transactions
 - Admin review of disputed games
 
-### 4.3 Usability Requirements
+ 4.3 Usability Requirements
 
-#### NFR-4.3.1: User Interface
+ NFR-4.3.1: User Interface
 - Mobile-responsive design (iOS, Android, responsive web)
 - Accessibility: WCAG 2.1 AA compliance minimum
 - Configurable font sizes
 
-#### NFR-4.3.2: Intuitiveness
+ NFR-4.3.2: Intuitiveness
 - Hover tooltips on complex UI elements
 - Clear visual feedback for enabled/disabled actions
 - Confirmation dialogs for destructive actions
 - Help system accessible via "?" icon
 - Consistent UI patterns across pages
 
-#### NFR-4.3.3: Game Feel
+ NFR-4.3.3: Game Feel
 - Smooth animations (60 FPS target)
 - Card shuffle and draw animations
 - Celebratory animations on win
@@ -612,15 +612,15 @@ The Gemstone Guilds application aims to deliver an accessible, engaging multipla
 - Loading spinners for async operations
 - Toast notifications for confirmations
 
-### 4.4 Compatibility Requirements
+ 4.4 Compatibility Requirements
 
-#### NFR-4.4.1: Browser Support
+ NFR-4.4.1: Browser Support
 - Chrome/Edge (latest 2 versions): 95%+
 - Firefox (latest 2 versions): 95%+
 - Safari (latest 2 versions): 90%+
 - Mobile browsers (iOS Safari, Chrome Mobile): 85%+
 
-#### NFR-4.4.2: Device Support
+ NFR-4.4.2: Device Support
 - mainly for mobile application
 - Desktop (1920×1080 minimum recommended)
 - Tablet (iPad 5th gen+, Android 7"+)
@@ -629,16 +629,16 @@ The Gemstone Guilds application aims to deliver an accessible, engaging multipla
 - Keyboard & mouse support
 - Gamepad support (future consideration)
 
-#### NFR-4.4.3: Network Conditions
+ NFR-4.4.3: Network Conditions
 - Works on WiFi and mobile data (3G/4G)
 - Handles packet loss gracefully (retries)
 - Offline graceful degradation (show offline message)
 - Reconnection automatic when connectivity restored
 - Works with latency up to 500ms
 
-### 4.5 Maintainability Requirements
+ 4.5 Maintainability Requirements
 
-#### NFR-4.5.1: Code Quality
+ NFR-4.5.1: Code Quality
 - TypeScript strict mode enabled (no `any` types)
 - ESLint rules enforced (no console.log in production code)
 - Unit test coverage: minimum 60% (target 80%)
@@ -647,7 +647,7 @@ The Gemstone Guilds application aims to deliver an accessible, engaging multipla
 - Component Storybook for UI components
 - Code review required for all PRs
 
-#### NFR-4.5.2: Architecture
+ NFR-4.5.2: Architecture
 - Modular component structure
 - Separation of concerns (components, logic, utils)
 - Reusable hooks for common patterns
@@ -655,7 +655,7 @@ The Gemstone Guilds application aims to deliver an accessible, engaging multipla
 - Socket.io events well-documented
 - Clear naming conventions
 
-#### NFR-4.5.3: Deployment
+ NFR-4.5.3: Deployment
 - CI/CD pipeline automation
 - Automated testing on PR submission
 - Staging environment mirrors production
@@ -665,9 +665,9 @@ The Gemstone Guilds application aims to deliver an accessible, engaging multipla
 
 ---
 
-## 5. Data Requirements
+ 5. Data Requirements
 
-### 5.1 User Data Model
+ 5.1 User Data Model
 
 ```
 User {
@@ -749,7 +749,7 @@ Message {
 }
 ```
 
-### 5.2 Game State Data Model
+ 5.2 Game State Data Model
 
 ```
 GameState {
@@ -785,143 +785,143 @@ Player {
 }
 ```
 
-### 5.3 Data Retention Policies
+ 5.3 Data Retention Policies
 
-- **Active User Data**: Retained indefinitely
-- **Deleted User Data**: Anonymized after 30 days
-- **Game Session Data**: Retained for 1 year (for dispute resolution)
-- **Chat Messages**: Retained for 90 days
-- **Audit Logs**: Retained for 1 year (security)
-- **Analytics Data**: Aggregated and retained indefinitely
+- Active User Data: Retained indefinitely
+- Deleted User Data: Anonymized after 30 days
+- Game Session Data: Retained for 1 year (for dispute resolution)
+- Chat Messages: Retained for 90 days
+- Audit Logs: Retained for 1 year (security)
+- Analytics Data: Aggregated and retained indefinitely
 
 ---
 
-## 6. System Constraints & Assumptions
+ 6. System Constraints & Assumptions
 
-### 6.1 Technical Constraints
+ 6.1 Technical Constraints
 
-- **Technology Stack:**
+- Technology Stack:
   - Frontend: React 18+, TypeScript, Vite
   - Backend: Node.js with Express.js
   - Real-time: Socket.io
   - Database: PostgreSQL (or equivalent)
   - UI Framework: shadcn/ui with Tailwind CSS
   
-- **Browser Requirements:**
+- Browser Requirements:
   - ES2020+ JavaScript support
   - WebSocket support (for Socket.io)
   - LocalStorage API
   - CSS Grid and Flexbox
 
-- **Network Requirements:**
+- Network Requirements:
   - WebSocket connectivity (typically port 443)
   - Latency tolerance up to 500ms
 
-### 6.2 Business Constraints
+ 6.2 Business Constraints
 
-- **Regulatory:**
+- Regulatory:
   - Children's Online Privacy Protection Act (COPPA) if targeting <13 year-olds
   
-- **Monetization:**
+- Monetization:
   - Free-to-play with optional cosmetics purchases
   - No pay-to-win mechanics (cosmetics only)
   - In-game currency purchasable with real money
 
-- **Content:**
+- Content:
   - Suitable for ages 7+ (ESRB: T for Teen or equivalent)
   - No explicit violence, adult content, or hate speech
 
-### 6.3 Assumptions
+ 6.3 Assumptions
 
-1. **User Base:**
+1. User Base:
    - Primarily players aged 7-60
    - Comfortable with online gaming and multiplayer
    - Multilingual audience (English & Persian speakers)
 
-2. **Infrastructure:**
+2. Infrastructure:
    - Deployment on cloud platform (AWS/GCP/Azure)
    - CDN available for static asset delivery
    - Email service available for user notifications
 
-3. **Game Mechanics:**
+3. Game Mechanics:
    - Basic Splendor and Dead Man's Draw rules well-known to target audience
    - Tutorial sufficient for learning mechanics
    - No extreme competitive gaming requirements (not esports-focused)
 
-4. **User Behavior:**
+4. User Behavior:
    - Average session duration: 15-30 minutes
    - Average login frequency: 3-5 times per week
    - Retention target: 30% monthly
 
 ---
 
-## 7. Acceptance Criteria & Testing Requirements
+ 7. Acceptance Criteria & Testing Requirements
 
-### 7.1 Functional Acceptance Criteria
+ 7.1 Functional Acceptance Criteria
 
-**Authentication:**
+Authentication:
 - ✅ Valid login credentials grant access
 - ✅ Invalid credentials rejected
 - ✅ Session persists across page refreshes
 - ✅ Logout clears all session data
 
-**Game Mechanics (Splendor):**
+Game Mechanics (Splendor):
 - ✅ All turn actions available when legal
 - ✅ Illegal actions prevented with error message
 - ✅ Victory at 15 points correctly triggered
 - ✅ Board state accurately reflects all transactions
 
-**Game Mechanics (Dead Man's Draw):**
+Game Mechanics (Dead Man's Draw):
 - ✅ Card draws execute correctly
 - ✅ Hazard clearing mechanics work properly
 - ✅ Banking treasures separates active from secure
 - ✅ Win condition identifies highest score
 
-**Multiplayer:**
+Multiplayer:
 - ✅ 2+ players can connect to same game
 - ✅ Moves execute in turn order
 - ✅ Game state synchronized across clients
 - ✅ Disconnection/reconnection works
 - ✅ Chat messages visible to participants
 
-**Progression:**
+Progression:
 - ✅ Coins awarded correctly for wins
 - ✅ Gems deductible for group creation
 - ✅ Rank points calculated per formula
 - ✅ Progression persists after session
 
-**Shop:**
+Shop:
 - ✅ Purchases deduct correct currency
 - ✅ Items added to inventory
 - ✅ Shop refresh weekly
 
-### 7.2 Non-Functional Acceptance Criteria
+ 7.2 Non-Functional Acceptance Criteria
 
-**Performance:**
+Performance:
 - ✅ Page load: < 3 seconds (4G)
 - ✅ Game state update: < 200ms network latency
 - ✅ UI response: < 100ms to user action
 - ✅ 60 FPS animations
 
-**Security:**
+Security:
 - ✅ All traffic HTTPS encrypted
 - ✅ No credentials in client code
 - ✅ Server validates all moves
 - ✅ Schema validation on all inputs
 - ✅ Rate limiting on sensitive endpoints
 
-**Compatibility:**
+Compatibility:
 - ✅ Works on Chrome, Firefox, Safari (latest 2 versions)
 - ✅ Mobile responsive (320px to 2560px width)
 - ✅ Touch controls functional on mobile
 - ✅ Works with latency up to 500ms
 
-**Accessibility:**
+Accessibility:
 - ✅ WCAG 2.1 AA compliance
 - ✅ Keyboard navigation throughout
 - ✅ Screen reader compatible
 
-### 7.3 Test Coverage Requirements
+ 7.3 Test Coverage Requirements
 
 | Category | Minimum Coverage | Target Coverage |
 |----------|------------------|-----------------|
@@ -933,32 +933,32 @@ Player {
 
 ---
 
-## 9. Out-of-Scope Items (Future Enhancements)
+ 9. Out-of-Scope Items (Future Enhancements)
 
-1. **Advanced Features:**
+1. Advanced Features:
    - Seasonal battle passes
    - Ranked ladder/rating system (beyond basic leaderboards)
    - Tournament brackets
    - Streaming integration (Twitch, YouTube)
 
-2. **Games:**
+2. Games:
    - Additional card games (Totem, Azul, Coup, Ticket to Ride)
    - Board games
    - Dice games
    - RPG elements
 
-3. **Platforms:**
+3. Platforms:
    - Native mobile apps (iOS, Android)
    - Desktop app (Electron)
 
-4. **Social:**
+4. Social:
    - Clans/alliances
    - Guild wars
    - Mentorship system
    - Community moderators
    - User-generated content
 
-5. **Monetization:**
+5. Monetization:
    - Battle pass systems
    - Seasonal cosmetics
    - Premium season pass content
@@ -966,7 +966,7 @@ Player {
 
 ---
 
-## 10. Revision History
+ 10. Revision History
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
@@ -974,7 +974,7 @@ Player {
 
 ---
 
-## 11. Approval & Sign-Off
+ 11. Approval & Sign-Off
 
 | Role | Name | Signature | Date |
 |------|------|-----------|------|
@@ -984,15 +984,15 @@ Player {
 
 ---
 
-## 12. Document Control
+ 12. Document Control
 
-- **Document Owner:** Engineering Team
-- **Last Reviewed:** April 29, 2026
-- **Next Review Date:** July 29, 2026
-- **Change Request Process:** Via GitHub Issues / Engineering Meetings
-- **Distribution:** Internal (Team + Stakeholders)
-- **Classification:** Internal Use
+- Document Owner: Engineering Team
+- Last Reviewed: April 29, 2026
+- Next Review Date: July 29, 2026
+- Change Request Process: Via GitHub Issues / Engineering Meetings
+- Distribution: Internal (Team + Stakeholders)
+- Classification: Internal Use
 
 ---
 
-**End of Software Requirements Specification**
+End of Software Requirements Specification

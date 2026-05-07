@@ -262,48 +262,66 @@ export default function useSplendorGameController(props: GameProps = {}) {
     setActionSubmitting(true);
   }, []);
 
-  const interactiveTutorialSteps = [
+  // Debounce ref to prevent rapid clicks
+  const actionDebounceRef = useRef<number | null>(null);
+
+  const interactiveTutorialSteps = useMemo(() => [
     {
-      title: "Goal: reach 15 points",
-      description: "Buy development cards and attract nobles to score. When a player reaches 15 points, everyone finishes the round and the highest score wins.",
+      title: lang === "fa" ? "هدف: رسیدن به ۱۵ امتیاز" : "Goal: reach 15 points",
+      description: lang === "fa" ? "کارت‌های توسعه را بخرید و نجبا را جذب کنید تا امتیاز بگیرید. وقتی بازیکنی به ۱۵ امتیاز می‌رسد، همه دور را تمام می‌کنند و بالاترین امتیاز برنده است." : "Buy development cards and attract nobles to score. When a player reaches 15 points, everyone finishes the round and the highest score wins.",
       focus: "goal" as const,
     },
     {
-      title: "Choose one action",
-      description: "On your turn, pick exactly one action: take gems, buy a card, reserve a visible card, or reserve blindly from a deck.",
+      title: lang === "fa" ? "یک عمل را انتخاب کنید" : "Choose one action",
+      description: lang === "fa" ? "در نوبت خود، دقیقاً یک عمل را انتخاب کنید: گرفتن جواهرات، خرید کارت، رزرو کارت قابل مشاهده، یا رزرو کور از یک دسته." : "On your turn, pick exactly one action: take gems, buy a card, reserve a visible card, or reserve blindly from a deck.",
       focus: "actions" as const,
     },
     {
-      title: "Gem token pool",
-      description: "Click gems here, then press Take. You can take 3 different gems, or 2 matching gems if at least 4 of that color remain.",
+      title: lang === "fa" ? "جواهرات مختلف را انتخاب کنید" : "Take different gems",
+      description: lang === "fa" ? "روی سه جواهر متفاوت (الماس، آبی، سبز) کلیک کنید، سپس دکمه بگیر را فشار دهید." : "Click three different gems (diamond, blue, green), then press Take.",
       focus: "tokens" as const,
     },
     {
-      title: "Buy or reserve cards",
-      description: "Click any face-up card. Buying sends it to your permanent bonus color; reserving sends it to your reserved row and may give a gold token.",
+      title: lang === "fa" ? "کارت سطح اول را خریدار" : "Buy a level 1 card",
+      description: lang === "fa" ? "یک کارت سطح ۱ کلیک کنید که شما می‌توانید با جواهرات خود خریداری کنید. جواهرات خود برای پرداخت استفاده خواهند شد و یک کارت قرمز دائمی جایزه دریافت خواهید کرد." : "Click a level 1 card you can afford with your gems. Your gems will be used for payment and you'll get a red permanent bonus.",
       focus: "card" as const,
     },
     {
-      title: "Three card levels",
-      description: "Level 1 cards are cheaper. Level 2 and 3 cards cost more, but they usually give more points and stronger progress.",
-      focus: "cards" as const,
+      title: lang === "fa" ? "دو توکن همرنگ بگیرید" : "Take matching gems",
+      description: lang === "fa" ? "روی دو توکن Onyx (سیاه) کلیک کنید تا درک کنید می‌توانید توکن‌های همرنگ بگیرید اگر حداقل ۴ توکن از آن رنگ باقی باشد." : "Click two onyx tokens to understand you can take matching gems if at least 4 remain of that color.",
+      focus: "tokens" as const,
     },
     {
-      title: "Noble visitors",
-      description: "Nobles wait here. If your permanent card bonuses match a noble requirement after buying, that noble automatically moves to your panel.",
-      focus: "nobles" as const,
+      title: lang === "fa" ? "یک کارت رزرو کنید" : "Reserve a card",
+      description: lang === "fa" ? "یک کارت بلندمدت کلیک کنید که نیاز به دو Onyx و دو توکن قرمز دارد و آن را رزرو کنید. شما یک توکن طلا دریافت خواهید کرد." : "Click a card requiring two onyxs and two red tokens and reserve it. You'll get a gold token.",
+      focus: "card" as const,
     },
     {
-      title: "Your player panel",
-      description: "Your panel shows score, owned gems, permanent card bonuses by color, reserved cards, and nobles you have attracted.",
+      title: lang === "fa" ? "کارت رزرو شده را خریدار" : "Buy reserved card",
+      description: lang === "fa" ? "کارت رزرو شده را از پنل خود خریداری کنید. توکن طلا می‌تواند هر رنگ را جایگزین کند و به شما کمک می‌کند بدون نیاز به همه جواهرات خریداری کنید." : "Buy the reserved card from your panel. The gold token can substitute any color, helping you afford cards without exact gems.",
       focus: "panel" as const,
     },
     {
-      title: "Turn timer",
-      description: "Watch the timer in the header. Finish your action before it reaches zero, especially in online or timed games.",
+      title: lang === "fa" ? "سه سطح کارتی" : "Three card levels",
+      description: lang === "fa" ? "کارت‌های سطح ۱ ارزان‌تر هستند. کارت‌های سطح ۲ و ۳ گران‌تر هستند، اما معمولاً امتیاز بیشتر و پیشرفت قوی‌تری می‌دهند." : "Level 1 cards are cheaper. Level 2 and 3 cards cost more, but they usually give more points and stronger progress.",
+      focus: "cards" as const,
+    },
+    {
+      title: lang === "fa" ? "بازدیدکنندگان نجیب" : "Noble visitors",
+      description: lang === "fa" ? "نجبا اینجا منتظر می‌مانند. اگر جایزه‌های کارت دائمی شما با نیاز یک نجیب پس از خرید مطابقت داشته باشد، آن نجیب به طور خودکار به پنل شما منتقل می‌شود." : "Nobles wait here. If your permanent card bonuses match a noble requirement after buying, that noble automatically moves to your panel.",
+      focus: "nobles" as const,
+    },
+    {
+      title: lang === "fa" ? "پنل بازیکن شما" : "Your player panel",
+      description: lang === "fa" ? "پنل شما امتیاز، جواهرات متعلق به شما، جایزه‌های کارت دائمی بر اساس رنگ، کارت‌های رزرو شده و نجبایی که جذب کرده‌اید را نشان می‌دهد." : "Your panel shows score, owned gems, permanent card bonuses by color, reserved cards, and nobles you have attracted.",
+      focus: "panel" as const,
+    },
+    {
+      title: lang === "fa" ? "تایمر نوبت" : "Turn timer",
+      description: lang === "fa" ? "به تایمر در هدر نگاه کنید. عمل خود را قبل از رسیدن به صفر تمام کنید، به خصوص در بازی‌های آنلاین یا زمان‌دار." : "Watch the timer in the header. Finish your action before it reaches zero, especially in online or timed games.",
       focus: "timer" as const,
     },
-  ];
+  ], [lang]);
 
   const isExpectedDailyPuzzleAction = useCallback(
     (action: DailyPuzzleAction | null) => {
@@ -636,10 +654,14 @@ export default function useSplendorGameController(props: GameProps = {}) {
   useEffect(() => {
     setTurnSecondsLeft(turnDurationSeconds);
     const interval = window.setInterval(() => {
+      // Pause timer during interactive tutorial
+      if (interactiveTutorialEnabled || manualTutorialOpen) {
+        return;
+      }
       setTurnSecondsLeft((prev) => Math.max(0, prev - 1));
     }, 1000);
     return () => window.clearInterval(interval);
-  }, [state.currentPlayerIndex, turnDurationSeconds]);
+  }, [state.currentPlayerIndex, turnDurationSeconds, interactiveTutorialEnabled, manualTutorialOpen]);
 
   // Phase sync: when all gems deselected, go back to idle
   useEffect(() => {
@@ -700,6 +722,12 @@ export default function useSplendorGameController(props: GameProps = {}) {
     setTurnWarning("");
     endTurn(targetScore);
     setPhase("idle");
+
+    // After timeout, if next player is AI, trigger AI move immediately
+    const nextPlayerIndex = (state.currentPlayerIndex + 1) % state.players.length;
+    if (isAIPlayer(nextPlayerIndex)) {
+      // The AI effect will trigger naturally when phase is idle and it's AI's turn
+    }
   }, [
     endTurn,
     gameMode,
@@ -707,6 +735,8 @@ export default function useSplendorGameController(props: GameProps = {}) {
     state.currentPlayerIndex,
     state.gameOver,
     turnSecondsLeft,
+    isAIPlayer,
+    state.players.length,
   ]);
 
   // AI turn - automatic execution with proper state tracking
@@ -747,6 +777,23 @@ export default function useSplendorGameController(props: GameProps = {}) {
         if (fallbackTake.length > 0) {
           const gems = fallbackTake.slice(0, Math.min(3, fallbackTake.length));
           const afterTake = performTakeTokens(state, gems);
+
+          // Add animations for AI taking tokens
+          gems.forEach((gem, index) => {
+            const start = getCenterBySelector(`[data-token-pool="${gem}"]`);
+            const end = getCenterBySelector(`[data-player-token-slot="${state.currentPlayerIndex}-${gem}"]`);
+            if (start && end) {
+              spawnFlight({
+                kind: "token",
+                color: GEM_INFO[gem].color,
+                imageUrl: gemTokenImages[gem],
+                start,
+                end,
+                durationMs: 400 + index * 30,
+              });
+            }
+          });
+
           takeTokens(gems);
           if (isMounted) {
             const total = getTotalTokens(afterTake.players[afterTake.currentPlayerIndex]);
@@ -765,6 +812,21 @@ export default function useSplendorGameController(props: GameProps = {}) {
             .find(Boolean);
           if (visibleCard) {
             const afterReserve = performReserveCard(state, (visibleCard as Card).id);
+
+            // Add animation for AI reserving card
+            const cardStart = getCardCenter((visibleCard as Card).id);
+            const cardEnd = getCenterBySelector(`[data-player-reserved-slot="${state.currentPlayerIndex}"]`);
+            if (cardStart && cardEnd) {
+              spawnFlight({
+                kind: "card",
+                color: "#cbd5e1",
+                label: "R",
+                start: cardStart,
+                end: cardEnd,
+                durationMs: 520,
+              });
+            }
+
             reserveCard((visibleCard as Card).id);
             if (isMounted) {
               const total = getTotalTokens(afterReserve.players[afterReserve.currentPlayerIndex]);
@@ -778,6 +840,21 @@ export default function useSplendorGameController(props: GameProps = {}) {
             return;
           }
           const afterReserve = performReserveCard(state, 0, 1);
+
+          // Add animation for AI reserving from deck
+          const deckStart = getCenterBySelector(`[data-deck-level="1"]`);
+          const reservedEnd = getCenterBySelector(`[data-player-reserved-slot="${state.currentPlayerIndex}"]`);
+          if (deckStart && reservedEnd) {
+            spawnFlight({
+              kind: "card",
+              color: "#1e293b",
+              label: "1",
+              start: deckStart,
+              end: reservedEnd,
+              durationMs: 560,
+            });
+          }
+
           reserveCard(0, 1);
           if (isMounted) {
             const total = getTotalTokens(afterReserve.players[afterReserve.currentPlayerIndex]);
@@ -801,12 +878,155 @@ export default function useSplendorGameController(props: GameProps = {}) {
         action.type === "reserveDeck";
 
       if (action.type === "purchaseCard") {
+        const afterPurchase = performPurchaseCard(state, action.cardId);
+        const card = state.visibleCards[3].find((c) => c?.id === action.cardId) ||
+                     state.visibleCards[2].find((c) => c?.id === action.cardId) ||
+                     state.visibleCards[1].find((c) => c?.id === action.cardId);
+
+        if (card) {
+          const cardStart = getCardCenter(card.id);
+          const cardEnd = getCenterBySelector(`[data-player-bonus-slot="${state.currentPlayerIndex}-${card.gemBonus}"]`);
+          if (cardStart && cardEnd) {
+            spawnFlight({
+              kind: "card",
+              color: GEM_INFO[card.gemBonus].color,
+              label: card.points ? String(card.points) : "+",
+              start: cardStart,
+              end: cardEnd,
+              durationMs: 800,
+            });
+          }
+
+          // Token payment animations
+          TOKEN_TYPES.forEach((tokenType, tokenIndex) => {
+            const paid = state.players[state.currentPlayerIndex].tokens[tokenType] - afterPurchase.players[afterPurchase.currentPlayerIndex].tokens[tokenType];
+            if (paid <= 0) return;
+            for (let i = 0; i < paid; i += 1) {
+              const start = getCenterBySelector(`[data-player-token-slot="${state.currentPlayerIndex}-${tokenType}"]`);
+              const end = getCenterBySelector(`[data-token-pool="${tokenType}"]`);
+              if (!start || !end) continue;
+              spawnFlight({
+                kind: "token",
+                color: GEM_INFO[tokenType].color,
+                imageUrl: gemTokenImages[tokenType],
+                start,
+                end,
+                durationMs: 400 + tokenIndex * 30,
+              });
+            }
+          });
+
+          // Noble animation
+          const beforeNobleIds = new Set(state.players[state.currentPlayerIndex].nobles.map((n) => String(n.id)));
+          const newNoble = afterPurchase.players[afterPurchase.currentPlayerIndex].nobles.find((n) => !beforeNobleIds.has(String(n.id)));
+          if (newNoble) {
+            const start = getCenterBySelector(`[data-noble-id="${String(newNoble.id)}"]`);
+            const end = getCenterBySelector(`[data-player-nobles-slot="${state.currentPlayerIndex}"]`);
+            if (start && end) {
+              spawnFlight({
+                kind: "noble",
+                color: "#f5d47a",
+                imageUrl: nobleImages[(Math.max(1, Number(newNoble.id)) - 1) % nobleImages.length],
+                start,
+                end,
+                durationMs: 900,
+              });
+            }
+          }
+        }
+
         purchaseCard(action.cardId);
       } else if (action.type === "takeTokens") {
+        const afterTake = performTakeTokens(state, action.gems);
+
+        // Add animations for AI taking tokens
+        action.gems.forEach((gem, index) => {
+          const start = getCenterBySelector(`[data-token-pool="${gem}"]`);
+          const end = getCenterBySelector(`[data-player-token-slot="${state.currentPlayerIndex}-${gem}"]`);
+          if (start && end) {
+            spawnFlight({
+              kind: "token",
+              color: GEM_INFO[gem].color,
+              imageUrl: gemTokenImages[gem],
+              start,
+              end,
+              durationMs: 400 + index * 30,
+            });
+          }
+        });
+
         takeTokens(action.gems);
       } else if (action.type === "reserveCard") {
+        const afterReserve = performReserveCard(state, action.cardId);
+        const card = state.visibleCards[3].find((c) => c?.id === action.cardId) ||
+                     state.visibleCards[2].find((c) => c?.id === action.cardId) ||
+                     state.visibleCards[1].find((c) => c?.id === action.cardId);
+
+        if (card) {
+          const cardStart = getCardCenter(card.id);
+          const cardEnd = getCenterBySelector(`[data-player-reserved-slot="${state.currentPlayerIndex}"]`);
+          if (cardStart && cardEnd) {
+            spawnFlight({
+              kind: "card",
+              color: "#cbd5e1",
+              label: "R",
+              start: cardStart,
+              end: cardEnd,
+              durationMs: 520,
+            });
+          }
+
+          // Gold token animation
+          if (state.tokenPool.gold > 0) {
+            const goldStart = getCenterBySelector('[data-token-pool="gold"]');
+            const goldEnd = getCenterBySelector(`[data-player-token-slot="${state.currentPlayerIndex}-gold"]`);
+            if (goldStart && goldEnd) {
+              spawnFlight({
+                kind: "token",
+                color: GEM_INFO.gold.color,
+                imageUrl: gemTokenImages.gold,
+                start: goldStart,
+                end: goldEnd,
+                durationMs: 460,
+              });
+            }
+          }
+        }
+
         reserveCard(action.cardId);
       } else if (action.type === "reserveDeck") {
+        const afterReserve = performReserveCard(state, 0, action.level);
+
+        // Add animation for AI reserving from deck
+        const deckStart = getCenterBySelector(`[data-deck-level="${action.level}"]`);
+        const reservedEnd = getCenterBySelector(`[data-player-reserved-slot="${state.currentPlayerIndex}"]`);
+        if (deckStart && reservedEnd) {
+          spawnFlight({
+            kind: "card",
+            color: "#1e293b",
+            label: String(action.level),
+            start: deckStart,
+            end: reservedEnd,
+            durationMs: 560,
+          });
+        }
+
+        // Gold token animation
+        if (state.tokenPool.gold > 0) {
+          const goldStart = getCenterBySelector('[data-token-pool="gold"]');
+          const goldEnd = getCenterBySelector(`[data-player-token-slot="${state.currentPlayerIndex}-gold"]`);
+          if (goldStart && goldEnd) {
+            spawnFlight({
+              kind: "token",
+              color: GEM_INFO.gold.color,
+              imageUrl: gemTokenImages.gold,
+              start: goldStart,
+              end: goldEnd,
+              durationMs: 460,
+            });
+          }
+        }
+
         reserveCard(0, action.level);
       }
 
@@ -838,6 +1058,63 @@ export default function useSplendorGameController(props: GameProps = {}) {
     endTurn,
   ]);
 
+  const isTutorialActionAllowed = useCallback(
+    (actionType: "takeTokens" | "buyCard" | "reserveCard", actionData?: any): boolean => {
+      // If tutorial is not enabled, all actions are allowed
+      if (!(interactiveTutorialEnabled || manualTutorialOpen)) {
+        return true;
+      }
+
+      // Tutorial step restrictions:
+      // Step 0-1: Informational only
+      // Step 2: Take 3 different gems (diamond, blue, green)
+      // Step 3: Buy a level 1 card
+      // Step 4: Take 2 same onyx tokens
+      // Step 5: Reserve a card
+      // Step 6: Buy reserved card
+      // Step 7+: All actions allowed
+
+      switch (tutorialStep) {
+        case 0:
+        case 1:
+          // Informational slides - don't allow actions yet
+          return false;
+        case 2:
+          // Take 3 different gems: ensure it's token selection with 3 different gems
+          if (actionType !== "takeTokens") return false;
+          if (!actionData?.gems || actionData.gems.length !== 3) return false;
+          const gemSet = new Set(actionData.gems);
+          return gemSet.size === 3; // Must be 3 different gems
+        case 3:
+          // Buy a level 1 card
+          if (actionType !== "buyCard") return false;
+          if (!actionData?.card) return false;
+          return actionData.card.level === 1; // Must be level 1
+        case 4:
+          // Take 2 same onyx tokens
+          if (actionType !== "takeTokens") return false;
+          if (!actionData?.gems || actionData.gems.length !== 2) return false;
+          return actionData.gems[0] === actionData.gems[1] && actionData.gems[0] === "onyx";
+        case 5:
+          // Reserve a card
+          if (actionType === "buyCard") return false; // Don't allow buying at this step
+          if (actionType === "takeTokens") return false; // Don't allow tokens
+          return actionType === "reserveCard"; // Only allow reserving
+        case 6:
+          // Buy reserved card
+          if (actionType !== "buyCard") return false;
+          if (!actionData?.card) return false;
+          // Check if card is in reserved list
+          const currentPlayer = state.players[state.currentPlayerIndex];
+          return currentPlayer.reserved.some((c) => c.id === actionData.card.id);
+        default:
+          // Step 7+: All actions allowed
+          return true;
+      }
+    },
+    [tutorialStep, interactiveTutorialEnabled, manualTutorialOpen, state],
+  );
+
   const handleGemClick = useCallback(
     (gem: GemType) => {
       // Check if it's current player's turn (for online games)
@@ -855,6 +1132,12 @@ export default function useSplendorGameController(props: GameProps = {}) {
         expectedDailyPuzzleAction?.type !== "takeTokens"
       ) {
         showSystemNotice("Wrong move.");
+        return;
+      }
+
+      // Tutorial validation for action type
+      if (!isTutorialActionAllowed("takeTokens", { gems: [gem] })) {
+        showSystemNotice(lang === "fa" ? "در حال حاضر در این قدم، این عمل مجاز نیست." : "This action is not allowed at this tutorial step.");
         return;
       }
 
@@ -897,6 +1180,7 @@ export default function useSplendorGameController(props: GameProps = {}) {
     },
     [
       phase,
+      state,
       state.tokenPool,
       selectedGems,
       gameMode,
@@ -907,6 +1191,7 @@ export default function useSplendorGameController(props: GameProps = {}) {
       challengeId,
       expectedDailyPuzzleAction,
       showSystemNotice,
+      isTutorialActionAllowed,
     ],
   );
 
@@ -921,6 +1206,20 @@ export default function useSplendorGameController(props: GameProps = {}) {
       showSystemNotice("Wrong move.");
       return;
     }
+
+    // Tutorial validation for final gem selection
+    if (!isTutorialActionAllowed("takeTokens", { gems: selectedGems })) {
+      showSystemNotice(lang === "fa" ? "انتخاب جواهرات نادرست است. به دستورات آموزش توجه کنید." : "Invalid gem selection for this tutorial step. Follow the tutorial instructions.");
+      return;
+    }
+
+    // Prevent rapid clicks - debounce
+    if (actionDebounceRef.current !== null) {
+      return;
+    }
+    actionDebounceRef.current = window.setTimeout(() => {
+      actionDebounceRef.current = null;
+    }, 500);
 
     lockActionUntilTurnChanges();
     audioManager.playSound("takeTokens");
@@ -1015,6 +1314,7 @@ export default function useSplendorGameController(props: GameProps = {}) {
     actionSubmitting,
     lockActionUntilTurnChanges,
     targetScore,
+    isTutorialActionAllowed,
   ]);
 
   const handleCancelTokens = useCallback(() => {
@@ -1043,6 +1343,14 @@ export default function useSplendorGameController(props: GameProps = {}) {
         return;
       }
 
+      // Tutorial validation: only allow buying level 1 cards at step 3
+      if (tutorialStep === 3) {
+        if (!isTutorialActionAllowed("buyCard", { card })) {
+          showSystemNotice(lang === "fa" ? "در این قدم فقط کارت‌های سطح ۱ قابل خریداری هستند." : "At this step, only level 1 cards can be purchased.");
+          return;
+        }
+      }
+
       if (phase !== "idle") return;
       setSelectedCard(card);
       setPhase("cardAction");
@@ -1057,6 +1365,8 @@ export default function useSplendorGameController(props: GameProps = {}) {
       challengeId,
       isExpectedDailyPuzzleAction,
       showSystemNotice,
+      tutorialStep,
+      isTutorialActionAllowed,
     ],
   );
 
@@ -1072,6 +1382,20 @@ export default function useSplendorGameController(props: GameProps = {}) {
       showSystemNotice("Wrong move.");
       return;
     }
+
+    // Tutorial validation
+    if (!isTutorialActionAllowed("buyCard", { card: selectedCard })) {
+      showSystemNotice(lang === "fa" ? "در این قدم این کارت قابل خریداری نیست. به دستورات آموزش توجه کنید." : "This card cannot be purchased at this tutorial step. Follow the tutorial instructions.");
+      return;
+    }
+
+    // Prevent rapid clicks - debounce
+    if (actionDebounceRef.current !== null) {
+      return;
+    }
+    actionDebounceRef.current = window.setTimeout(() => {
+      actionDebounceRef.current = null;
+    }, 500);
     lockActionUntilTurnChanges();
     audioManager.playSound("buyCard");
     console.log(
@@ -1088,7 +1412,7 @@ export default function useSplendorGameController(props: GameProps = {}) {
           label: selectedCard.points ? String(selectedCard.points) : "+",
           start: cardStart,
           end: cardEnd,
-          durationMs: 520,
+          durationMs: 800,
         });
       }
       TOKEN_TYPES.forEach((tokenType, tokenIndex) => {
@@ -1120,7 +1444,7 @@ export default function useSplendorGameController(props: GameProps = {}) {
             imageUrl: nobleImages[(Math.max(1, Number(newNoble.id)) - 1) % nobleImages.length],
             start,
             end,
-            durationMs: 650,
+            durationMs: 900,
           });
         }
       }
@@ -1142,7 +1466,7 @@ export default function useSplendorGameController(props: GameProps = {}) {
         label: selectedCard.points ? String(selectedCard.points) : "+",
         start: cardStart,
         end: cardEnd,
-        durationMs: 520,
+        durationMs: 800,
       });
     }
     TOKEN_TYPES.forEach((tokenType, tokenIndex) => {
@@ -1174,7 +1498,7 @@ export default function useSplendorGameController(props: GameProps = {}) {
           imageUrl: nobleImages[(Math.max(1, Number(newNoble.id)) - 1) % nobleImages.length],
           start,
           end,
-          durationMs: 650,
+          durationMs: 900,
         });
       }
     }
@@ -1221,6 +1545,8 @@ export default function useSplendorGameController(props: GameProps = {}) {
     actionSubmitting,
     lockActionUntilTurnChanges,
     targetScore,
+    isTutorialActionAllowed,
+    lang,
   ]);
 
   const handleReserveCard = useCallback(() => {
@@ -1231,6 +1557,25 @@ export default function useSplendorGameController(props: GameProps = {}) {
       return;
     }
     if (!selectedCard) return;
+
+    // Tutorial validation - only allow reserve at step 5
+    if ((interactiveTutorialEnabled || manualTutorialOpen) && tutorialStep === 5) {
+      if (!isTutorialActionAllowed("reserveCard")) {
+        showSystemNotice(lang === "fa" ? "در این قدم فقط رزرو کردن مجاز است." : "Only reserving is allowed at this tutorial step.");
+        return;
+      }
+    } else if ((interactiveTutorialEnabled || manualTutorialOpen) && (tutorialStep < 5 || tutorialStep === 6)) {
+      showSystemNotice(lang === "fa" ? "در این قدم رزرو کردن مجاز نیست." : "Reserving is not allowed at this tutorial step.");
+      return;
+    }
+
+    // Prevent rapid clicks - debounce
+    if (actionDebounceRef.current !== null) {
+      return;
+    }
+    actionDebounceRef.current = window.setTimeout(() => {
+      actionDebounceRef.current = null;
+    }, 500);
     lockActionUntilTurnChanges();
     audioManager.playSound("reserveCard");
     console.log(
@@ -1347,12 +1692,32 @@ export default function useSplendorGameController(props: GameProps = {}) {
         showSystemNotice("Wrong move.");
         return;
       }
+
+      // Tutorial validation - only allow reserve at step 5
+      if ((interactiveTutorialEnabled || manualTutorialOpen) && tutorialStep === 5) {
+        if (!isTutorialActionAllowed("reserveCard")) {
+          showSystemNotice(lang === "fa" ? "در این قدم فقط رزرو کردن مجاز است." : "Only reserving is allowed at this tutorial step.");
+          return;
+        }
+      } else if ((interactiveTutorialEnabled || manualTutorialOpen) && (tutorialStep < 5 || tutorialStep === 6)) {
+        showSystemNotice(lang === "fa" ? "در این قدم رزرو کردن مجاز نیست." : "Reserving is not allowed at this tutorial step.");
+        return;
+      }
+
       if (phase !== "idle") return;
       if (
         currentPlayer.reservedCards.length >= 3 ||
         state.decks[level].length === 0
       )
         return;
+
+      // Prevent rapid clicks - debounce
+      if (actionDebounceRef.current !== null) {
+        return;
+      }
+      actionDebounceRef.current = window.setTimeout(() => {
+        actionDebounceRef.current = null;
+      }, 500);
       lockActionUntilTurnChanges();
       const deckStart = getCenterBySelector(`[data-deck-level="${level}"]`);
       const reservedEnd = getCenterBySelector(`[data-player-reserved-slot="${state.currentPlayerIndex}"]`);
@@ -1451,6 +1816,11 @@ export default function useSplendorGameController(props: GameProps = {}) {
       actionSubmitting,
       lockActionUntilTurnChanges,
       targetScore,
+      isTutorialActionAllowed,
+      interactiveTutorialEnabled,
+      manualTutorialOpen,
+      tutorialStep,
+      lang,
     ],
   );
 

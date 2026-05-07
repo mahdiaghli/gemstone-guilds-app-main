@@ -32,9 +32,8 @@ export function getBackCardsByLevel(selectedCardBack: CardBackId) {
 }
 
 export function getAiDelay(aiDifficulty: AIDifficulty) {
-  if (aiDifficulty === "easy") return 150 + Math.random() * 100;
-  if (aiDifficulty === "hard") return 250 + Math.random() * 100;
-  return 200 + Math.random() * 100;
+  // Bots should think for 2 seconds before making a move
+  return 2000;
 }
 
 export function getTimeoutReturnToken(state: GameState, playerIndex: number) {

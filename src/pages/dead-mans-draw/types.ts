@@ -6,6 +6,7 @@ import type {
   DeadMansDrawRing,
   DeadMansDrawState,
 } from "@/lib/deadMansDraw";
+import type { DeadMansDrawInteractiveTutorialStep } from "./shared";
 
 export type Translate = (
   key: string,
@@ -42,6 +43,21 @@ export type BustPreviewState = {
   highlightIds: string[];
 };
 
+export type DeadMansDrawFlightAnimation = {
+  id: string;
+  card: DeadMansDrawCard;
+  kind: "reveal" | "collect" | "burn";
+  start: {
+    x: number;
+    y: number;
+  };
+  end: {
+    x: number;
+    y: number;
+  };
+  durationMs: number;
+};
+
 export type DeadMansDrawGameOverViewProps = {
   dir: "ltr" | "rtl";
   t: Translate;
@@ -74,6 +90,7 @@ export type DeadMansDrawBoardViewProps = {
   canCollect: boolean;
   onReveal: () => void;
   onCollect: () => void;
+  cardFlights: DeadMansDrawFlightAnimation[];
   visibleTreasureArea: DeadMansDrawCard[];
   highlightedTreasureIds: Set<string>;
   selectedTreasureHelpId: string | null;
@@ -81,12 +98,22 @@ export type DeadMansDrawBoardViewProps = {
   getPlayerDisplayName: (index: number) => string;
   activePlayerIndex: number;
   pendingEffect: DeadMansDrawPendingEffect | null;
+  decisionDisabled: boolean;
+  onAstrolabeReveal: () => void;
+  onAstrolabeCollect: () => void;
+  onMapChoice: (cardId: string) => void;
+  onMisfireChoice: (suit: any) => void;
   onPistolTarget: (targetPlayerIndex: number, suit: any) => void;
   onDaggerTarget: (targetPlayerIndex: number, suit: any) => void;
   onHorseshoeTarget: (suit: any) => void;
   targetSelectionDisabled: boolean;
   onOpenSummary: () => void;
   onOpenExit: () => void;
+  tutorialStep?: number;
+  tutorialSteps?: DeadMansDrawInteractiveTutorialStep[];
+  onNextTutorial?: () => void;
+  onPrevTutorial?: () => void;
+  onCloseTutorial?: () => void;
 };
 
 export type DeadMansDrawSummaryModalProps = {

@@ -48,6 +48,11 @@ export default function GameHeader({
   roomPlayers,
   highlightTimer,
 }: GameHeaderProps) {
+  const currentPlayerName = getPlayerDisplayName(stateCurrentPlayerIndex);
+  const truncatedPlayerName = currentPlayerName.length > 10 
+    ? currentPlayerName.substring(0, 10) 
+    : currentPlayerName;
+  
   return (
     <div className="mb-3 flex items-center justify-between gap-4">
       <div className="flex min-w-0 items-center gap-3">
@@ -80,17 +85,17 @@ export default function GameHeader({
                 {isCurrentPlayerMe() ? t("yourTurn") : t("waiting")}
               </span>
               {" | "}
-              {getPlayerDisplayName(stateCurrentPlayerIndex)}
+              {truncatedPlayerName}
             </>
           ) : (
             <>
-              {getPlayerDisplayName(stateCurrentPlayerIndex)}
+              {truncatedPlayerName}
               {isAIPlayer(stateCurrentPlayerIndex) ? " 🤖" : ""}
             </>
           )}
         </span>
         <span className={cn("text-xs text-muted-foreground rounded-md px-2 py-1", highlightTimer && "ring-2 ring-amber-400/80 bg-amber-500/10")}>
-          {t("turnTimeLeft")}: {turnSecondsLeft} {t("secondsShort")}
+          {truncatedPlayerName} - {t("turnTimeLeft")}: {turnSecondsLeft} {t("secondsShort")}
         </span>
       </div>
       <div className="flex flex-col items-end gap-2">

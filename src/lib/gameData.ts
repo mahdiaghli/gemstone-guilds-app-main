@@ -47,7 +47,8 @@ export const GEM_INFO: Record<GemType | 'gold', { name: string; color: string; b
   sapphire: { name: 'Sapphire', color: '#222dff', bgColor: 'rgba(59,130,246,0.15)',  darkColor: '#1d4ed8' },
   emerald:  { name: 'Emerald',  color: '#00c32a', bgColor: 'rgba(34,197,94,0.15)',   darkColor: '#0fc937' },
   ruby:     { name: 'Ruby',     color: '#ff0000', bgColor: 'rgba(239,68,68,0.15)',   darkColor: '#b91c1c' },
-  onyx:     { name: 'Onyx',     color: '#574545', bgColor: 'rgba(148,163,184,0.12)', darkColor: '#959494' },
+  // Make "onyx" look clearly brown/bronze to be more distinguishable
+  onyx:     { name: 'Onyx',     color: '#8B4513', bgColor: 'rgba(139,69,19,0.18)', darkColor: '#654321' },
   gold:     { name: 'Gold',     color: '#eab308', bgColor: 'rgba(234,179,8,0.15)',   darkColor: '#ffffff' },
 };
 

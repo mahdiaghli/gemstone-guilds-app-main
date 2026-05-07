@@ -6,11 +6,13 @@ export function DeckCounter({
   count,
   onClick,
   disabled = false,
+  deckId,
 }: {
   label: string;
   count: number;
   onClick?: () => void;
   disabled?: boolean;
+  deckId?: string;
 }) {
   const content = (
     <>
@@ -28,6 +30,7 @@ export function DeckCounter({
           type="button"
           onClick={onClick}
           disabled={disabled}
+          data-dead-draw-deck={deckId}
           className={cn(
             "relative mx-auto block w-fit rounded-[18px] focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-300/80",
             !disabled && "cursor-pointer transition-transform hover:-translate-y-1",
@@ -37,7 +40,7 @@ export function DeckCounter({
           {content}
         </button>
       ) : (
-        <div className="relative mx-auto block w-fit rounded-[18px]">
+        <div className="relative mx-auto block w-fit rounded-[18px]" data-dead-draw-deck={deckId}>
           {content}
         </div>
       )}

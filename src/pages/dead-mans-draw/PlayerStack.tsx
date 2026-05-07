@@ -41,52 +41,62 @@ export function PlayerStack({
   const ownChoiceSuits = new Set(
     playerIndex === activePlayerIndex ? ownChoiceEffect?.options.map((card) => card.suit) ?? [] : [],
   );
+  const hasOverlayTarget = targetableSuits.size > 0 || ownChoiceSuits.size > 0;
 
   return (
     <div
-      className={cn("rounded-[26px] border bg-cover bg-center p-4 backdrop-blur-sm", isActive ? "border-amber-300/70" : "border-white/10")}
+      data-dead-draw-player-panel={typeof playerIndex === "number" ? String(playerIndex) : undefined}
+      className={cn(
+        "relative rounded-[20px] border bg-cover bg-center p-3 backdrop-blur-sm",
+        isActive ? "border-amber-300/70" : "border-white/10",
+        hasOverlayTarget && "z-[42]",
+      )}
       style={{
         backgroundImage: `${isActive ? "linear-gradient(rgba(15,23,42,0.76), rgba(15,23,42,0.82))" : "linear-gradient(rgba(2,6,23,0.68), rgba(2,6,23,0.74))"}, url(${zirkhakiBackground})`,
       }}
     >
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-3">
-            {ringVisual ? (
-              <button
-                type="button"
-                onClick={() => setShowPowerHelp((value) => !value)}
-                className="shrink-0 rounded-2xl border border-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-300/80"
-              >
-                <img src={ringVisual.character} alt={ringVisual.label} className="h-16 w-16 rounded-2xl object-cover" />
-              </button>
-            ) : null}
-            <div className="min-w-0">
-              <p className="truncate font-cinzel text-base text-white sm:text-lg">{displayName}</p>
-              {player.ring ? <p className="mt-1 text-xs leading-5 text-teal-100/75">{t(`deadMansDrawPowerLabel${player.ring}`)}</p> : null}
-              {player.ring === "madam-margot" && markedOpponentName ? <p className="text-xs leading-5 text-rose-100/80">{t("deadMansDrawMarkedOpponent", { player: markedOpponentName })}</p> : null}
-            </div>
-          </div>
-          {player.ring && showPowerHelp ? (
-            <div className="mt-3 rounded-2xl border border-teal-300/25 bg-teal-400/8 p-3 text-xs leading-6 text-slate-200/85">
-              {t(getPowerAbilityKey(player.ring))}
-            </div>
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          {ringVisual ? (
+            <button
+              type="button"
+              onClick={() => setShowPowerHelp((value) => !value)}
+              className="shrink-0 rounded-xl border border-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-300/80"
+            >
+              <img src={ringVisual.character} alt={ringVisual.label} className="h-10 w-10 rounded-xl object-cover" />
+            </button>
           ) : null}
+          <div className="min-w-0">
+            <p className="truncate font-cinzel text-sm text-white">{displayName}</p>
+            {player.ring ? <p className="mt-0.5 text-[10px] leading-4 text-teal-100/75">{t(`deadMansDrawPowerLabel${player.ring}`)}</p> : null}
+            {player.ring === "madam-margot" && markedOpponentName ? <p className="text-[10px] leading-4 text-rose-100/80">{t("deadMansDrawMarkedOpponent", { player: markedOpponentName })}</p> : null}
+          </div>
         </div>
 
         <div className="shrink-0 text-right">
-          <p className="font-cinzel text-xl text-amber-300 sm:text-2xl">{getDeadMansDrawScore(player)}</p>
-          <p className="text-[11px] text-white/45">{t("deadMansDrawCardCount", { count: getPlayerCardCount(player) })}</p>
+          <p className="font-cinzel text-lg text-amber-300">{getDeadMansDrawScore(player)}</p>
+          <p className="text-[10px] text-white/45">{getPlayerCardCount(player)}</p>
         </div>
       </div>
+      {player.ring && showPowerHelp ? (
+        <div className="mt-2 rounded-xl border border-teal-300/25 bg-teal-400/8 p-2 text-[10px] leading-5 text-slate-200/85">
+          {t(getPowerAbilityKey(player.ring))}
+        </div>
+      ) : null}
 
-      <div className="mt-4 grid grid-cols-5 gap-2">
+      <div className="mt-3 grid grid-cols-5 gap-1.5">
         {Object.entries(player.collected).map(([suit, cards]) => {
           const topCard = cards[cards.length - 1];
+          const highestValue = cards.length > 0 ? Math.max(...cards.map((c) => c.value)) : 0;
+
           if (!topCard) {
             return (
-              <div key={suit} className="rounded-2xl border border-dashed border-white/10 bg-black/10 p-1">
-                <img src={SUIT_IMAGES[suit as DeadMansDrawSuit]} alt={suit} className="h-11 w-full rounded-xl object-cover opacity-25" />
+              <div
+                key={suit}
+                data-dead-draw-player-slot={typeof playerIndex === "number" ? `${playerIndex}-${suit}` : undefined}
+                className="rounded-xl border border-dashed border-white/10 bg-black/10 p-1"
+              >
+                <img src={SUIT_IMAGES[suit as DeadMansDrawSuit]} alt={suit} className="h-8 w-full rounded-lg object-cover opacity-25" />
               </div>
             );
           }
@@ -95,21 +105,11 @@ export function PlayerStack({
           const isOwnChoice = ownChoiceSuits.has(suit as DeadMansDrawSuit);
           const content = (
             <>
-              <div className="relative h-14">
-                <div className="relative h-12 w-10">
-                  {cards.slice(Math.max(0, cards.length - 3)).map((stackCard, stackIndex) => (
-                    <img
-                      key={stackCard.id}
-                      src={SUIT_IMAGES[suit as DeadMansDrawSuit]}
-                      alt={suit}
-                      className="absolute h-12 w-10 rounded-xl border border-white/10 object-cover shadow-[0_8px_18px_rgba(2,6,23,0.35)]"
-                      style={{ left: `${stackIndex * 4}px`, top: `${stackIndex * 2}px`, zIndex: stackIndex + 1 }}
-                    />
-                  ))}
-                </div>
-                <span className="absolute right-0 top-0 rounded-full bg-black/70 px-1.5 py-0.5 font-cinzel text-xs text-white">{topCard.value}</span>
+              <div className="relative h-10">
+                <img src={SUIT_IMAGES[suit as DeadMansDrawSuit]} alt={suit} className="h-8 w-full rounded-lg object-cover shadow-[0_4px_12px_rgba(2,6,23,0.35)]" />
+                <span className="absolute right-0 top-0 rounded-full bg-black/70 px-1 py-0.5 font-cinzel text-[10px] text-white shadow-lg">{highestValue}</span>
               </div>
-              <p className="mt-1 text-[10px] leading-3 text-amber-100/85">{cards.map((card) => card.value).join(", ")}</p>
+              <p className="mt-1 text-[9px] leading-3 text-amber-100/85 text-center">{cards.length}</p>
             </>
           );
 
@@ -120,7 +120,13 @@ export function PlayerStack({
                 type="button"
                 disabled={targetSelectionDisabled}
                 onClick={() => isOwnChoice ? onOwnChoiceCard?.(suit as DeadMansDrawSuit) : onTargetCard?.(playerIndex, suit as DeadMansDrawSuit)}
-                className="rounded-2xl border border-red-400 bg-red-500/10 p-1.5 text-left shadow-[0_0_18px_rgba(248,113,113,0.45)] transition hover:bg-red-500/20 disabled:cursor-not-allowed disabled:opacity-60"
+                data-dead-draw-player-slot={typeof playerIndex === "number" ? `${playerIndex}-${suit}` : undefined}
+                className={cn(
+                  "relative z-[45] rounded-xl p-1 text-left transition animate-pulse disabled:cursor-not-allowed disabled:opacity-60",
+                  isOwnChoice
+                    ? "border border-amber-300 bg-amber-400/12 shadow-[0_0_24px_rgba(251,191,36,0.42)] hover:bg-amber-400/20"
+                    : "border border-red-400 bg-red-500/10 shadow-[0_0_18px_rgba(248,113,113,0.45)] hover:bg-red-500/20",
+                )}
               >
                 {content}
               </button>
@@ -128,7 +134,11 @@ export function PlayerStack({
           }
 
           return (
-            <div key={suit} className="rounded-2xl border border-white/10 bg-black/15 p-1.5">
+            <div
+              key={suit}
+              data-dead-draw-player-slot={typeof playerIndex === "number" ? `${playerIndex}-${suit}` : undefined}
+              className="rounded-xl border border-white/10 bg-black/15 p-1"
+            >
               {content}
             </div>
           );

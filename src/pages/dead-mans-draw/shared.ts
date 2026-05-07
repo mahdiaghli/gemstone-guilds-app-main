@@ -143,6 +143,12 @@ export type DeadMansDrawTutorialBodyKey =
 export type DeadMansDrawTutorialSummaryKey =
   `deadMansDrawTutorialStep${DeadMansDrawTutorialStep}Summary`;
 
+export interface DeadMansDrawInteractiveTutorialStep {
+  title: string;
+  description: string;
+  focus: "intro" | "deck-section" | "player-panel" | "treasure-area" | "cards" | "powers";
+}
+
 export const getPowerAbilityKey = (ringId: DeadMansDrawRing) => {
   switch (ringId) {
     case "le-corsaire":

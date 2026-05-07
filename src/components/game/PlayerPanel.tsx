@@ -99,7 +99,7 @@ export default function PlayerPanel({ player, playerName, isActive, isAI, onRese
 
       {/* Reserved cards */}
       <div className="mt-1.5 pt-1.5 border-t border-border/30" data-player-reserved-slot={String(player.id)}>
-        {player.reservedCards.length > 0 && isActive && !isAI && (
+        {player.reservedCards.length > 0 && isActive && (
           <div className="flex gap-1 overflow-x-auto px-1 py-1">
             {player.reservedCards.map(card => (
               <CardDisplay
@@ -107,13 +107,13 @@ export default function PlayerPanel({ player, playerName, isActive, isAI, onRese
                 card={card}
                 dataCardId={card.id}
                 compact
-                onClick={() => onReservedCardClick?.(card)}
+                onClick={isAI ? undefined : () => onReservedCardClick?.(card)}
                 affordable={canPlayerAffordCard(player, card)}
               />
             ))}
           </div>
         )}
-        {player.reservedCards.length > 0 && (!isActive || isAI) && (
+        {player.reservedCards.length > 0 && !isActive && (
           <span className="text-[10px] text-muted-foreground">
             {player.reservedCards.length} {t('reserved')}
           </span>

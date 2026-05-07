@@ -96,13 +96,21 @@ export default function OnlineGame() {
     }
   }, [playerName, roomId, isHost, playerCount, turnTime, gameStarted, joinRoom, selectedGame.id]);
 
-  // Start game if room status changes
+  // Start game if room status changes to playing
   useEffect(() => {
     if (roomStatus === 'playing' && !gameStarted) {
       markPendingEntryFeeConsumed();
       setGameStarted(true);
     }
   }, [roomStatus, gameStarted]);
+
+  // Auto-start game for players joining an already-playing room
+  useEffect(() => {
+    if (roomStatus === 'playing' && playerName && !gameStarted) {
+      markPendingEntryFeeConsumed();
+      setGameStarted(true);
+    }
+  }, [roomStatus, playerName, gameStarted]);
 
   useEffect(() => {
     if (error || errorMsg) {
