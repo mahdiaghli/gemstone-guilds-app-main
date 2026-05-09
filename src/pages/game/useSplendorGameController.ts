@@ -242,6 +242,8 @@ export default function useSplendorGameController(props: GameProps = {}) {
   const [flightAnimations, setFlightAnimations] = useState<SplendorGameSceneProps["flightAnimations"]>([]);
   const [actionSubmitting, setActionSubmitting] = useState(false);
   const previousPlayerIndexRef = useRef(0);
+  const playerActionTakenRef = useRef(false);
+  const [showRobotTurnPopup, setShowRobotTurnPopup] = useState(false);
 
   const currentPlayer = state.players[state.currentPlayerIndex];
   const localPlayerIndex = gameMode === "online" ? (props.playerIndex ?? 0) : 0;
@@ -666,12 +668,7 @@ export default function useSplendorGameController(props: GameProps = {}) {
     setTurnWarning("");
     endTurn(targetScore);
     setPhase("idle");
-
-    // After timeout, if next player is AI, trigger AI move immediately
-    const nextPlayerIndex = (state.currentPlayerIndex + 1) % state.players.length;
-    if (isAIPlayer(nextPlayerIndex)) {
-      // The AI effect will trigger naturally when phase is idle and it's AI's turn
-    }
+    setTurnSecondsLeft(turnDurationSeconds);
   }, [
     endTurn,
     gameMode,
@@ -696,6 +693,11 @@ export default function useSplendorGameController(props: GameProps = {}) {
     let isMounted = true;
 
     const executeAI = async () => {
+      // Show robot turn popup immediately
+      if (isMounted) {
+        setShowRobotTurnPopup(true);
+      }
+      
       await new Promise((resolve) => setTimeout(resolve, getAiDelay(aiDifficulty)));
 
       if (!isMounted) return;
@@ -993,6 +995,8 @@ export default function useSplendorGameController(props: GameProps = {}) {
 
     return () => {
       isMounted = false;
+      // Hide robot turn popup when component unmounts or turn changes
+      setShowRobotTurnPopup(false);
     };
   }, [
     state.currentPlayerIndex,
@@ -1937,6 +1941,7 @@ export default function useSplendorGameController(props: GameProps = {}) {
         console.error("Failed to save tutorial completion:", e);
       }
     },
+    showRobotTurnPopup,
   };
 
   return { sceneProps };

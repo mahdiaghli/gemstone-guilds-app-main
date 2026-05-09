@@ -89,6 +89,7 @@ export default function SplendorGameHUD(props: Pick<
         isCurrentPlayerMe={props.isCurrentPlayerMe}
         stateCurrentPlayerIndex={props.stateCurrentPlayerIndex}
         getPlayerDisplayName={props.getPlayerDisplayName}
+        isAIPlayer={props.isAIPlayer}
         handleReturnToken={props.handleReturnToken}
         onCloseQuickRules={props.onCloseQuickRules}
         onCancelCardAction={props.onCancelCardAction}

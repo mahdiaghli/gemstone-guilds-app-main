@@ -1,3 +1,4 @@
+import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { Noble, GEM_TYPES, GemType } from '@/lib/gameData';
 import { useLanguage } from '@/hooks/useLanguage';
@@ -57,7 +58,10 @@ export default function NobleDisplay({ noble, compact }: NobleDisplayProps) {
   const requirementEntries = GEM_TYPES.filter((gem) => noble.requirements[gem]);
   
   return (
-    <div 
+    <motion.div
+      initial={{ opacity: 0, scale: 0.7, y: 12 }}
+      animate={{ opacity: 1, scale: 1, y: 0 }}
+      transition={{ duration: 0.35, ease: [0.34, 1.56, 0.64, 1] }}
       className={cn(
         'rounded-lg bg-card border border-primary/20 flex flex-col relative overflow-hidden',
         compact ? 'w-12 h-12 p-1' : 'w-14 h-14 md:w-16 md:h-16 p-2',
@@ -114,6 +118,6 @@ export default function NobleDisplay({ noble, compact }: NobleDisplayProps) {
           );
         })}
       </div>
-    </div>
+    </motion.div>
   );
 }

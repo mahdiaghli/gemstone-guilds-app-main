@@ -80,4 +80,5 @@ export type SplendorGameSceneProps = {
   onNextTutorialStep: () => void;
   onPrevTutorialStep: () => void;
   onCloseTutorial: () => void;
+  showRobotTurnPopup: boolean;
 };

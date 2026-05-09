@@ -28,17 +28,20 @@ export function DeadMansDrawBonusPreviewView({
             backgroundImage: `linear-gradient(rgba(2,6,23,0.88), rgba(2,6,23,0.92)), url(${overlayBackground})`,
           }}
         >
-          <p className="font-cinzel text-xs uppercase tracking-[0.38em] text-sky-100/65">Chest + Key</p>
-          <h1 className="mt-3 font-cinzel text-4xl text-white">
-            {t("deadMansDrawBonusPreviewTitle", {
-              player: getPlayerDisplayName(preview.playerIndex),
-            })}
-          </h1>
-          <p className="mt-3 text-sm leading-6 text-slate-300/80">{t("deadMansDrawBonusPreviewBody")}</p>
-          <div className="mt-8 flex flex-wrap gap-4">
-            {preview.cards.map((card) => <CardChip key={card.id} card={card} />)}
+          <div className="mb-8 text-center">
+            <p className="font-cinzel text-xs uppercase tracking-[0.35em] text-sky-200/65">
+              {dir === "rtl" ? "صندوق و کلید" : "Chest & Key"}
+            </p>
+            <p className="mt-2 text-sm leading-6 text-sky-50/90">
+              {dir === "rtl"
+                ? `${getPlayerDisplayName(preview.playerIndex)} این گنج‌ها را از پشته سوخته بازیابی کرد`
+                : `${getPlayerDisplayName(preview.playerIndex)} recovered these treasures from the burn pile`}
+            </p>
           </div>
-          <div className="mt-8">
+          <div className="mt-8 grid grid-cols-3 gap-4">
+            {preview.cards.map((card) => <CardChip key={card.id} card={card} compact />)}
+          </div>
+          <div className="mt-8 flex justify-center">
             <Button variant="game" onClick={onConfirm}>
               {t("deadMansDrawBonusPreviewConfirm")}
             </Button>

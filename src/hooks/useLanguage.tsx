@@ -800,8 +800,9 @@ const translations = {
   deadMansDrawCardCount: { fa: "{{count}} کارت", en: "{{count}} cards" },
   deadMansDrawStackTopValue: { fa: "بالاترین امتیاز: {{value}}", en: "Top value: {{value}}" },
   deadMansDrawStackBehindValues: { fa: "پشت آن: {{values}}", en: "Behind it: {{values}}" },
-  deadMansDrawBonusPreviewTitle: { fa: "{{player}} گنج جایزه را برداشت", en: "{{player}} recovered bonus treasure" },
-  deadMansDrawBonusPreviewBody: { fa: "این کارت‌ها از پشتهٔ سوخته آمده‌اند. وقتی همه آن‌ها را دیدند، تایید کن تا بازیکن بعدی شروع کند.", en: "These cards came from the burn pile. Click yes when everyone has reviewed them and the next player can begin." },
+  deadMansDrawBonusPreviewRecovered: { fa: "این گنج‌ها را از کارت‌های سوخته برداشت", en: "recovered these treasures from burn pile" },
+  deadMansDrawBonusPreviewBody:{ fa: "این کارت ها ازکارت های سوخته آمده اند. {{player}}این گنج ها رو با استفاده از صندوق + کلید برداشت", en: "{{player}} recovered these treasures using chest + key. These cards came from the burn pile." },
+
   deadMansDrawBonusPreviewConfirm: { fa: "بله، بازیکن بعدی", en: "Yes, next player" },
   deadMansDrawGameOver: { fa: "پایان بازی", en: "Game Over" },
   deadMansDrawWinnerLine: { fa: "{{winners}} برنده شد", en: "{{winners}} win" },

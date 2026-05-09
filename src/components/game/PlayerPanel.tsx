@@ -1,3 +1,4 @@
+import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { Player, Card, GEM_TYPES, TOKEN_TYPES, GEM_INFO } from '@/lib/gameData';
 import { getPlayerBonuses, getPlayerScore, canPlayerAffordCard } from '@/lib/gameLogic';
@@ -20,7 +21,11 @@ export default function PlayerPanel({ player, playerName, isActive, isAI, onRese
   const { t } = useLanguage();
 
   return (
-    <div className={cn(
+    <motion.div
+      initial={{ opacity: 0, y: 24 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4, ease: [0.25, 0.46, 0.45, 0.94] }}
+      className={cn(
       'rounded-lg border bg-cover bg-center p-2 transition-all min-w-0',
       isActive
         ? 'border-primary/60 ring-1 ring-primary/20 shadow-md shadow-primary/10'
@@ -130,6 +135,6 @@ export default function PlayerPanel({ player, playerName, isActive, isAI, onRese
           ))
         ) : null}
       </div>
-    </div>
+    </motion.div>
   );
 }

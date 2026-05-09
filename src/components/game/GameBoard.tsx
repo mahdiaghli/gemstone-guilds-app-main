@@ -62,16 +62,26 @@ export default function GameBoard({
 }: GameBoardProps) {
   return (
     <>
-      <div className={cn("mb-3 flex gap-2 overflow-x-auto pb-1 rounded-xl transition-all", tutorialFocus === "nobles" && "ring-4 ring-amber-300 bg-amber-500/15 p-2 shadow-[0_0_28px_rgba(251,191,36,0.45)]")}>
+      <motion.div
+        initial={{ opacity: 0, y: -12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, ease: "easeOut" }}
+        className={cn("mb-3 flex gap-2 overflow-x-auto pb-1 rounded-xl transition-all", tutorialFocus === "nobles" && "ring-4 ring-amber-300 bg-amber-500/15 p-2 shadow-[0_0_28px_rgba(251,191,36,0.45)]")}
+      >
         <span className="mr-1 self-center font-cinzel text-[10px] tracking-wider text-muted-foreground">
           {t("nobles")}
         </span>
         {state.nobles.map((noble) => (
           <NobleDisplay key={noble.id} noble={noble} />
         ))}
-      </div>
+      </motion.div>
 
-      <div className={cn("mb-3 space-y-2 rounded-xl transition-all", (tutorialFocus === "cards" || tutorialFocus === "card") && "ring-4 ring-amber-300 bg-amber-500/15 p-2 shadow-[0_0_28px_rgba(251,191,36,0.45)]")}>
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.35, delay: 0.1 }}
+        className={cn("mb-3 space-y-2 rounded-xl transition-all", (tutorialFocus === "cards" || tutorialFocus === "card") && "ring-4 ring-amber-300 bg-amber-500/15 p-2 shadow-[0_0_28px_rgba(251,191,36,0.45)]")}
+      >
         {([3, 2, 1] as const).map((level) => (
           <div key={level} className="flex items-center gap-1.5 md:gap-2">
             <motion.button
@@ -106,6 +116,7 @@ export default function GameBoard({
                   affordable={canPlayerAffordCard(currentPlayer, card)}
                   dataCardId={card.id}
                   animateIn
+                  staggerIndex={(3 - level) * 4 + index}
                 />
               ) : (
                 <div
@@ -116,9 +127,14 @@ export default function GameBoard({
             )}
           </div>
         ))}
-      </div>
+      </motion.div>
 
-      <div className={cn("mb-3 rounded-xl border border-border/30 bg-card/50 p-3 transition-all", tutorialFocus === "tokens" && "ring-4 ring-amber-300 shadow-[0_0_28px_rgba(251,191,36,0.45)]")}>
+      <motion.div
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.35, delay: 0.2 }}
+        className={cn("mb-3 rounded-xl border border-border/30 bg-card/50 p-3 transition-all", tutorialFocus === "tokens" && "ring-4 ring-amber-300 shadow-[0_0_28px_rgba(251,191,36,0.45)]")}
+      >
         <div className="flex flex-wrap items-center justify-center gap-2 md:gap-3">
           {GEM_TYPES.map((gem) => {
             const displayCount = tempPoolDisplay ? tempPoolDisplay[gem] : state.tokenPool[gem];
@@ -157,9 +173,12 @@ export default function GameBoard({
             </motion.div>
           )}
         </AnimatePresence>
-      </div>
+      </motion.div>
 
-      <div
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, delay: 0.3 }}
         className={cn(
           "grid gap-2",
           panelCount <= 2
@@ -171,8 +190,11 @@ export default function GameBoard({
         )}
       >
         {state.players.map((player, index) => (
-          <div
+          <motion.div
             key={player.id}
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.35, delay: 0.35 + index * 0.08 }}
             className={
               panelCount === 3 && index === 2
                 ? "col-span-2 w-full md:mx-auto md:w-[calc(50%-0.25rem)]"
@@ -190,9 +212,9 @@ export default function GameBoard({
                   : undefined
               }
             />
-          </div>
+          </motion.div>
         ))}
-      </div>
+      </motion.div>
     </>
   );
 }

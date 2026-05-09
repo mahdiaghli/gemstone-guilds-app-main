@@ -54,6 +54,7 @@ interface CardDisplayProps {
   costStatus?: Partial<Record<GemType, boolean>>;
   dataCardId?: string | number;
   animateIn?: boolean;
+  staggerIndex?: number;
 }
 
 const backCardImages = [backcard1Img, backcard2Img, backcard3Img];
@@ -130,6 +131,7 @@ export default function CardDisplay({
   costStatus,
   dataCardId,
   animateIn,
+  staggerIndex = 0,
 }: CardDisplayProps) {
   const { t } = useLanguage();
   const cardImagePath = getCardFaceImage(card);
@@ -141,9 +143,9 @@ export default function CardDisplay({
 
   return (
     <motion.div
-      initial={animateIn ? { opacity: 0, rotateY: -90, scale: 0.96 } : undefined}
+      initial={animateIn ? { opacity: 0, rotateY: -90, scale: 0.85 } : undefined}
       animate={animateIn ? { opacity: 1, rotateY: 0, scale: 1 } : undefined}
-      transition={animateIn ? { duration: 0.28, ease: "easeOut" } : undefined}
+      transition={animateIn ? { duration: 0.35, delay: staggerIndex * 0.06, ease: [0.34, 1.56, 0.64, 1] } : undefined}
       whileHover={onClick ? { y: -4, scale: 1.02 } : undefined}
       onClick={onClick}
       className={cn(

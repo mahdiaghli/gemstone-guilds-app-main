@@ -42,6 +42,9 @@ export default function GemToken({ type, count, onClick, selected, disabled, siz
 
   return (
     <motion.button
+      initial={{ opacity: 0, scale: 0.5, y: 16 }}
+      animate={{ opacity: 1, scale: 1, y: 0 }}
+      transition={{ duration: 0.4, ease: [0.34, 1.56, 0.64, 1] }}
       whileHover={!disabled ? { scale: 1.12 } : undefined}
       whileTap={!disabled ? { scale: 0.92 } : undefined}
       onClick={onClick}

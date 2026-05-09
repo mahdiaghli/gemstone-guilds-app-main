@@ -85,6 +85,49 @@ export default function SplendorGameScene(props: SplendorGameSceneProps) {
             </motion.div>
           </div>
         )}
+
+        {/* Robot Turn Popup
+        {props.showRobotTurnPopup && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              className="rounded-3xl border-2 border-amber-400/50 bg-slate-900/95 p-8 shadow-[0_0_60px_rgba(251,191,36,0.4)]"
+            >
+              <div className="flex flex-col items-center gap-4">
+                <div className="flex h-16 w-16 items-center justify-center rounded-full bg-amber-400/20">
+                  <span className="text-3xl">🤖</span>
+                </div>
+                <h2 className="font-cinzel text-2xl font-bold text-amber-100">
+                  {props.lang === "fa" ? "نوبت ربات" : "Robot's Turn"}
+                </h2>
+                <p className="text-center text-slate-300">
+                  {props.lang === "fa"
+                    ? "ربات در حال فکر کردن است..."
+                    : "The robot is thinking..."}
+                </p>
+                <div className="mt-2 flex gap-1">
+                  <motion.span
+                    animate={{ opacity: [0.4, 1, 0.4] }}
+                    transition={{ duration: 1.5, repeat: Infinity, delay: 0 }}
+                    className="h-2 w-2 rounded-full bg-amber-400"
+                  />
+                  <motion.span
+                    animate={{ opacity: [0.4, 1, 0.4] }}
+                    transition={{ duration: 1.5, repeat: Infinity, delay: 0.3 }}
+                    className="h-2 w-2 rounded-full bg-amber-400"
+                  />
+                  <motion.span
+                    animate={{ opacity: [0.4, 1, 0.4] }}
+                    transition={{ duration: 1.5, repeat: Infinity, delay: 0.6 }}
+                    className="h-2 w-2 rounded-full bg-amber-400"
+                  />
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )} */}
       </div>
       {props.flightAnimations.map((flight) => (
         <motion.div
