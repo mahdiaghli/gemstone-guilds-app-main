@@ -153,7 +153,7 @@ export default function CardDisplay({
         'bg-card border-border',
         affordable && 'border-primary ring-2 ring-primary/60 shadow-lg shadow-primary/40 scale-105',
         onClick && 'cursor-pointer',
-        compact ? 'w-14 h-20' : 'w-[4.5rem] h-24 md:w-20 md:h-28',
+        compact ? 'w-16 h-22' : 'w-20 h-28 md:w-24 md:h-32',
       )}
       style={{
         backgroundImage: showBack ? `url('${backImagePath}')` : `url('${cardImagePath}')`,
@@ -178,8 +178,8 @@ export default function CardDisplay({
                 'flex items-center justify-center',
                 'rounded-full bg-black/85 saturate-25',
                 compact
-                  ? 'w-4 h-4 text-[9px]'
-                  : 'w-5 h-5 md:w-6 md:h-6 text-xs md:text-sm'
+                  ? 'w-5 h-5 text-[11px]'
+                  : 'w-6 h-6 md:w-7 md:h-7 text-sm md:text-base'
               )}
             >
               {card.points}
@@ -191,13 +191,13 @@ export default function CardDisplay({
             alt={t(gemNameMap[card.gemBonus])}
             className={cn(
               'drop-shadow-[0_0_10px_rgba(255,255,255,0.35)]',
-              compact ? 'h-5 w-5' : 'h-6 w-6 md:h-7 md:w-7',
+              compact ? 'h-6 w-6' : 'h-7 w-7 md:h-8 md:w-8',
             )}
           />
         </div>
       </div>
       <div className={cn(
-        'absolute bottom-0.5 left-0.5 max-w-[85%] rounded bg-black/42 p-0.5',
+        'absolute bottom-0.5 left-0.5 max-w-[85%] rounded bg-black/70 p-0.5',
         costLayoutClass,
       )}>
         {costEntries.map((gem, index) => {
@@ -218,9 +218,9 @@ export default function CardDisplay({
             <div
               key={gem}
               className={cn(
-    'flex items-center gap-0.2 rounded-md bg-black/55 px-0.5 py-[1px] font-bold text سفید ring-1',
-                compact       ? 'text-[7px] px-1'
-                              : 'text-[9px] md:text-[10px] px-0.5',
+    'flex items-center gap-0.2 rounded-md bg-black/70 px-0.5 py-[1px] font-bold text-white ring-1',
+                compact       ? 'text-[11px] px-1'
+                              : 'text-[12px] md:text-[13px] px-0.5',
                                 'min-w-[1.6rem]',
                 (affordable && emphasizeAffordableCosts) || costStatus?.[gem]
                   ? 'ring-amber-300 shadow-[0_0_8px_rgba(252,211,77,0.55)]'
@@ -232,7 +232,7 @@ export default function CardDisplay({
               <img
                 src={gemImages[gem]}
                 alt={t(gemNameMap[gem])}
-                className={compact ? 'h-3 w-3' : 'h-4 w-4 md:h-[1.05rem] md:w-[1.05rem]'}
+                className={compact ? 'h-4 w-4' : 'h-5 w-5 md:h-[1.25rem] md:w-[1.25rem]'}
               />
               <span>{cost}</span>
             </div>

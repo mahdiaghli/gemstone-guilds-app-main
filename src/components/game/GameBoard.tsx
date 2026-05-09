@@ -68,7 +68,7 @@ export default function GameBoard({
         transition={{ duration: 0.4, ease: "easeOut" }}
         className={cn("mb-3 flex gap-2 overflow-x-auto pb-1 rounded-xl transition-all", tutorialFocus === "nobles" && "ring-4 ring-amber-300 bg-amber-500/15 p-2 shadow-[0_0_28px_rgba(251,191,36,0.45)]")}
       >
-        <span className="mr-1 self-center font-cinzel text-[10px] tracking-wider text-muted-foreground">
+        <span className="mr-1 self-center font-cinzel text-[12px] tracking-wider text-muted-foreground">
           {t("nobles")}
         </span>
         {state.nobles.map((noble) => (
@@ -88,7 +88,7 @@ export default function GameBoard({
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               onClick={() => handleReserveDeck(level)}
-              className="relative h-24 w-[4.5rem] shrink-0 overflow-hidden rounded-lg border-2 transition-colors hover:border-primary/40 md:h-28 md:w-20"
+              className="relative h-28 w-20 shrink-0 overflow-hidden rounded-lg border-2 transition-colors hover:border-primary/40 md:h-32 md:w-24"
               style={{ borderColor: `${LEVEL_COLORS[level]}60` }}
               data-deck-level={level}
             >
@@ -101,7 +101,7 @@ export default function GameBoard({
                 }}
               />
               <div className="relative z-10 flex flex-col items-center justify-center p-2">
-                <span className="mt-14 text-[10px] font-bold text-white drop-shadow-[0_1px_4px_rgba(0,0,0,0.9)] md:mt-[4.25rem]">
+                <span className="mt-14 text-[12px] font-bold text-white drop-shadow-[0_1px_4px_rgba(0,0,0,0.9)] md:mt-[4.25rem]">
                   {state.decks[level].length}
                 </span>
               </div>
@@ -121,7 +121,7 @@ export default function GameBoard({
               ) : (
                 <div
                   key={`e-${level}-${index}`}
-                  className="h-24 w-[4.5rem] rounded-lg border border-dashed border-border/30 md:h-28 md:w-20"
+                  className="h-28 w-20 rounded-lg border border-dashed border-border/30 md:h-32 md:w-24"
                 />
               ),
             )}

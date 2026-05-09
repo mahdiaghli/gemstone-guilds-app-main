@@ -100,7 +100,7 @@ export default function PageTopBar() {
                 <span className="min-w-[52px] text-[11px] leading-none">
                   {formatNumber(progress.coins)}
                 </span>
-                <span className="flex h-5 w-5 items-center justify-center rounded-full border border-yellow-400/60 bg-black/60 text-yellow-200 text-[10px] shadow-[0_0_6px_rgba(250,204,21,0.7)]">
+                <span className="flex h-5 w-5 items-center justify-center rounded-full border border-yellow-400/60 bg-black/60 text-yellow-200 text-[12px] shadow-[0_0_6px_rgba(250,204,21,0.7)]">
                   <Plus className="h-3 w-3" />
                 </span>
               </button>
@@ -120,7 +120,7 @@ export default function PageTopBar() {
                 <span className="min-w-[52px] text-[11px] leading-none">
                   {formatNumber(gems)}
                 </span>
-                <span className="flex h-5 w-5 items-center justify-center rounded-full border border-sky-300/70 bg-black/60 text-sky-100 text-[10px] shadow-[0_0_6px_rgba(56,189,248,0.8)]">
+                <span className="flex h-5 w-5 items-center justify-center rounded-full border border-sky-300/70 bg-black/60 text-sky-100 text-[12px] shadow-[0_0_6px_rgba(56,189,248,0.8)]">
                   <Plus className="h-3 w-3" />
                 </span>
               </button>
@@ -148,7 +148,7 @@ export default function PageTopBar() {
                   <span className="truncate">
                     {t("level")} {levelInfo.level}
                   </span>
-                  <span className="shrink-0 text-[10px]">
+                  <span className="shrink-0 text-[12px]">
                     {levelInfo.currentXp}/{levelInfo.requiredXp}
                   </span>
                 </div>

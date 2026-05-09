@@ -55,7 +55,7 @@ export default function PlayerPanel({ player, playerName, isActive, isAI, onRese
                 className={cn("w-3 h-3 rounded-full transition-opacity", hasToken ? "opacity-100" : "opacity-25")}
                 style={{ backgroundColor: GEM_INFO[type].color }}
               />
-              <span className={cn("text-[10px] font-bold transition-opacity", hasToken ? "text-foreground opacity-100" : "text-foreground/25 opacity-100")}>{player.tokens[type]}</span>
+              <span className={cn("text-[12px] font-bold transition-opacity", hasToken ? "text-foreground opacity-100" : "text-foreground/25 opacity-100")}>{player.tokens[type]}</span>
             </div>
           );
         })}
@@ -92,7 +92,7 @@ export default function PlayerPanel({ player, playerName, isActive, isAI, onRese
                 )}
               </div>
               <span className={cn(
-                'text-[10px] font-bold ml-0.5',
+                'text-[12px] font-bold ml-0.5',
                 count > 0 ? 'text-foreground' : 'text-muted-foreground/40',
               )}>
                 {count}
@@ -119,7 +119,7 @@ export default function PlayerPanel({ player, playerName, isActive, isAI, onRese
           </div>
         )}
         {player.reservedCards.length > 0 && !isActive && (
-          <span className="text-[10px] text-muted-foreground">
+          <span className="text-[12px] text-muted-foreground">
             {player.reservedCards.length} {t('reserved')}
           </span>
         )}
