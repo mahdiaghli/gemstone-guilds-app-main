@@ -65,8 +65,8 @@ export default function GameBoard({
       <motion.div
         initial={{ opacity: 0, y: -12 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, ease: "easeOut" }}
-        className={cn("mb-3 flex gap-2 overflow-x-auto pb-1 rounded-xl transition-all", tutorialFocus === "nobles" && "ring-4 ring-amber-300 bg-amber-500/15 p-2 shadow-[0_0_28px_rgba(251,191,36,0.45)]")}
+        transition={{ duration: 0.3, ease: "easeOut" }}
+        className={cn("mb-4 flex gap-3 overflow-x-auto pb-2 rounded-xl transition-all", tutorialFocus === "nobles" && "ring-4 ring-amber-300 bg-amber-500/15 p-3 shadow-[0_0_28px_rgba(251,191,36,0.45)]")}
       >
         <span className="mr-1 self-center font-cinzel text-[12px] tracking-wider text-muted-foreground">
           {t("nobles")}
@@ -79,16 +79,16 @@ export default function GameBoard({
       <motion.div
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.35, delay: 0.1 }}
-        className={cn("mb-3 space-y-2 rounded-xl transition-all", (tutorialFocus === "cards" || tutorialFocus === "card") && "ring-4 ring-amber-300 bg-amber-500/15 p-2 shadow-[0_0_28px_rgba(251,191,36,0.45)]")}
+        transition={{ duration: 0.25, delay: 0.08 }}
+        className={cn("mb-4 space-y-3 rounded-xl transition-all", (tutorialFocus === "cards" || tutorialFocus === "card") && "ring-4 ring-amber-300 bg-amber-500/15 p-3 shadow-[0_0_28px_rgba(251,191,36,0.45)]")}
       >
         {([3, 2, 1] as const).map((level) => (
-          <div key={level} className="flex items-center gap-1.5 md:gap-2">
+          <div key={level} className="flex items-center gap-2 md:gap-3">
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               onClick={() => handleReserveDeck(level)}
-              className="relative h-28 w-20 shrink-0 overflow-hidden rounded-lg border-2 transition-colors hover:border-primary/40 md:h-32 md:w-24"
+              className="relative h-28 w-20 shrink-0 overflow-hidden rounded-lg border-2 transition-all duration-200 hover:border-primary/60 hover:shadow-lg hover:shadow-primary/20 md:h-32 md:w-24"
               style={{ borderColor: `${LEVEL_COLORS[level]}60` }}
               data-deck-level={level}
             >
@@ -132,10 +132,10 @@ export default function GameBoard({
       <motion.div
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.35, delay: 0.2 }}
-        className={cn("mb-3 rounded-xl border border-border/30 bg-card/50 p-3 transition-all", tutorialFocus === "tokens" && "ring-4 ring-amber-300 shadow-[0_0_28px_rgba(251,191,36,0.45)]")}
+        transition={{ duration: 0.25, delay: 0.15 }}
+        className={cn("mb-4 rounded-xl border border-border/30 bg-card/50 p-4 transition-all", tutorialFocus === "tokens" && "ring-4 ring-amber-300 shadow-[0_0_28px_rgba(251,191,36,0.45)]")}
       >
-        <div className="flex flex-wrap items-center justify-center gap-2 md:gap-3">
+        <div className="flex flex-wrap items-center justify-center gap-3 md:gap-4">
           {GEM_TYPES.map((gem) => {
             const displayCount = tempPoolDisplay ? tempPoolDisplay[gem] : state.tokenPool[gem];
             return (
@@ -162,7 +162,7 @@ export default function GameBoard({
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -8, scale: 0.96 }}
               transition={{ duration: 0.2 }}
-              className="mt-3 flex justify-center gap-2"
+              className="mt-4 flex justify-center gap-3"
             >
               <Button variant="game" size="sm" onClick={handleConfirmTokens} disabled={actionSubmitting}>
                 {t("take")} {selectedGems.length === 2 && selectedGems[0] === selectedGems[1] ? t("takeSame") : selectedGems.length}
@@ -178,9 +178,9 @@ export default function GameBoard({
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, delay: 0.3 }}
+        transition={{ duration: 0.3, delay: 0.22 }}
         className={cn(
-          "grid gap-2",
+          "grid gap-3",
           panelCount <= 2
             ? "grid-cols-2"
             : panelCount === 3
@@ -194,7 +194,7 @@ export default function GameBoard({
             key={player.id}
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.35, delay: 0.35 + index * 0.08 }}
+            transition={{ duration: 0.25, delay: 0.25 + index * 0.05 }}
             className={
               panelCount === 3 && index === 2
                 ? "col-span-2 w-full md:mx-auto md:w-[calc(50%-0.25rem)]"

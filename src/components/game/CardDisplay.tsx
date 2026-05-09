@@ -145,13 +145,14 @@ export default function CardDisplay({
     <motion.div
       initial={animateIn ? { opacity: 0, rotateY: -90, scale: 0.85 } : undefined}
       animate={animateIn ? { opacity: 1, rotateY: 0, scale: 1 } : undefined}
-      transition={animateIn ? { duration: 0.35, delay: staggerIndex * 0.06, ease: [0.34, 1.56, 0.64, 1] } : undefined}
-      whileHover={onClick ? { y: -4, scale: 1.02 } : undefined}
+      transition={animateIn ? { duration: 0.25, delay: staggerIndex * 0.03, ease: [0.34, 1.56, 0.64, 1] } : undefined}
+      whileHover={onClick ? { y: -6, scale: 1.03 } : undefined}
+      whileTap={onClick ? { scale: 0.98 } : undefined}
       onClick={onClick}
       className={cn(
-        'rounded-lg border-2 relative overflow-hidden card-shine transition-all',
+        'rounded-lg border-2 relative overflow-hidden card-shine transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2',
         'bg-card border-border',
-        affordable && 'border-primary ring-2 ring-primary/60 shadow-lg shadow-primary/40 scale-105',
+        affordable && 'border-primary ring-2 ring-primary/70 shadow-lg shadow-primary/50',
         onClick && 'cursor-pointer',
         compact ? 'w-16 h-22' : 'w-20 h-28 md:w-24 md:h-32',
       )}

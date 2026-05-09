@@ -15,9 +15,9 @@ const buttonVariants = cva(
         secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/80",
         ghost: "hover:bg-accent hover:text-accent-foreground",
         link: "text-primary underline-offset-4 hover:underline",
-        hero: "bg-primary text-primary-foreground hover:bg-primary/80 text-lg px-10 py-6 tracking-[0.15em] font-cinzel rounded-xl shadow-lg shadow-primary/25 transition-all duration-300 hover:shadow-xl hover:shadow-primary/30",
-        game: "bg-primary/10 text-primary border border-primary/30 hover:bg-primary/20 font-cinzel tracking-wider",
-        "game-secondary": "bg-secondary text-secondary-foreground hover:bg-secondary/80 font-body",
+        hero: "bg-primary text-primary-foreground hover:bg-primary/85 hover:scale-[1.02] text-lg px-10 py-6 tracking-[0.15em] font-cinzel rounded-xl shadow-lg shadow-primary/25 transition-all duration-300 hover:shadow-xl hover:shadow-primary/40",
+        game: "bg-primary/10 text-primary border border-primary/30 hover:bg-primary/25 hover:border-primary/50 font-cinzel tracking-wider",
+        "game-secondary": "bg-secondary text-secondary-foreground hover:bg-secondary/90 hover:brightness-110 font-body",
       },
       size: {
         default: "h-10 px-4 py-2",
