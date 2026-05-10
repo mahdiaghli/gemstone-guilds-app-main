@@ -135,14 +135,14 @@ export default function SplendorGameScene(props: SplendorGameSceneProps) {
           className={cn(
             "pointer-events-none fixed z-[60] flex items-center justify-center overflow-hidden border border-white/40 font-bold text-white shadow-xl",
             flight.kind === "card"
-              ? "h-24 w-[4.5rem] rounded-lg text-xl md:h-28 md:w-20"
+              ? "h-28 w-20 rounded-lg text-xl md:h-32 md:w-24"
               : flight.kind === "noble"
                 ? "h-14 w-14 rounded-lg text-sm md:h-16 md:w-16"
-                : "h-8 w-8 rounded-full text-[10px]",
+                : "h-8 w-8 rounded-full text-[12px]",
           )}
           style={{
-            left: flight.start.x - (flight.kind === "card" ? 36 : flight.kind === "noble" ? 28 : 16),
-            top: flight.start.y - (flight.kind === "card" ? 48 : flight.kind === "noble" ? 28 : 16),
+            left: flight.start.x - (flight.kind === "card" ? 40 : flight.kind === "noble" ? 28 : 16),
+            top: flight.start.y - (flight.kind === "card" ? 56 : flight.kind === "noble" ? 28 : 16),
             backgroundColor: flight.imageUrl ? "transparent" : flight.color || "#94a3b8",
             backgroundImage: flight.imageUrl ? `url('${flight.imageUrl}')` : undefined,
             backgroundSize: flight.kind === "token" ? "contain" : "cover",

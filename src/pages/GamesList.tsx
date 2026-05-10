@@ -48,7 +48,7 @@ export default function GamesList() {
 
   return (
     <AppPageShell currentPath="/menu" backgroundImage={shellBackgrounds.gamesList}>
-      <div className="space-y-3 sm:space-y-4">
+      <div className="space-y-4 sm:space-y-5">
         {GAME_CATALOG.map((game) => {
           const posters = FEATURED_POSTERS[game.id];
 
@@ -57,10 +57,10 @@ export default function GamesList() {
               key={game.id}
               type="button"
               onClick={() => navigate(`/menu/${game.id}`)}
-              className="group relative w-full overflow-hidden rounded-[30px] border border-white/10 bg-slate-950/75 text-left shadow-[0_24px_60px_rgba(2,6,23,0.45)] transition-all active:scale-[0.99] sm:hover:-translate-y-1 sm:hover:border-primary/50"
+              className="group relative w-full overflow-hidden rounded-[30px] border border-white/10 bg-slate-950/75 text-left shadow-[0_24px_60px_rgba(2,6,23,0.45)] transition-all duration-300 active:scale-[0.99] sm:hover:-translate-y-2 sm:hover:border-primary/60 sm:hover:shadow-[0_28px_70px_rgba(2,6,23,0.55)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
             >
               <div
-                className="absolute inset-0 bg-cover bg-center opacity-80 transition-opacity group-hover:opacity-35"
+                className="absolute inset-0 bg-cover bg-center opacity-80 transition-opacity duration-300 group-hover:opacity-30"
                 style={{ backgroundImage: `url(${posters?.wide || GAME_IMAGES[game.id] || deadMansDrawImage})` }}
               />
               <div
@@ -69,9 +69,8 @@ export default function GamesList() {
                   background: `linear-gradient(145deg, ${game.accentFrom}22, ${game.accentTo}16 58%, rgba(2,6,23,0.9))`,
                 }}
               />
-              <div className="absolute inset-x-5 top-0 h-px bg-gradient-to-r from-transparent via-white/60 to-transparent" />
 
-              <div className="relative flex min-h-[168px] flex-col gap-4 p-4 sm:min-h-[184px] sm:p-5">
+              <div className="relative flex min-h-[168px] flex-col gap-4 p-5 sm:min-h-[184px] sm:p-6">
                 <div className="flex items-start gap-4">
                   {/* <div className="flex shrink-0 items-center justify-center overflow-hidden rounded-[24px] border border-white/10 bg-black/20 p-2 shadow-[0_18px_30px_rgba(2,6,23,0.35)]"> */}
                     {/* <img src={GAME_IMAGES[game.id] || deadMansDrawImage} alt={game.name} className="h-20 w-20 object-contain sm:h-24 sm:w-24" /> */}

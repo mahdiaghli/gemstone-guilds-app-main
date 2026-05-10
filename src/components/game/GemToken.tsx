@@ -30,7 +30,7 @@ export const gemTokenImages: Record<GemType | 'gold', string> = {
 export default function GemToken({ type, count, onClick, selected, disabled, size = 'md', dataTokenPool }: GemTokenProps) {
   const info = GEM_INFO[type];
   const sizeClasses = {
-    sm: 'h-8 gap-1 px-2 text-[10px]',
+    sm: 'h-8 gap-1 px-2 text-[12px]',
     md: 'h-10 gap-1.5 px-2.5 text-sm',
     lg: 'h-12 gap-2 px-3 text-base',
   };

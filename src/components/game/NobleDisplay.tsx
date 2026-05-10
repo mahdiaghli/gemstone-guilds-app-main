@@ -89,7 +89,7 @@ export default function NobleDisplay({ noble, compact }: NobleDisplayProps) {
       className={cn(
         'font-cinzel font-bold text-white leading-none',
         'drop-shadow-[0_1px_1px_rgba(0,0,0,0.85)]',
-        compact ? 'text-[10px]' : 'text-xs md:text-sm',
+        compact ? 'text-[12px]' : 'text-sm md:text-base',
       )}
     >
       {noble.points}

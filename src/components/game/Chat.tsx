@@ -172,7 +172,7 @@ export default function Chat({
                 <span className="font-semibold text-primary flex-1">
                   {msg.playerName}
                 </span>
-                <span className="text-muted-foreground text-[10px] whitespace-nowrap">
+                <span className="text-muted-foreground text-[11px] whitespace-nowrap">
                   {formatTime(msg.timestamp)}
                 </span>
               </div>

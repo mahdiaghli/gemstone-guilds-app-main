@@ -76,16 +76,6 @@ export default function Index() {
       />
       <div className="absolute inset-0 bg-gradient-to-t from-background via-background/10 to-background/10" />
 
-      {GEM_DECORATIONS.map((gem, i) => (
-        <span
-          key={i}
-          className="absolute text-2xl md:text-3xl opacity-20 pointer-events-none"
-          style={{ left: gem.x, top: gem.y }}
-        >
-          {gem.emoji}
-        </span>
-      ))}
-
       <PageTopBar />
 
       <div className="relative z-10 mt-28 w-full max-w-md px-4 text-center md:mt-32">
@@ -111,16 +101,16 @@ export default function Index() {
           {/* {game.subtitle} */}
         {/* </p> */}
 
-        <div className="space-y-3 mb-6">
+        <div className="space-y-4 mb-6">
           {menuItems.map((item) => (
             <button
               key={item.id}
               onClick={item.action}
               className={cn(
-                "w-full flex items-center gap-4 rounded-xl border-2 transition-all",
-                item.id === "tutorial" ? "px-3 py-2" : "p-4",
+                "w-full flex items-center gap-5 rounded-xl border-2 transition-all",
+                item.id === "tutorial" ? "px-4 py-3" : "p-5",
                 dir === "rtl" ? "text-right flex-row-reverse" : "text-left",
-                "border-border/50 bg-card/50 hover:border-primary/30",
+                "border-border/50 bg-card/50 hover:border-primary/50 hover:bg-card/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
               )}
             >
               <img src={item.icon} alt={item.title} className={item.id === "tutorial" ? "h-8 w-8 object-contain" : "h-10 w-10 object-contain"} />
