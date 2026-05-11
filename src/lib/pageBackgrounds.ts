@@ -10,18 +10,22 @@ const pageBackgrounds: Record<PageKey, Partial<Record<GameId, string>>> = {
   index: {
     splendor: splendorBackground,
     "dead-mans-draw": deadMansDrawBackground,
+    "beasty-bar": defaultBackground,
   },
   "mode-setup": {
     splendor: splendorBackground,
     "dead-mans-draw": deadMansDrawBackground,
+    "beasty-bar": defaultBackground,
   },
   "manual-room": {
     splendor: splendorBackground,
     "dead-mans-draw": deadMansDrawBackground,
+    "beasty-bar": defaultBackground,
   },
   "find-match": {
     splendor: splendorBackground,
     "dead-mans-draw": deadMansDrawBackground,
+    "beasty-bar": defaultBackground,
   },
 };
 

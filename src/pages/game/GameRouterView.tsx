@@ -1,5 +1,6 @@
 import DeadMansDrawGame from "@/pages/DeadMansDrawGame";
 import SplendorGame from "@/pages/SplendorGame";
+import BeastyBarGame from "@/pages/BeastyBarGame";
 import { getGameById } from "@/lib/gameCatalog";
 import type { GameProps } from "@/pages/game/gamePageUtils";
 
@@ -24,6 +25,10 @@ export default function GameRouterView({ gameId, ...props }: GameRouterViewProps
         onGameEnd={props.onGameEnd}
       />
     );
+  }
+
+  if (selectedGame.id === "beasty-bar") {
+    return <BeastyBarGame />;
   }
 
   return <SplendorGame {...props} />;

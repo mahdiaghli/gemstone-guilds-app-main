@@ -12,7 +12,7 @@ import splendorSquarePoster from "@/assets/poster-square-splendor (4).png";
 import deadMansDrawWidePoster from "@/assets/poster-wide-zirkhaki.png";
 import deadMansDrawSquarePoster from "@/assets/poster-square-zirkhaki.png";
 import totemImage from "@/assets/play with robots.png";
-import azulImage from "@/assets/gem-blue.png";
+import beastyBarImage from "@/assets/play with robots.png";
 import coupImage from "@/assets/card2.png";
 import ticketImage from "@/assets/banner.png";
 
@@ -20,7 +20,7 @@ const GAME_IMAGES: Record<string, string> = {
   splendor: splendorSquarePoster,
   "dead-mans-draw": deadMansDrawSquarePoster,
   totem: totemImage,
-  azul: azulImage,
+  "beasty-bar": beastyBarImage,
   coup: coupImage,
   "ticket-to-ride": ticketImage,
 };

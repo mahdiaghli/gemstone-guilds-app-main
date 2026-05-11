@@ -2,7 +2,7 @@ export type GameId =
   | "splendor"
   | "dead-mans-draw"
   | "totem"
-  | "azul"
+  | "beasty-bar"
   | "coup"
   | "ticket-to-ride";
 
@@ -43,12 +43,12 @@ export const GAME_CATALOG: GameConfig[] = [
     accentTo: "#eab308",
   },
   {
-    id: "azul",
-    name: "Azul",
-    subtitle: "Draft colorful tiles and build the most elegant mosaic.",
-    badge: "Tiles",
-    accentFrom: "#38bdf8",
-    accentTo: "#2563eb",
+    id: "beasty-bar",
+    name: "Beasty Bar",
+    subtitle: "Guide animals to the Wild Cafe in this chaotic party game.",
+    badge: "Party",
+    accentFrom: "#f97316",
+    accentTo: "#22c55e",
   },
   {
     id: "coup",
