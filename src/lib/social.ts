@@ -84,6 +84,9 @@ export interface GameInvite {
   roomId: string;
 }
 
+const REMOTE_RETRY_COOLDOWN_MS = 30_000;
+let remoteDisabledUntil = 0;
+
 interface SocialStore {
   friends: Record<string, string[]>;
   friendRequests: FriendRequest[];
@@ -229,6 +232,10 @@ function removeUserFromGroups(store: SocialStore, userId: string) {
 }
 
 async function fetchRemoteJson<T>(url: string, init?: RequestInit): Promise<T | null> {
+  if (Date.now() < remoteDisabledUntil) {
+    return null;
+  }
+
   try {
     const headers = new Headers(init?.headers);
     const hasBody = init?.body !== undefined && init?.body !== null;
@@ -248,6 +255,7 @@ async function fetchRemoteJson<T>(url: string, init?: RequestInit): Promise<T | 
     if (!response.ok) return null;
     return (await response.json()) as T;
   } catch {
+    remoteDisabledUntil = Date.now() + REMOTE_RETRY_COOLDOWN_MS;
     return null;
   }
 }
@@ -788,9 +796,5 @@ export function syncSelectedAvatar(userId: string | undefined, selectedAvatar: s
   updateLocalUserProfile(userId, { selectedAvatar });
   const user = getRegisteredUsers().find((entry: any) => entry.id === userId);
   if (!user) return;
-  fetch(`${API_SERVER_URL}/users`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ ...user, selectedAvatar }),
-  }).catch(() => {});
+  postRemote("/users", { ...user, selectedAvatar });
 }

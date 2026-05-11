@@ -9,7 +9,7 @@ export default function Landing() {
   if (!user) return <Navigate to="/login" replace />;
 
   const needsTutorial = localStorage.getItem("splendor-needs-tutorial") === "true";
-  if (needsTutorial) return <Navigate to="/tutorial?first=1" replace />;
+  if (needsTutorial) return <Navigate to="/splendor-tutorial?first=1" replace />;
 
   return <Navigate to="/menu" replace />;
 }

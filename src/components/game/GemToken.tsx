@@ -13,6 +13,8 @@ interface GemTokenProps {
   count?: number;
   onClick?: () => void;
   selected?: boolean;
+  highlighted?: boolean;
+  dimmed?: boolean;
   disabled?: boolean;
   size?: 'sm' | 'md' | 'lg';
   dataTokenPool?: string;
@@ -27,7 +29,17 @@ export const gemTokenImages: Record<GemType | 'gold', string> = {
   gold: gemGoldImg,
 };
 
-export default function GemToken({ type, count, onClick, selected, disabled, size = 'md', dataTokenPool }: GemTokenProps) {
+export default function GemToken({
+  type,
+  count,
+  onClick,
+  selected,
+  highlighted,
+  dimmed,
+  disabled,
+  size = 'md',
+  dataTokenPool,
+}: GemTokenProps) {
   const info = GEM_INFO[type];
   const sizeClasses = {
     sm: 'h-8 gap-1 px-2 text-[10px]',
@@ -43,7 +55,20 @@ export default function GemToken({ type, count, onClick, selected, disabled, siz
   return (
     <motion.button
       initial={{ opacity: 0, scale: 0.5, y: 16 }}
-      animate={{ opacity: 1, scale: 1, y: 0 }}
+      animate={{
+        opacity: 1,
+        y: 0,
+        scale: selected ? [1, 1.08, 1] : 1,
+        boxShadow: selected
+          ? [
+              "0 0 0 rgba(255,255,255,0)",
+              `0 0 18px ${info.color}99`,
+              `0 0 8px ${info.color}66`,
+            ]
+          : highlighted
+            ? `0 0 18px ${info.color}88`
+            : "0 0 0 rgba(255,255,255,0)",
+      }}
       transition={{ duration: 0.4, ease: [0.34, 1.56, 0.64, 1] }}
       whileHover={!disabled ? { scale: 1.12 } : undefined}
       whileTap={!disabled ? { scale: 0.92 } : undefined}
@@ -53,6 +78,8 @@ export default function GemToken({ type, count, onClick, selected, disabled, siz
         'rounded-full flex items-center justify-center font-bold transition-all relative',
         sizeClasses[size],
         selected && 'ring-2 ring-primary ring-offset-2 ring-offset-background',
+        highlighted && 'ring-2 ring-amber-300/90 ring-offset-2 ring-offset-background',
+        dimmed && 'opacity-45 saturate-50',
         disabled && 'opacity-40 cursor-not-allowed',
         !disabled && onClick && 'cursor-pointer',
         `gem-glow-${type}`,

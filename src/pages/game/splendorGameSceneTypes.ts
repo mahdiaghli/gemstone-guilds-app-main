@@ -1,5 +1,9 @@
 import type { Card, GameState, GemType, TokenType } from "@/lib/gameData";
-import type { Phase } from "@/pages/game/gamePageUtils";
+import type {
+  Phase,
+  PostGameActionButton,
+  PostGameNoticeDialog,
+} from "@/pages/game/gamePageUtils";
 
 export type SplendorGameSceneProps = {
   flightAnimations: Array<{
@@ -55,6 +59,8 @@ export type SplendorGameSceneProps = {
   onAcceptRematch: () => void;
   onPlayAgain: () => void;
   onMenu: () => void;
+  gameOverActions?: PostGameActionButton[];
+  postGameNoticeDialog?: PostGameNoticeDialog | null;
   panelCount: number;
   tempPoolDisplay: Record<TokenType, number> | null;
   selectedGems: GemType[];

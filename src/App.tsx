@@ -11,6 +11,7 @@ import GamesList from "./pages/GamesList";
 import Index from "./pages/Index";
 import ModeSetup from "./pages/ModeSetup";
 import Game from "./pages/Game";
+import SplendorStepByStepTutorial from "./pages/SplendorStepByStepTutorial";
 import Tutorial from "./pages/Tutorial";
 import OnlineLobby from "./pages/OnlineLobby";
 import OnlineMatchmaking from "./pages/OnlineMatchmaking";
@@ -172,6 +173,7 @@ const App = () => (
               }
             />
             <Route path="/game" element={<Game />} />
+            <Route path="/splendor-tutorial" element={<SplendorStepByStepTutorial />} />
             <Route path="/tutorial" element={<Tutorial />} />
             <Route
               path="/online-lobby"

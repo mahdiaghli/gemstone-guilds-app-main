@@ -17,6 +17,10 @@ import { Card, GameState, TOKEN_TYPES, TokenType } from "@/lib/gameData";
 import { canPlayerAffordCard, getPlayerBonuses, getPlayerScore, getTotalTokens } from "@/lib/gameLogic";
 import overlayBackground from "@/assets/background.png";
 import type { GemType } from "@/lib/gameData";
+import type {
+  PostGameActionButton,
+  PostGameNoticeDialog,
+} from "@/pages/game/gamePageUtils";
 
 type GameOverlaysProps = {
   t: (key: string, values?: Record<string, string | number>) => string;
@@ -49,6 +53,8 @@ type GameOverlaysProps = {
   onAcceptRematch: () => void;
   onPlayAgain: () => void;
   onMenu: () => void;
+  gameOverActions?: PostGameActionButton[];
+  postGameNoticeDialog?: PostGameNoticeDialog | null;
 };
 
 export default function GameOverlays({
@@ -82,6 +88,8 @@ export default function GameOverlays({
   onAcceptRematch,
   onPlayAgain,
   onMenu,
+  gameOverActions,
+  postGameNoticeDialog,
 }: GameOverlaysProps) {
   const currentPlayerBonuses = getPlayerBonuses(currentPlayer);
   const selectedCardCostStatus: Partial<Record<GemType, boolean>> | undefined = selectedCard
@@ -105,6 +113,10 @@ export default function GameOverlays({
     !state.gameOver &&
     gameMode === "online" &&
     !isCurrentPlayerMe();
+  const resolvedGameOverActions = gameOverActions ?? [
+    { key: "play-again", label: t("playAgain"), onClick: onPlayAgain, variant: "game" as const },
+    { key: "menu", label: t("menu"), onClick: onMenu, variant: "ghost" as const },
+  ];
 
   return (
     <>
@@ -335,13 +347,18 @@ export default function GameOverlays({
                   </div>
                 ))}
               </div>
-              <div className="mt-6 flex gap-2">
-                <Button variant="game" onClick={onPlayAgain} className="flex-1">
-                  {t("playAgain")}
-                </Button>
-                <Button variant="ghost" onClick={onMenu} className="flex-1">
-                  {t("menu")}
-                </Button>
+              <div className="mt-6 flex flex-wrap gap-2">
+                {resolvedGameOverActions.map((action) => (
+                  <Button
+                    key={action.key}
+                    variant={action.variant ?? "game"}
+                    onClick={action.onClick}
+                    disabled={action.disabled}
+                    className="flex-1"
+                  >
+                    {action.label}
+                  </Button>
+                ))}
               </div>
             </motion.div>
           </motion.div>
@@ -382,6 +399,27 @@ export default function GameOverlays({
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>{t("stay")}</AlertDialogCancel>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog
+        open={Boolean(postGameNoticeDialog?.open)}
+        onOpenChange={(open) => {
+          if (!open) {
+            postGameNoticeDialog?.onConfirm();
+          }
+        }}
+      >
+        <AlertDialogContent className="bg-cover bg-center" style={modalBackgroundStyle}>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{postGameNoticeDialog?.title}</AlertDialogTitle>
+            <AlertDialogDescription>{postGameNoticeDialog?.description}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction onClick={postGameNoticeDialog?.onConfirm}>
+              {postGameNoticeDialog?.confirmLabel}
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

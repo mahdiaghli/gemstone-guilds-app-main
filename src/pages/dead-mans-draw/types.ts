@@ -109,6 +109,8 @@ export type DeadMansDrawBoardViewProps = {
   targetSelectionDisabled: boolean;
   onOpenSummary: () => void;
   onOpenExit: () => void;
+  showExitButton?: boolean;
+  showTutorialCloseButton?: boolean;
   tutorialStep?: number;
   tutorialSteps?: DeadMansDrawInteractiveTutorialStep[];
   onNextTutorial?: () => void;

@@ -21,6 +21,7 @@ import gemOnyxImg from '@/assets/gem-onyx.png';
 interface NobleDisplayProps {
   noble: Noble;
   compact?: boolean;
+  highlighted?: boolean;
 }
 
 const gemNameMap: Record<string, string> = {
@@ -51,7 +52,7 @@ const gemImages: Record<GemType, string> = {
   onyx: gemOnyxImg,
 };
 
-export default function NobleDisplay({ noble, compact }: NobleDisplayProps) {
+export default function NobleDisplay({ noble, compact, highlighted }: NobleDisplayProps) {
   const { t } = useLanguage();
   const nobleIndex = typeof noble.id === 'number' ? noble.id : Number(noble.id);
   const nobleImage = nobleImages[(Math.max(1, nobleIndex) - 1) % nobleImages.length];
@@ -64,6 +65,7 @@ export default function NobleDisplay({ noble, compact }: NobleDisplayProps) {
       transition={{ duration: 0.35, ease: [0.34, 1.56, 0.64, 1] }}
       className={cn(
         'rounded-lg bg-card border border-primary/20 flex flex-col relative overflow-hidden',
+        highlighted && 'ring-2 ring-amber-300 shadow-[0_0_24px_rgba(251,191,36,0.55)]',
         compact ? 'w-12 h-12 p-1' : 'w-14 h-14 md:w-16 md:h-16 p-2',
       )}
       style={{

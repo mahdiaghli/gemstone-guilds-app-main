@@ -46,6 +46,8 @@ export default function SplendorGameHUD(props: Pick<
   | "onAcceptRematch"
   | "onPlayAgain"
   | "onMenu"
+  | "gameOverActions"
+  | "postGameNoticeDialog"
   | "interactiveTutorial"
 >) {
   return (
@@ -104,6 +106,8 @@ export default function SplendorGameHUD(props: Pick<
         onAcceptRematch={props.onAcceptRematch}
         onPlayAgain={props.onPlayAgain}
         onMenu={props.onMenu}
+        gameOverActions={props.gameOverActions}
+        postGameNoticeDialog={props.postGameNoticeDialog}
       />
     </>
   );

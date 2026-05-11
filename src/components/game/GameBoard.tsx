@@ -37,6 +37,14 @@ type GameBoardProps = {
   handleCancel: () => void;
   backCardsByLevel: Record<1 | 2 | 3, string>;
   tutorialFocus?: "tokens" | "card" | "cards" | "nobles" | "panel";
+  highlightedTokenTypes?: Array<GemType | "gold">;
+  dimUnhighlightedTokens?: boolean;
+  highlightedCardIds?: Array<string | number>;
+  dimUnhighlightedCards?: boolean;
+  highlightedNobleIds?: Array<string | number>;
+  highlightReservedAreaForPlayerId?: number;
+  highlightedReservedCardIds?: Array<string | number>;
+  highlightedPlayerTokenTypes?: TokenType[];
 };
 
 export default function GameBoard({
@@ -59,6 +67,14 @@ export default function GameBoard({
   handleCancel,
   backCardsByLevel,
   tutorialFocus,
+  highlightedTokenTypes = [],
+  dimUnhighlightedTokens,
+  highlightedCardIds = [],
+  dimUnhighlightedCards,
+  highlightedNobleIds = [],
+  highlightReservedAreaForPlayerId,
+  highlightedReservedCardIds = [],
+  highlightedPlayerTokenTypes = [],
 }: GameBoardProps) {
   return (
     <>
@@ -72,7 +88,11 @@ export default function GameBoard({
           {t("nobles")}
         </span>
         {state.nobles.map((noble) => (
-          <NobleDisplay key={noble.id} noble={noble} />
+          <NobleDisplay
+            key={noble.id}
+            noble={noble}
+            highlighted={highlightedNobleIds.includes(noble.id)}
+          />
         ))}
       </motion.div>
 
@@ -114,6 +134,8 @@ export default function GameBoard({
                   card={card}
                   onClick={() => handleCardClick(card)}
                   affordable={canPlayerAffordCard(currentPlayer, card)}
+                  highlighted={highlightedCardIds.includes(card.id)}
+                  dimmed={dimUnhighlightedCards && !highlightedCardIds.includes(card.id)}
                   dataCardId={card.id}
                   animateIn
                   staggerIndex={(3 - level) * 4 + index}
@@ -145,6 +167,8 @@ export default function GameBoard({
                 count={displayCount}
                 onClick={() => handleGemClick(gem)}
                 selected={selectedGems.includes(gem)}
+                highlighted={highlightedTokenTypes.includes(gem)}
+                dimmed={dimUnhighlightedTokens && !highlightedTokenTypes.includes(gem)}
                 disabled={state.tokenPool[gem] <= 0 && !selectedGems.includes(gem)}
                 size="md"
                 dataTokenPool={gem}
@@ -152,7 +176,14 @@ export default function GameBoard({
             );
           })}
           <div className="mx-1 h-8 w-px bg-border/50" />
-          <GemToken type="gold" count={state.tokenPool.gold} size="md" dataTokenPool="gold" />
+          <GemToken
+            type="gold"
+            count={state.tokenPool.gold}
+            size="md"
+            highlighted={highlightedTokenTypes.includes("gold")}
+            dimmed={dimUnhighlightedTokens && !highlightedTokenTypes.includes("gold")}
+            dataTokenPool="gold"
+          />
         </div>
 
         <AnimatePresence>
@@ -206,6 +237,9 @@ export default function GameBoard({
               playerName={getPlayerDisplayName(player.id)}
               isActive={player.id === state.currentPlayerIndex}
               isAI={isAIPlayer(player.id)}
+              highlightedTokenTypes={player.id === highlightReservedAreaForPlayerId ? highlightedPlayerTokenTypes : []}
+              highlightReservedArea={player.id === highlightReservedAreaForPlayerId}
+              highlightedReservedCardIds={player.id === highlightReservedAreaForPlayerId ? highlightedReservedCardIds : []}
               onReservedCardClick={
                 player.id === state.currentPlayerIndex && !isAIPlayer(player.id)
                   ? handleCardClick

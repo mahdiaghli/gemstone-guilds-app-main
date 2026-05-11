@@ -34,27 +34,45 @@ export default function Index() {
     }
   }, [gameId, navigate]);
 
+  const openSplendorDestination = (targetPath: string) => {
+    if (game.id !== "splendor") {
+      navigate(targetPath);
+      return;
+    }
+
+    const tutorialCompleted =
+      localStorage.getItem("splendor-tutorial-completed") === "true";
+    if (!tutorialCompleted) {
+      navigate(
+        `/splendor-tutorial?first=1&returnTo=${encodeURIComponent(targetPath)}`,
+      );
+      return;
+    }
+
+    navigate(targetPath);
+  };
+
   const menuItems = [
     {
       id: "ai" as const,
       icon: robotIcon,
       title: t("playWithAI"),
       subtitle: t("playWithAIDesc"),
-      action: () => navigate(`/mode-setup?mode=ai&game=${game.id}`),
+      action: () => openSplendorDestination(`/mode-setup?mode=ai&game=${game.id}`),
     },
     {
       id: "local" as const,
       icon: localIcon,
       title: t("localPlay"),
       subtitle: t("localPlayDesc"),
-      action: () => navigate(`/mode-setup?mode=local&game=${game.id}`),
+      action: () => openSplendorDestination(`/mode-setup?mode=local&game=${game.id}`),
     },
     {
       id: "online" as const,
       icon: onlineIcon,
       title: t("onlinePlay"),
       subtitle: t("onlinePlayDesc"),
-      action: () => navigate(`/mode-setup?mode=online&game=${game.id}`),
+      action: () => openSplendorDestination(`/mode-setup?mode=online&game=${game.id}`),
     },
     {
       id: "tutorial" as const,

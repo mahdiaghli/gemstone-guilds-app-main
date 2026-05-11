@@ -38,6 +38,8 @@ export function DeadMansDrawBoardView({
   targetSelectionDisabled,
   onOpenSummary,
   onOpenExit,
+  showExitButton = true,
+  showTutorialCloseButton = true,
   tutorialStep,
   tutorialSteps,
   onNextTutorial,
@@ -175,13 +177,17 @@ export function DeadMansDrawBoardView({
                   total: tutorialSteps?.length ?? 0,
                 })}
               </span>
-              <button
-                type="button"
-                onClick={onCloseTutorial}
-                className="flex h-9 w-9 items-center justify-center rounded-full border border-white/20 bg-white/10 text-white transition hover:bg-white/20"
-              >
-                <X className="h-4 w-4" />
-              </button>
+              {showTutorialCloseButton ? (
+                <button
+                  type="button"
+                  onClick={onCloseTutorial}
+                  className="flex h-9 w-9 items-center justify-center rounded-full border border-white/20 bg-white/10 text-white transition hover:bg-white/20"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              ) : (
+                <div className="h-9 w-9" />
+              )}
             </div>
             <h3 className="font-cinzel text-xl font-bold text-amber-100">
               {currentTutorialStep.title}
@@ -239,15 +245,17 @@ export function DeadMansDrawBoardView({
               >
                 <BookOpenText className="h-5 w-5" />
               </button>
-              <button
-                type="button"
-                onClick={onOpenExit}
-                className="flex h-11 w-11 items-center justify-center rounded-full bg-rose-300/10 text-rose-50 transition hover:bg-rose-300/20"
-                aria-label={t("deadMansDrawBackToMenu")}
-                title={t("deadMansDrawBackToMenu")}
-              >
-                <X className="h-5 w-5" />
-              </button>
+              {showExitButton ? (
+                <button
+                  type="button"
+                  onClick={onOpenExit}
+                  className="flex h-11 w-11 items-center justify-center rounded-full bg-rose-300/10 text-rose-50 transition hover:bg-rose-300/20"
+                  aria-label={t("deadMansDrawBackToMenu")}
+                  title={t("deadMansDrawBackToMenu")}
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              ) : null}
             </div>
           </div>
 

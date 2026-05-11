@@ -80,7 +80,7 @@ export default function useSplendorGameController(props: GameProps = {}) {
   
   const isFirstTimePlayer = !hasPlayedSplendorBefore && gameMode !== "online" && !challengeId;
   
-  const interactiveTutorialEnabled = (searchParams.get("tutorial") === "1" || isFirstTimePlayer) && gameMode !== "online";
+  const interactiveTutorialEnabled = false;
   const humanPlayerCount = Math.min(
     playerCount,
     Math.max(
@@ -1813,8 +1813,7 @@ export default function useSplendorGameController(props: GameProps = {}) {
     isCurrentPlayerMe,
     isAIPlayer,
     onShowQuickRules: () => {
-      setTutorialStep(0);
-      setManualTutorialOpen(true);
+      setShowQuickRules(true);
     },
     onExit: () => {
       if (state.gameOver) {
@@ -1903,6 +1902,8 @@ export default function useSplendorGameController(props: GameProps = {}) {
       setGlobalMusicTrack("lobby");
       navigate(menuPath);
     },
+    gameOverActions: props.gameOverActions,
+    postGameNoticeDialog: props.postGameNoticeDialog || null,
     panelCount,
     tempPoolDisplay,
     selectedGems,

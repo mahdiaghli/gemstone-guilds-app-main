@@ -3,9 +3,27 @@ import { useState } from "react";
 import { getDeadMansDrawScore, getPlayerCardCount, type DeadMansDrawPendingEffect, type DeadMansDrawPlayer, type DeadMansDrawSuit } from "@/lib/deadMansDraw";
 import { cn } from "@/lib/utils";
 import zirkhakiBackground from "@/assets/background-zirkhaki.png";
+import canonIcon from "@/assets/canon-svg.png";
+import coinIcon from "@/assets/coin-icon.svg";
+import diamondIcon from "@/assets/diamond-icon.svg";
+import hookIcon from "@/assets/hook-svg.png";
+import carpetIcon from "@/assets/magic-carpet-svg.png";
 
 import type { Translate } from "./helpers";
-import { getPowerAbilityKey, POWER_VISUALS, SUIT_IMAGES } from "./shared";
+import { getPowerAbilityKey, POWER_VISUALS } from "./shared";
+
+const PLAYER_PANEL_SUIT_ICONS: Record<DeadMansDrawSuit, string> = {
+  astrolabe: diamondIcon,
+  pistol: canonIcon,
+  dagger: diamondIcon,
+  carpet: carpetIcon,
+  snake: diamondIcon,
+  coin: coinIcon,
+  horseshoe: hookIcon,
+  map: carpetIcon,
+  chest: diamondIcon,
+  key: diamondIcon,
+};
 
 export function PlayerStack({
   player,
@@ -96,7 +114,11 @@ export function PlayerStack({
                 data-dead-draw-player-slot={typeof playerIndex === "number" ? `${playerIndex}-${suit}` : undefined}
                 className="rounded-xl border border-dashed border-white/10 bg-black/10 p-1"
               >
-                <img src={SUIT_IMAGES[suit as DeadMansDrawSuit]} alt={suit} className="h-8 w-full rounded-lg object-cover opacity-25" />
+                <img
+                  src={PLAYER_PANEL_SUIT_ICONS[suit as DeadMansDrawSuit]}
+                  alt={suit}
+                  className="h-8 w-full rounded-lg object-contain p-1 opacity-35"
+                />
               </div>
             );
           }
@@ -106,7 +128,11 @@ export function PlayerStack({
           const content = (
             <>
               <div className="relative h-10">
-                <img src={SUIT_IMAGES[suit as DeadMansDrawSuit]} alt={suit} className="h-8 w-full rounded-lg object-cover shadow-[0_4px_12px_rgba(2,6,23,0.35)]" />
+                <img
+                  src={PLAYER_PANEL_SUIT_ICONS[suit as DeadMansDrawSuit]}
+                  alt={suit}
+                  className="h-8 w-full rounded-lg bg-white/5 object-contain p-1 shadow-[0_4px_12px_rgba(2,6,23,0.35)]"
+                />
                 <span className="absolute right-0 top-0 rounded-full bg-black/70 px-1 py-0.5 font-cinzel text-[10px] text-white shadow-lg">{highestValue}</span>
               </div>
               <p className="mt-1 text-[9px] leading-3 text-amber-100/85 text-center">{cards.length}</p>

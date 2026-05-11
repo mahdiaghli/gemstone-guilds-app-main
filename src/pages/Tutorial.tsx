@@ -119,10 +119,14 @@ export default function Tutorial() {
   useEffect(() => {
     if (searchParams.get("first") === "1") {
       localStorage.removeItem("splendor-needs-tutorial");
+      if (!isDeadMansDraw) {
+        navigate("/splendor-tutorial?first=1", { replace: true });
+        return;
+      }
       setMode("steps");
       setStep(0);
     }
-  }, [searchParams]);
+  }, [isDeadMansDraw, navigate, searchParams]);
 
   const splendorSteps = [
     {
@@ -378,22 +382,13 @@ export default function Tutorial() {
               icon={tutorialImg}
               dir={dir as "rtl" | "ltr"}
               onClick={() => {
-                setMode("steps");
-                setStep(0);
+                if (isDeadMansDraw) {
+                  navigate(`/game?game=dead-mans-draw&mode=local&players=2&tutorial=1&returnTo=${encodeURIComponent("/tutorial?game=dead-mans-draw")}`);
+                  return;
+                }
+                navigate("/splendor-tutorial");
               }}
             />
-
-            {/* راهنمای قدم‌به‌قدم روی خود صفحه بازی */}
-            {!isDeadMansDraw && (
-              <TutorialMenuCard
-                accent="blue"
-                title="Interactive game walkthrough"
-                description="Open the Splendor board and learn each part directly on the real game screen."
-                icon={diceImg}
-                dir={dir as "rtl" | "ltr"}
-                onClick={() => navigate("/game?players=2&mode=local&game=splendor&tutorial=1")}
-              />
-            )}
 
             {/* دستورالعمل کامل بازی */}
             <TutorialMenuCard

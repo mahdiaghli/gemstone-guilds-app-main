@@ -49,6 +49,8 @@ interface CardDisplayProps {
   onClick?: () => void;
   affordable?: boolean;
   compact?: boolean;
+  highlighted?: boolean;
+  dimmed?: boolean;
   showBack?: boolean;
   emphasizeAffordableCosts?: boolean;
   costStatus?: Partial<Record<GemType, boolean>>;
@@ -126,6 +128,8 @@ export default function CardDisplay({
   onClick,
   affordable,
   compact,
+  highlighted,
+  dimmed,
   showBack,
   emphasizeAffordableCosts,
   costStatus,
@@ -152,6 +156,8 @@ export default function CardDisplay({
         'rounded-lg border-2 relative overflow-hidden card-shine transition-all',
         'bg-card border-border',
         affordable && 'border-primary ring-2 ring-primary/60 shadow-lg shadow-primary/40 scale-105',
+        highlighted && 'ring-2 ring-amber-300 shadow-[0_0_24px_rgba(251,191,36,0.55)]',
+        dimmed && 'opacity-45 saturate-50',
         onClick && 'cursor-pointer',
         compact ? 'w-14 h-20' : 'w-[4.5rem] h-24 md:w-20 md:h-28',
       )}

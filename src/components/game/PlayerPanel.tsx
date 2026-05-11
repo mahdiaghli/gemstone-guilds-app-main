@@ -13,9 +13,21 @@ interface PlayerPanelProps {
   isActive: boolean;
   isAI?: boolean;
   onReservedCardClick?: (card: Card) => void;
+  highlightedTokenTypes?: TokenType[];
+  highlightReservedArea?: boolean;
+  highlightedReservedCardIds?: Array<string | number>;
 }
 
-export default function PlayerPanel({ player, playerName, isActive, isAI, onReservedCardClick }: PlayerPanelProps) {
+export default function PlayerPanel({
+  player,
+  playerName,
+  isActive,
+  isAI,
+  onReservedCardClick,
+  highlightedTokenTypes = [],
+  highlightReservedArea,
+  highlightedReservedCardIds = [],
+}: PlayerPanelProps) {
   const bonuses = getPlayerBonuses(player);
   const score = getPlayerScore(player);
   const { t } = useLanguage();
@@ -49,8 +61,16 @@ export default function PlayerPanel({ player, playerName, isActive, isAI, onRese
       <div className="flex flex-wrap gap-1 mb-1.5">
         {TOKEN_TYPES.map(type => {
           const hasToken = player.tokens[type] > 0;
+          const highlighted = highlightedTokenTypes.includes(type);
           return (
-            <div key={type} className="flex items-center gap-0.5" data-player-token-slot={`${player.id}-${type}`}>
+            <div
+              key={type}
+              className={cn(
+                "flex items-center gap-0.5 rounded-full px-1 py-0.5 transition-all",
+                highlighted && "shadow-[0_0_16px_rgba(251,191,36,0.38)] ring-1 ring-amber-300/70",
+              )}
+              data-player-token-slot={`${player.id}-${type}`}
+            >
               <div
                 className={cn("w-3 h-3 rounded-full transition-opacity", hasToken ? "opacity-100" : "opacity-25")}
                 style={{ backgroundColor: GEM_INFO[type].color }}
@@ -103,7 +123,13 @@ export default function PlayerPanel({ player, playerName, isActive, isAI, onRese
       </div>
 
       {/* Reserved cards */}
-      <div className="mt-1.5 pt-1.5 border-t border-border/30" data-player-reserved-slot={String(player.id)}>
+      <div
+        className={cn(
+          "mt-1.5 border-t border-border/30 pt-1.5 transition-all",
+          highlightReservedArea && "rounded-lg bg-amber-400/10 ring-2 ring-amber-300/80 shadow-[0_0_20px_rgba(251,191,36,0.25)]",
+        )}
+        data-player-reserved-slot={String(player.id)}
+      >
         {player.reservedCards.length > 0 && isActive && (
           <div className="flex gap-1 overflow-x-auto px-1 py-1">
             {player.reservedCards.map(card => (
@@ -112,6 +138,7 @@ export default function PlayerPanel({ player, playerName, isActive, isAI, onRese
                 card={card}
                 dataCardId={card.id}
                 compact
+                highlighted={highlightedReservedCardIds.includes(card.id)}
                 onClick={isAI ? undefined : () => onReservedCardClick?.(card)}
                 affordable={canPlayerAffordCard(player, card)}
               />

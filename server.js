@@ -144,8 +144,54 @@ io.on("connection", (socket) => {
       room.status = "finished";
       room.gameState = null;
       room.rematch = null;
+      room.postGame = null;
       clearTurnTimer(room);
       io.to(roomId).emit("game-ended", { playersInRoom: getRoomPlayersArray(rooms, roomId) });
+    }
+  });
+
+  socket.on("post-game-action", (data) => {
+    const { roomId, playerId, playerName, action, initialGameState } = data;
+    const room = rooms.get(roomId);
+    if (!room) return;
+
+    socket.to(roomId).emit("post-game-action", {
+      playerId,
+      playerName,
+      action,
+    });
+
+    if (action !== "play-again") {
+      return;
+    }
+
+    if (!room.postGame) {
+      room.postGame = {
+        playAgainVotes: new Set(),
+        initialGameState: null,
+      };
+    }
+
+    room.postGame.playAgainVotes.add(playerId);
+    if (initialGameState) {
+      room.postGame.initialGameState = initialGameState;
+    }
+
+    io.to(roomId).emit("post-game-votes", {
+      playerIds: Array.from(room.postGame.playAgainVotes),
+    });
+
+    if (
+      room.postGame.playAgainVotes.size === room.players.size
+      && room.postGame.initialGameState
+    ) {
+      handleGameStart(
+        rooms,
+        io,
+        roomId,
+        room.postGame.initialGameState,
+        Math.max(15, Math.round((room.turn.durationMs || 45000) / 1000)),
+      );
     }
   });
 

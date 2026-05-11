@@ -13,6 +13,22 @@ export type Phase =
   | "cardAction"
   | "aiThinking";
 
+export type PostGameActionButton = {
+  key: string;
+  label: string;
+  onClick: () => void;
+  variant?: "game" | "ghost" | "outline" | "secondary" | "game-secondary";
+  disabled?: boolean;
+};
+
+export type PostGameNoticeDialog = {
+  open: boolean;
+  title: string;
+  description: string;
+  confirmLabel: string;
+  onConfirm: () => void;
+};
+
 export interface GameProps {
   mode?: "local" | "ai" | "online";
   roomId?: string;
@@ -25,6 +41,8 @@ export interface GameProps {
   serverGameState?: GameState | null;
   onGameStateChange?: (state: GameState) => void;
   onGameEnd?: () => void;
+  gameOverActions?: PostGameActionButton[];
+  postGameNoticeDialog?: PostGameNoticeDialog | null;
 }
 
 export function getBackCardsByLevel(selectedCardBack: CardBackId) {

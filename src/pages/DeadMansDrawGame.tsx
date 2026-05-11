@@ -46,6 +46,8 @@ export default function DeadMansDrawGame(props: DeadMansDrawGameProps = {}) {
   const { dir, t } = useLanguage();
   const { user } = useAuth();
   const menuPath = getGameMenuPath(searchParams.get("game"));
+  const manualTutorialRequested = searchParams.get("tutorial") === "1";
+  const tutorialReturnTo = searchParams.get("returnTo") || menuPath;
 
   const playerCount = Math.min(4, Math.max(2, parseInt(searchParams.get("players") || "2", 10)));
   const gameMode = (props.mode || searchParams.get("mode") || "local") as "local" | "ai" | "online";
@@ -64,23 +66,36 @@ export default function DeadMansDrawGame(props: DeadMansDrawGameProps = {}) {
   const currentState = gameMode === "online" && props.serverGameState ? (props.serverGameState as DeadMansDrawState) : localState;
 
   // Check if first time playing
-  const isFirstTime = useMemo(() => {
-    const hasPlayed = localStorage.getItem('deadmansdraw-has-played');
+  const [isFirstTime, setIsFirstTime] = useState(() => {
+    const hasPlayed = localStorage.getItem("deadmansdraw-has-played");
     return !hasPlayed;
-  }, []);
+  });
+  const forcedTutorialOpen = manualTutorialRequested && gameMode !== "online";
+  const lockedTutorial = isFirstTime && !manualTutorialRequested;
 
   // Show tutorial on first time
   useEffect(() => {
     if (
-      isFirstTime
+      (isFirstTime || forcedTutorialOpen)
       && gameMode !== "online"
+      && tutorialStep < 0
       && currentState.ringSelectionIndex === null
       && !currentState.powerTargetSelection
     ) {
       setTutorialStep(0);
-      localStorage.setItem('deadmansdraw-has-played', 'true');
+      if (isFirstTime) {
+        localStorage.setItem('deadmansdraw-has-played', 'true');
+        setIsFirstTime(false);
+      }
     }
-  }, [currentState.powerTargetSelection, currentState.ringSelectionIndex, gameMode, isFirstTime]);
+  }, [
+    currentState.powerTargetSelection,
+    currentState.ringSelectionIndex,
+    forcedTutorialOpen,
+    gameMode,
+    isFirstTime,
+    tutorialStep,
+  ]);
 
   const interactiveTutorialSteps = useMemo((): DeadMansDrawInteractiveTutorialStep[] => [
     {
@@ -726,11 +741,19 @@ export default function DeadMansDrawGame(props: DeadMansDrawGameProps = {}) {
         }}
         onOpenSummary={() => setTutorialStep(0)}
         onOpenExit={() => setShowExitConfirm(true)}
+        showExitButton={!lockedTutorial}
+        showTutorialCloseButton={!lockedTutorial}
         tutorialStep={tutorialStep}
         tutorialSteps={interactiveTutorialSteps}
         onNextTutorial={() => setTutorialStep((step) => Math.min(interactiveTutorialSteps.length - 1, step + 1))}
         onPrevTutorial={() => setTutorialStep((step) => Math.max(0, step - 1))}
-        onCloseTutorial={() => setTutorialStep(-1)}
+        onCloseTutorial={() => {
+          if (lockedTutorial && tutorialStep < interactiveTutorialSteps.length - 1) return;
+          setTutorialStep(-1);
+          if (manualTutorialRequested) {
+            navigate(tutorialReturnTo, { replace: true });
+          }
+        }}
       />
       <DeadMansDrawExitModal
         open={showExitConfirm}

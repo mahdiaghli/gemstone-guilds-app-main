@@ -91,6 +91,7 @@ export function handleGameStart(rooms, io, roomId, gameState, turnTime) {
 
   room.status = "playing";
   room.gameState = gameState;
+  room.postGame = null;
 
   // Get players in a consistent order (sorted by socket ID to ensure consistency)
   const playersArray = Array.from(room.players.values()).sort((a, b) =>

@@ -13,13 +13,18 @@ import PageTopBar from '@/components/game/PageTopBar';
 import { getGameById, getGameMenuPath } from '@/lib/gameCatalog';
 import { markPendingEntryFeeConsumed, refundPendingEntryFee } from '@/lib/onlineEntryFee';
 import { initializeDeadMansDrawGame } from '@/lib/deadMansDraw';
+import { sendFriendRequest } from '@/lib/social';
+import type {
+  PostGameActionButton,
+  PostGameNoticeDialog,
+} from '@/pages/game/gamePageUtils';
 
 export default function OnlineGame() {
   const { roomId } = useParams<{ roomId: string }>();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const playerId = searchParams.get('player') || '';
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const selectedGame = getGameById(searchParams.get('game'));
   const menuPath = getGameMenuPath(searchParams.get('game'));
   const { user } = useAuth();
@@ -32,6 +37,9 @@ export default function OnlineGame() {
   const [turnTime, setTurnTime] = useState(45);
   const [gameStarted, setGameStarted] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+  const [postGameNoticeDialog, setPostGameNoticeDialog] = useState<PostGameNoticeDialog | null>(null);
+  const [playAgainVotes, setPlayAgainVotes] = useState<string[]>([]);
+  const [friendRequestLocked, setFriendRequestLocked] = useState(false);
 
   const {
     gameState,
@@ -53,6 +61,15 @@ export default function OnlineGame() {
   const initialOnlineState = selectedGame.id === 'dead-mans-draw'
     ? initializeDeadMansDrawGame(actualPlayerCount, true)
     : localGameState;
+
+  const opponentIds = useMemo(
+    () => Object.values(roomPlayers)
+      .map((player: any) => player.id)
+      .filter((id): id is string => Boolean(id) && id !== playerId),
+    [playerId, roomPlayers],
+  );
+
+  const playerHasVotedPlayAgain = playAgainVotes.includes(playerId);
 
   // Track last synced state to prevent infinite loops
   const lastSyncedGameStateRef = useCallback((newState: GameState) => {
@@ -101,6 +118,8 @@ export default function OnlineGame() {
     if (roomStatus === 'playing' && !gameStarted) {
       markPendingEntryFeeConsumed();
       setGameStarted(true);
+      setPlayAgainVotes([]);
+      setFriendRequestLocked(false);
     }
   }, [roomStatus, gameStarted]);
 
@@ -109,8 +128,54 @@ export default function OnlineGame() {
     if (roomStatus === 'playing' && playerName && !gameStarted) {
       markPendingEntryFeeConsumed();
       setGameStarted(true);
+      setPlayAgainVotes([]);
+      setFriendRequestLocked(false);
     }
   }, [roomStatus, playerName, gameStarted]);
+
+  useEffect(() => {
+    if (!gameState || gameState.gameOver) return;
+    setPlayAgainVotes([]);
+    setFriendRequestLocked(false);
+    setPostGameNoticeDialog(null);
+  }, [gameState]);
+
+  useEffect(() => {
+    if (!socket) return;
+
+    const handlePostGameAction = (data: { action: 'play-again' | 'exit'; playerName?: string }) => {
+      const actor = data.playerName || (lang === 'fa' ? 'بازیکن' : 'A player');
+      const description = data.action === 'play-again'
+        ? (lang === 'fa'
+          ? `${actor} می‌خواهد دوباره همین بازی را شروع کند. اگر شما هم «بازی مجدد» را بزنید، همین نوع بازی تکرار می‌شود.`
+          : `${actor} wants to play this game again. If you also choose Play Again, the same game type will restart.`)
+        : (lang === 'fa'
+          ? `${actor} از بازی خارج شد.`
+          : `${actor} exited the game.`);
+
+      setPostGameNoticeDialog({
+        open: true,
+        title: data.action === 'play-again'
+          ? (lang === 'fa' ? 'درخواست بازی مجدد' : 'Play Again Request')
+          : (lang === 'fa' ? 'خروج از بازی' : 'Player Exited'),
+        description,
+        confirmLabel: t('continueLabel'),
+        onConfirm: () => setPostGameNoticeDialog(null),
+      });
+    };
+
+    const handlePostGameVotes = (data: { playerIds?: string[] }) => {
+      setPlayAgainVotes(data.playerIds || []);
+    };
+
+    socket.on('post-game-action', handlePostGameAction);
+    socket.on('post-game-votes', handlePostGameVotes);
+
+    return () => {
+      socket.off('post-game-action', handlePostGameAction);
+      socket.off('post-game-votes', handlePostGameVotes);
+    };
+  }, [lang, socket, t]);
 
   useEffect(() => {
     if (error || errorMsg) {
@@ -150,6 +215,91 @@ export default function OnlineGame() {
     leaveRoom();
     navigate(menuPath);
   };
+
+  const handleSendFriendRequests = useCallback(() => {
+    if (!user?.id || opponentIds.length === 0 || friendRequestLocked) return;
+
+    const results = opponentIds.map((opponentId) => sendFriendRequest(user.id, opponentId));
+    const sentCount = results.filter((result) => result === 'sent').length;
+
+    setFriendRequestLocked(true);
+    setPostGameNoticeDialog({
+      open: true,
+      title: sentCount > 0
+        ? t('requestSentTitle')
+        : t(results.every((result) => result === 'already-friends') ? 'alreadyFriendsTitle' : 'requestAlreadySentTitle'),
+      description: sentCount > 0
+        ? t('requestSentMessage')
+        : t(results.every((result) => result === 'already-friends') ? 'alreadyFriendsMessage' : 'requestAlreadySentMessage'),
+      confirmLabel: t('continueLabel'),
+      onConfirm: () => setPostGameNoticeDialog(null),
+    });
+  }, [friendRequestLocked, opponentIds, t, user?.id]);
+
+  const handleRequestPlayAgain = useCallback(() => {
+    if (!socket || !roomId || !playerId || playerHasVotedPlayAgain) return;
+
+    socket.emit('post-game-action', {
+      roomId,
+      playerId,
+      playerName,
+      action: 'play-again',
+      initialGameState: initialOnlineState,
+    });
+  }, [initialOnlineState, playerHasVotedPlayAgain, playerId, playerName, roomId, socket]);
+
+  const handleExitFinishedGame = useCallback(() => {
+    if (socket && roomId && playerId) {
+      socket.emit('post-game-action', {
+        roomId,
+        playerId,
+        playerName,
+        action: 'exit',
+      });
+    }
+    leaveRoom();
+    navigate(menuPath);
+  }, [leaveRoom, menuPath, navigate, playerId, playerName, roomId, socket]);
+
+  const gameOverActions = useMemo<PostGameActionButton[] | undefined>(() => {
+    if (selectedGame.id !== 'splendor' || !gameState?.gameOver) return undefined;
+
+    return [
+      {
+        key: 'play-again',
+        label: playerHasVotedPlayAgain
+          ? (lang === 'fa' ? 'در انتظار دیگران' : 'Waiting for Others')
+          : t('playAgain'),
+        onClick: handleRequestPlayAgain,
+        variant: 'game',
+        disabled: playerHasVotedPlayAgain,
+      },
+      {
+        key: 'friend-request',
+        label: lang === 'fa' ? 'درخواست دوستی' : 'Friend Request',
+        onClick: handleSendFriendRequests,
+        variant: 'outline',
+        disabled: friendRequestLocked || opponentIds.length === 0,
+      },
+      {
+        key: 'exit-game',
+        label: t('leaveGameAction'),
+        onClick: handleExitFinishedGame,
+        variant: 'ghost',
+      },
+    ];
+  }, [
+    friendRequestLocked,
+    gameState?.gameOver,
+    handleExitFinishedGame,
+    handleRequestPlayAgain,
+    handleSendFriendRequests,
+    lang,
+    opponentIds.length,
+    playerHasVotedPlayAgain,
+    selectedGame.id,
+    t,
+  ]);
 
   const playerNamesList = useMemo(() => {
     const playersArray = Object.values(roomPlayers);
@@ -292,7 +442,7 @@ export default function OnlineGame() {
   }
 
   return (
-    <Game
+      <Game
       mode="online"
       roomId={roomId}
       playerId={playerId}
@@ -304,6 +454,8 @@ export default function OnlineGame() {
       serverGameState={gameState}
       onGameStateChange={lastSyncedGameStateRef}
       onGameEnd={leaveRoom}
+      gameOverActions={gameOverActions}
+      postGameNoticeDialog={postGameNoticeDialog}
     />
   );
 }
