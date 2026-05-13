@@ -33,7 +33,6 @@ import {
 } from "./dead-mans-draw/DeadMansDrawOverlays";
 import { PowerChoiceScreen } from "./dead-mans-draw/PowerChoiceScreen";
 import { PowerTargetScreen } from "./dead-mans-draw/PowerTargetScreen";
-import { type DeadMansDrawInteractiveTutorialStep } from "./dead-mans-draw/shared";
 import {
   DeadMansDrawGameOverView,
   DeadMansDrawBonusPreviewView,
@@ -46,8 +45,6 @@ export default function DeadMansDrawGame(props: DeadMansDrawGameProps = {}) {
   const { dir, t } = useLanguage();
   const { user } = useAuth();
   const menuPath = getGameMenuPath(searchParams.get("game"));
-  const manualTutorialRequested = searchParams.get("tutorial") === "1";
-  const tutorialReturnTo = searchParams.get("returnTo") || menuPath;
 
   const playerCount = Math.min(4, Math.max(2, parseInt(searchParams.get("players") || "2", 10)));
   const gameMode = (props.mode || searchParams.get("mode") || "local") as "local" | "ai" | "online";
@@ -55,7 +52,6 @@ export default function DeadMansDrawGame(props: DeadMansDrawGameProps = {}) {
 
   const initialState = useMemo(() => initializeDeadMansDrawGame(playerCount, true), [playerCount]);
   const [localState, setLocalState] = useState<DeadMansDrawState>(initialState);
-  const [tutorialStep, setTutorialStep] = useState(-1);
   const [showExitConfirm, setShowExitConfirm] = useState(false);
   const [selectedTreasureHelpId, setSelectedTreasureHelpId] = useState<string | null>(null);
   const [bustPreview, setBustPreview] = useState<{ cards: DeadMansDrawCard[]; highlightIds: string[] } | null>(null);
@@ -64,89 +60,6 @@ export default function DeadMansDrawGame(props: DeadMansDrawGameProps = {}) {
   const [cardFlights, setCardFlights] = useState<DeadMansDrawFlightAnimation[]>([]);
   const [transitionLocked, setTransitionLocked] = useState(false);
   const currentState = gameMode === "online" && props.serverGameState ? (props.serverGameState as DeadMansDrawState) : localState;
-
-  // Check if first time playing
-  const [isFirstTime, setIsFirstTime] = useState(() => {
-    const hasPlayed = localStorage.getItem("deadmansdraw-has-played");
-    return !hasPlayed;
-  });
-  const forcedTutorialOpen = manualTutorialRequested && gameMode !== "online";
-  const lockedTutorial = isFirstTime && !manualTutorialRequested;
-
-  // Show tutorial on first time
-  useEffect(() => {
-    if (
-      (isFirstTime || forcedTutorialOpen)
-      && gameMode !== "online"
-      && tutorialStep < 0
-      && currentState.ringSelectionIndex === null
-      && !currentState.powerTargetSelection
-    ) {
-      setTutorialStep(0);
-      if (isFirstTime) {
-        localStorage.setItem('deadmansdraw-has-played', 'true');
-        setIsFirstTime(false);
-      }
-    }
-  }, [
-    currentState.powerTargetSelection,
-    currentState.ringSelectionIndex,
-    forcedTutorialOpen,
-    gameMode,
-    isFirstTime,
-    tutorialStep,
-  ]);
-
-  const interactiveTutorialSteps = useMemo((): DeadMansDrawInteractiveTutorialStep[] => [
-    {
-      title: dir === "rtl" ? "خلاصه بازی" : "Game Overview",
-      description: dir === "rtl" ? "در Deadman's Draw، شما کارت‌ها را از دسته می‌کشید و سعی می‌کنید تا زمانی که بُست نمی‌شوید، امتیاز جمع کنید. هر کارت قدرت خاصی دارد. اگر کارتی با دسته‌ای که قبلاً دارید بکشید، بُست می‌شوید و کارت‌های کشیده شده را از دست می‌دهید. بالاترین امتیاز برنده است." : "In Deadman's Draw, you draw cards from the deck and try to collect points before you bust. Each card has a special power. If you draw a card with a suit you already have, you bust and lose the drawn cards. The highest score wins.",
-      focus: "intro",
-      action: null,
-    },
-    {
-      title: dir === "rtl" ? "بخش دسته و جمع‌آوری" : "Deck and Collect Section",
-      description: dir === "rtl" ? "در گوشه سمت چپ، دسته کارت‌ها قرار دارد که می‌توانید از آن کارت بکشید. در وسط، دکمه جمع‌آوری گنج قرار دارد که کارت‌های کشیده شده را به مجموعه شما اضافه می‌کند. در گوشه سمت راست، پشته سوخته قرار دارد که کارت‌های بُست شده به آن می‌روند." : "In the left corner is the draw deck where you can draw cards. In the center is the Collect Treasure button that adds drawn cards to your collection. In the right corner is the burn pile where busted cards go.",
-      focus: "deck-section",
-      action: null,
-    },
-    {
-      title: dir === "rtl" ? "گام ۱: کارت بکشید" : "Step 1: Draw a card",
-      description: dir === "rtl" ? "روی دسته کارت‌ها کلیک کنید تا یک کارت بکشید. کارت در منطقه گنج نمایش داده می‌شود." : "Click on the draw deck to draw a card. The card will appear in the treasure area.",
-      focus: "deck-section",
-      action: "reveal",
-    },
-    {
-      title: dir === "rtl" ? "گام ۲: گنج را جمع کنید" : "Step 2: Collect treasure",
-      description: dir === "rtl" ? "روی دکمه جمع‌آوری گنج کلیک کنید تا کارت‌های کشیده شده را به مجموعه خود اضافه کنید." : "Click the Collect Treasure button to add the drawn cards to your collection.",
-      focus: "deck-section",
-      action: "collect",
-    },
-    {
-      title: dir === "rtl" ? "پنل بازیکن" : "Player Panel",
-      description: dir === "rtl" ? "پنل بازیکن امتیاز و کارت‌های جمع‌آوری شده شما را نشان می‌دهد. کارت‌ها بر اساس دسته‌بندی دسته‌ها گروه‌بندی شده‌اند و فقط بالاترین کارت هر دسته امتیاز می‌دهد." : "The player panel shows your score and collected cards. Cards are grouped by suit, and only the highest card in each suit scores.",
-      focus: "player-panel",
-      action: null,
-    },
-    {
-      title: dir === "rtl" ? "منطقه گنج" : "Treasure Area",
-      description: dir === "rtl" ? "کارت‌های کشیده شده در این منطقه نمایش داده می‌شوند. هر کارت قدرت خاصی دارد که می‌تواند به شما کمک کند. روی کارت‌ها کلیک کنید تا توضیحات آن‌ها را ببینید." : "Drawn cards appear in this area. Each card has a special power that can help you. Click on cards to see their descriptions.",
-      focus: "treasure-area",
-      action: null,
-    },
-    {
-      title: dir === "rtl" ? "انواع کارت‌ها" : "Card Types",
-      description: dir === "rtl" ? "انواع مختلفی از کارت‌ها وجود دارد: Eye (چشم) کارت بعدی را نشان می‌دهد، Cannon (توپ) از حریف کم می‌کند، Sword (شمشیر) می‌دزدد، Hook (قلاب) از بانک خودت بازی می‌کند، Map (نقشه) از سوخته برمی‌گرداند، Kraken کارت‌های اجباری اضافه می‌کشد، Coin امتیاز مستقیم است و Chest + Key جایزه می‌دهد." : "There are different card types: Eye lets you peek at the next card, Cannon removes from opponent, Sword steals, Hook plays from your bank, Map recovers from burn pile, Kraken forces extra draws, Coin gives direct points, and Chest + Key gives a bonus.",
-      focus: "cards",
-      action: null,
-    },
-    {
-      title: dir === "rtl" ? "قدرت‌های ویژه" : "Special Powers",
-      description: dir === "rtl" ? "این ۹ قدرت ویژه بازی پایه را تغییر می‌دهند. قبل از فشار دادن برای کارت بعدی، حتما نگاه کن چه قدرتی روی میز فعال است، چون بعضی از آن‌ها هجومی هستند و بعضی دفاعی." : "These 9 special powers change the base game. Before pushing your luck, check which powers are active, as some are offensive and others defensive.",
-      focus: "powers",
-      action: null,
-    },
-  ], [dir]);
 
   useEffect(() => {
     return () => {
@@ -214,13 +127,15 @@ export default function DeadMansDrawGame(props: DeadMansDrawGameProps = {}) {
 
     const gridRect = grid.getBoundingClientRect();
     const firstCard = grid.querySelector("[data-dead-draw-treasure-card]") as HTMLElement | null;
-    const fallbackWidth = 82;
+    const computedStyle = window.getComputedStyle(grid);
+    const gap = Number.parseFloat(computedStyle.columnGap || computedStyle.gap || "8") || 8;
+    const columns = 4;
+    const fallbackWidth = (gridRect.width - gap * (columns - 1)) / columns;
     const fallbackHeight = 112;
-    const gap = 8;
     const cardWidth = firstCard?.getBoundingClientRect().width ?? fallbackWidth;
     const cardHeight = firstCard?.getBoundingClientRect().height ?? fallbackHeight;
-    const column = slotIndex % 3;
-    const row = Math.floor(slotIndex / 3);
+    const column = slotIndex % columns;
+    const row = Math.floor(slotIndex / columns);
 
     return {
       x: gridRect.left + column * (cardWidth + gap) + cardWidth / 2,
@@ -295,8 +210,7 @@ export default function DeadMansDrawGame(props: DeadMansDrawGameProps = {}) {
 
   const actionState = getDeadMansDrawActionState(currentState);
   const previewLocked = Boolean(bustPreview);
-  const tutorialOpen = tutorialStep >= 0;
-  const overlayLocked = Boolean(bonusPreview) || previewLocked || transitionLocked || tutorialOpen;
+  const overlayLocked = Boolean(bonusPreview) || previewLocked || transitionLocked;
   const interactionLocked = overlayLocked || !isCurrentPlayerMe;
   const scoreBoard = currentState.players.map((player, index) => ({ index, score: getDeadMansDrawScore(player), cardCount: getPlayerCardCount(player) }));
   const highestScore = Math.max(...scoreBoard.map((entry) => entry.score));
@@ -739,21 +653,7 @@ export default function DeadMansDrawGame(props: DeadMansDrawGameProps = {}) {
             originSelector: `[data-dead-draw-player-slot="${currentState.currentPlayerIndex}-${suit}"]`,
           });
         }}
-        onOpenSummary={() => setTutorialStep(0)}
         onOpenExit={() => setShowExitConfirm(true)}
-        showExitButton={!lockedTutorial}
-        showTutorialCloseButton={!lockedTutorial}
-        tutorialStep={tutorialStep}
-        tutorialSteps={interactiveTutorialSteps}
-        onNextTutorial={() => setTutorialStep((step) => Math.min(interactiveTutorialSteps.length - 1, step + 1))}
-        onPrevTutorial={() => setTutorialStep((step) => Math.max(0, step - 1))}
-        onCloseTutorial={() => {
-          if (lockedTutorial && tutorialStep < interactiveTutorialSteps.length - 1) return;
-          setTutorialStep(-1);
-          if (manualTutorialRequested) {
-            navigate(tutorialReturnTo, { replace: true });
-          }
-        }}
       />
       <DeadMansDrawExitModal
         open={showExitConfirm}

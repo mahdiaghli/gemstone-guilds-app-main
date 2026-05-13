@@ -102,6 +102,29 @@ export function useBeastyBarGame(props: UseBeastyBarGameProps): UseBeastyBarGame
     [state, isCurrentPlayerTurn]
   );
 
+  const finalizeAfterAction = useCallback((nextState: BeastyBarGameState) => {
+    let resolvedState = resolveRepeatableAbilities(nextState);
+    resolvedState = checkGameOver(resolvedState);
+
+    if (resolvedState.gameOver) {
+      return resolvedState;
+    }
+
+    if (resolvedState.bumpingZone.animals.length >= 5) {
+      return {
+        ...resolvedState,
+        phase: "checkingGate",
+      };
+    }
+
+    if (!resolvedState.pendingEffect) {
+      resolvedState = endTurn(resolvedState);
+      resolvedState = checkGameOver(resolvedState);
+    }
+
+    return resolvedState;
+  }, []);
+
   const playCardAction = useCallback(
     (cardId: string) => {
       if (!canPlayCard(cardId)) return;
@@ -113,30 +136,10 @@ export function useBeastyBarGame(props: UseBeastyBarGameProps): UseBeastyBarGame
         if (newState.pendingEffect) {
           return newState;
         }
-
-        // Resolve repeatable abilities
-        newState = resolveRepeatableAbilities(newState);
-
-        // Check game over
-        newState = checkGameOver(newState);
-
-        // Check if bumping zone has 5 cards - if so, let the useEffect handle it with delay
-        // The Heaven's Gate resolution will happen after a 1-second delay
-        if (newState.bumpingZone.animals.length === 5) {
-          // Don't advance turn yet - wait for gate resolution
-          return newState;
-        }
-
-        // Auto-advance to next player's turn after card is played
-        // (unless we're waiting for a player decision or gate resolution)
-        if (!newState.pendingEffect && !newState.gameOver && newState.bumpingZone.animals.length < 5) {
-          newState = endTurn(newState);
-        }
-
-        return newState;
+        return finalizeAfterAction(newState);
       });
     },
-    [canPlayCard]
+    [canPlayCard, finalizeAfterAction]
   );
 
   const resolveEffectAction = useCallback(
@@ -145,25 +148,10 @@ export function useBeastyBarGame(props: UseBeastyBarGameProps): UseBeastyBarGame
 
       setState((prev) => {
         let newState = resolvePendingEffect(prev, choice);
-
-        // Resolve repeatable abilities
-        newState = resolveRepeatableAbilities(newState);
-
-        // Check Heaven's Gate
-        newState = checkHeavensGate(newState);
-
-        // Check game over
-        newState = checkGameOver(newState);
-
-        // Auto-advance turn after resolving effect (e.g., kangaroo jump)
-        if (!newState.pendingEffect && !newState.gameOver) {
-          newState = endTurn(newState);
-        }
-
-        return newState;
+        return finalizeAfterAction(newState);
       });
     },
-    [state.pendingEffect]
+    [finalizeAfterAction, state.pendingEffect]
   );
 
   const endTurnAction = useCallback(() => {
@@ -179,34 +167,31 @@ export function useBeastyBarGame(props: UseBeastyBarGameProps): UseBeastyBarGame
 
   // Heaven's Gate resolution delay (1 second after 5th card)
   useEffect(() => {
-    if (state.bumpingZone.animals.length === 5 && state.phase !== "checkingGate") {
-      // Set phase to checkingGate to trigger the delay
-      setState((prev) => ({
-        ...prev,
-        phase: "checkingGate",
-      }));
+    if (state.phase !== "checkingGate") return;
+    if (state.bumpingZone.animals.length < 5) return;
+    if (gateTimeoutRef.current) return;
 
-      // Wait 1 second so players can see all 5 cards, then resolve
-      gateTimeoutRef.current = setTimeout(() => {
-        setState((prev) => {
-          let newState = structuredClone(prev) as BeastyBarGameState;
-          newState = checkHeavensGate(newState);
-          newState = checkGameOver(newState);
-          newState.phase = "playing";
+    // Wait 1 second so players can see all 5 cards, then resolve.
+    gateTimeoutRef.current = setTimeout(() => {
+      gateTimeoutRef.current = null;
+      setState((prev) => {
+        let newState = structuredClone(prev) as BeastyBarGameState;
+        newState = checkHeavensGate(newState);
+        newState = checkGameOver(newState);
+        newState.phase = "playing";
 
-          // Advance to next player if game not over
-          if (!newState.gameOver) {
-            newState = endTurn(newState);
-          }
+        if (!newState.gameOver) {
+          newState = endTurn(newState);
+        }
 
-          return newState;
-        });
-      }, 1000);
-    }
+        return newState;
+      });
+    }, 1000);
 
     return () => {
       if (gateTimeoutRef.current) {
         clearTimeout(gateTimeoutRef.current);
+        gateTimeoutRef.current = null;
       }
     };
   }, [state.bumpingZone.animals.length, state.phase]);
@@ -215,19 +200,19 @@ export function useBeastyBarGame(props: UseBeastyBarGameProps): UseBeastyBarGame
   useEffect(() => {
     if (state.gameOver) return;
     if (isOnlineGame) return;
+    if (state.phase !== "playing") return;
     if (!isAIPlayer(state.currentPlayerIndex)) return;
-    if (aiThinking) return;
+    if (aiTimeoutRef.current) return;
 
     const executeAI = async () => {
       setAiThinking(true);
-      const player = state.players[state.currentPlayerIndex];
       setAiThinkingText(getAIThinkingText(state, state.currentPlayerIndex, "en"));
 
-      // Delay based on difficulty
       const delay =
-        aiDifficulty === "easy" ? 1000 : aiDifficulty === "medium" ? 1500 : 2000;
+        aiDifficulty === "easy" ? 500 : aiDifficulty === "medium" ? 800 : 1000;
 
       aiTimeoutRef.current = setTimeout(() => {
+        aiTimeoutRef.current = null;
         setState((prev) => {
           let newState = prev;
           const move = getAIMove(prev, prev.currentPlayerIndex, aiDifficulty);
@@ -251,10 +236,7 @@ export function useBeastyBarGame(props: UseBeastyBarGameProps): UseBeastyBarGame
 
           // Continue processing if no more pending effects
           if (!newState.pendingEffect) {
-            newState = resolveRepeatableAbilities(newState);
-            newState = checkHeavensGate(newState);
-            newState = checkGameOver(newState);
-            newState = endTurn(newState);
+            newState = finalizeAfterAction(newState);
           }
 
           return newState;
@@ -270,9 +252,27 @@ export function useBeastyBarGame(props: UseBeastyBarGameProps): UseBeastyBarGame
     return () => {
       if (aiTimeoutRef.current) {
         clearTimeout(aiTimeoutRef.current);
+        aiTimeoutRef.current = null;
       }
     };
-  }, [state.currentPlayerIndex, state.gameOver, isAIPlayer, aiDifficulty, isOnlineGame]);
+  }, [aiDifficulty, finalizeAfterAction, isAIPlayer, isOnlineGame, state.currentPlayerIndex, state.gameOver, state.phase]);
+
+  useEffect(() => {
+    if (state.gameOver) return;
+    if (state.pendingEffect) return;
+    if (state.phase !== "playing") return;
+
+    const activePlayer = state.players[state.currentPlayerIndex];
+    if (activePlayer.hand.length > 0) return;
+
+    setAiThinking(false);
+    setAiThinkingText("");
+    setState((prev) => {
+      let nextState = endTurn(prev);
+      nextState = checkGameOver(nextState);
+      return nextState;
+    });
+  }, [state]);
 
   const currentPlayer = state.players[state.currentPlayerIndex];
 

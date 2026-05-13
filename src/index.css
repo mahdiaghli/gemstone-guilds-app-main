@@ -88,6 +88,14 @@
   [dir="ltr"] {
     font-size: 17px;
   }
+
+  [dir="rtl"] {
+    font-family: Tahoma, "Segoe UI", sans-serif;
+  }
+
+  .font-persian {
+    font-family: Tahoma, "Segoe UI", sans-serif;
+  }
 }
 
 /* Gem glow effects */

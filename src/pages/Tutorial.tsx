@@ -123,8 +123,7 @@ export default function Tutorial() {
         navigate("/splendor-tutorial?first=1", { replace: true });
         return;
       }
-      setMode("steps");
-      setStep(0);
+      navigate("/tutorial-deadmansdraw?first=1", { replace: true });
     }
   }, [isDeadMansDraw, navigate, searchParams]);
 
@@ -383,7 +382,7 @@ export default function Tutorial() {
               dir={dir as "rtl" | "ltr"}
               onClick={() => {
                 if (isDeadMansDraw) {
-                  navigate(`/game?game=dead-mans-draw&mode=local&players=2&tutorial=1&returnTo=${encodeURIComponent("/tutorial?game=dead-mans-draw")}`);
+                  navigate(`/tutorial-deadmansdraw?returnTo=${encodeURIComponent("/tutorial?game=dead-mans-draw")}`);
                   return;
                 }
                 navigate("/splendor-tutorial");

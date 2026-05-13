@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Plus, Settings } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { cn } from "@/lib/utils";
 
 import MenuSettingsDialog from "@/components/game/MenuSettingsDialog";
 import coinIcon from "@/assets/coin.png";
@@ -76,7 +77,7 @@ export default function PageTopBar() {
   return (
   <>
     <div
-      className="fixed inset-x-0 top-0 z-50 px-2 pt-2 sm:px-3 md:px-4"
+      className={cn("fixed inset-x-0 top-0 z-50 px-2 pt-2 sm:px-3 md:px-4", dir === "rtl" ? "font-persian" : "")}
       dir={dir}
     >
       <div className="mx-auto flex w-full max-w-md flex-col gap-1 sm:max-w-lg md:max-w-6xl">

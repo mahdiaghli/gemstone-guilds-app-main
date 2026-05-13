@@ -3,26 +3,31 @@ import { useState } from "react";
 import { getDeadMansDrawScore, getPlayerCardCount, type DeadMansDrawPendingEffect, type DeadMansDrawPlayer, type DeadMansDrawSuit } from "@/lib/deadMansDraw";
 import { cn } from "@/lib/utils";
 import zirkhakiBackground from "@/assets/background-zirkhaki.png";
-import canonIcon from "@/assets/canon-svg.png";
-import coinIcon from "@/assets/coin-icon.svg";
-import diamondIcon from "@/assets/diamond-icon.svg";
-import hookIcon from "@/assets/hook-svg.png";
-import carpetIcon from "@/assets/magic-carpet-svg.png";
+import canonIcon from "@/assets/canon-icon.png";
+import coinIcon from "@/assets/coin-icon.png";
+import hookIcon from "@/assets/hook.png";
+import carpetIcon from "@/assets/carpet-icon.png";
+import ancorIcon from "@/assets/ancor-icon.png";
+import chestIcon from "@/assets/chest-icon.png";
+import keyIcon from "@/assets/key-icon.png";
+import krakenIcon from "@/assets/kraken-icon.png";
+import oracleIcon from "@/assets/oracle-icon.png";
+import swordIcon from "@/assets/sword-icon.png";
 
 import type { Translate } from "./helpers";
 import { getPowerAbilityKey, POWER_VISUALS } from "./shared";
 
 const PLAYER_PANEL_SUIT_ICONS: Record<DeadMansDrawSuit, string> = {
-  astrolabe: diamondIcon,
+  astrolabe: oracleIcon,
   pistol: canonIcon,
-  dagger: diamondIcon,
-  carpet: carpetIcon,
-  snake: diamondIcon,
+  dagger: swordIcon,
+  carpet: ancorIcon,
+  snake: krakenIcon,
   coin: coinIcon,
   horseshoe: hookIcon,
   map: carpetIcon,
-  chest: diamondIcon,
-  key: diamondIcon,
+  chest: chestIcon,
+  key: keyIcon,
 };
 
 export function PlayerStack({

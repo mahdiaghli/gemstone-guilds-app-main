@@ -88,6 +88,8 @@ export type DeadMansDrawBoardViewProps = {
   currentState: DeadMansDrawState;
   canReveal: boolean;
   canCollect: boolean;
+  glowingDeck?: boolean;
+  glowingCollect?: boolean;
   onReveal: () => void;
   onCollect: () => void;
   cardFlights: DeadMansDrawFlightAnimation[];
@@ -107,7 +109,7 @@ export type DeadMansDrawBoardViewProps = {
   onDaggerTarget: (targetPlayerIndex: number, suit: any) => void;
   onHorseshoeTarget: (suit: any) => void;
   targetSelectionDisabled: boolean;
-  onOpenSummary: () => void;
+  onOpenSummary?: () => void;
   onOpenExit: () => void;
   showExitButton?: boolean;
   showTutorialCloseButton?: boolean;

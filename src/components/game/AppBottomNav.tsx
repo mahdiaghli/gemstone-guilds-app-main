@@ -19,10 +19,10 @@ interface AppBottomNavProps {
 
 export default function AppBottomNav({ currentPath }: AppBottomNavProps) {
   const navigate = useNavigate();
-  const { t } = useLanguage();
+  const { t, dir } = useLanguage();
 
   return (
-    <div className="fixed inset-x-0 bottom-0 z-50 px-3 pb-4">
+    <div className="fixed inset-x-0 bottom-0 z-50 px-3 pb-4" dir={dir}>
       {/* کانتینر اصلی نوار */}
       <div
         className={cn(

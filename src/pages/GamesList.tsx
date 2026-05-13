@@ -40,6 +40,26 @@ export default function GamesList() {
   const navigate = useNavigate();
   const { lang } = useLanguage();
 
+  const openGameCard = (gameId: string) => {
+    const destination = `/menu/${gameId}`;
+
+    try {
+      if (gameId === "splendor" && localStorage.getItem("splendor-tutorial-completed") !== "true") {
+        navigate(`/splendor-tutorial?first=1&returnTo=${encodeURIComponent(destination)}`);
+        return;
+      }
+
+      if (gameId === "dead-mans-draw" && localStorage.getItem("deadmansdraw-tutorial-completed") !== "true") {
+        navigate(`/tutorial-deadmansdraw?first=1&returnTo=${encodeURIComponent(destination)}`);
+        return;
+      }
+    } catch {
+      // If storage is unavailable, fall back to the game menu.
+    }
+
+    navigate(destination);
+  };
+
   const copy = useMemo(() => lang === "fa" ? {
     play: "بازی",
   } : {
@@ -56,7 +76,7 @@ export default function GamesList() {
             <button
               key={game.id}
               type="button"
-              onClick={() => navigate(`/menu/${game.id}`)}
+              onClick={() => openGameCard(game.id)}
               className="group relative w-full overflow-hidden rounded-[30px] border border-white/10 bg-slate-950/75 text-left shadow-[0_24px_60px_rgba(2,6,23,0.45)] transition-all active:scale-[0.99] sm:hover:-translate-y-1 sm:hover:border-primary/50"
             >
               <div

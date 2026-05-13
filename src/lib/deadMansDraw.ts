@@ -495,30 +495,6 @@ function handleBust(state: DeadMansDrawState) {
   const safeIds = new Set(safeCards.map((card) => card.id));
   let burned = state.treasureArea.filter((card) => !safeIds.has(card.id));
   
-  // Check if player has chest + key before busting - they get bonus cards even on bust
-  const hasChest = state.treasureArea.some((card) => card.suit === "chest");
-  const hasKey = state.treasureArea.some((card) => card.suit === "key");
-  if (hasChest && hasKey && burned.length > 0) {
-    const bonusCount = state.treasureArea.length;
-    let bonusCards: DeadMansDrawCard[] = [];
-
-    if (currentPlayer.ring === "le-corsaire") {
-      bonusCards = plunderTopCardsFromOpponents(state, state.currentPlayerIndex, bonusCount);
-      if (bonusCards.length) {
-        addCardsToCollected(currentPlayer, bonusCards);
-        state.lastAction = `Bust! But Chest + Key plundered ${bonusCards.length} bonus card(s) from opponents.`;
-      }
-    } else if (state.discardPile.length) {
-      const shuffledDiscard = shuffleCards([...state.discardPile, ...burned]);
-      bonusCards = shuffledDiscard.slice(0, Math.min(bonusCount, shuffledDiscard.length));
-      const bonusIds = new Set(bonusCards.map((card) => card.id));
-      state.discardPile = shuffledDiscard.filter((card) => !bonusIds.has(card.id));
-      burned = burned.filter((card) => !bonusIds.has(card.id)); // Remove bonus cards from burned
-      addCardsToCollected(currentPlayer, bonusCards);
-      state.lastAction = `Bust! But Chest + Key recovered ${bonusCards.length} bonus card(s) from burn pile.`;
-    }
-  }
-
   const madamOwnerIndex = state.players.findIndex((player, index) =>
     index !== state.currentPlayerIndex
     && player.ring === "madam-margot"
@@ -527,16 +503,12 @@ function handleBust(state: DeadMansDrawState) {
 
   if (madamOwnerIndex !== -1 && burned.length) {
     addCardsToCollected(state.players[madamOwnerIndex], burned);
-    if (!state.lastAction.includes("Chest + Key")) {
-      state.lastAction = "Bust! Madam Margot banked the busted treasure.";
-    }
+    state.lastAction = "Bust! Madam Margot banked the busted treasure.";
   } else {
     state.discardPile = shuffleCards([...state.discardPile, ...burned]);
-    if (!state.lastAction.includes("Chest + Key")) {
-      state.lastAction = safeCards.length
-        ? "Bust! The Carpet saved part of the treasure."
-        : "Bust! Everything goes to the burn pile.";
-    }
+    state.lastAction = safeCards.length
+      ? "Bust! The Carpet saved part of the treasure."
+      : "Bust! Everything goes to the burn pile.";
   }
 
   state.treasureArea = [];

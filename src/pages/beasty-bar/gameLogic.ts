@@ -63,8 +63,11 @@ function resolveAnimalAbility(
   const playerIndex = card.ownerIndex;
   const player = newState.players[playerIndex];
   const zone = newState.bumpingZone.animals;
+  const resolvedType = card.copiedType && card.copiedType !== "chameleon"
+    ? card.copiedType
+    : card.type;
 
-  switch (card.type) {
+  switch (resolvedType) {
     case "lion": {
       // Frighten all monkeys
       const monkeys = zone.filter((a) => a.type === "monkey");
@@ -154,10 +157,8 @@ function resolveAnimalAbility(
     }
 
     case "beaver": {
-      // Swap Heaven's Gate and Exile direction
-      newState.bumpingZone.heavenGateDirection =
-        newState.bumpingZone.heavenGateDirection === "normal" ? "reversed" : "normal";
-      newState.lastAction = `${player.name}'s beaver reversed the gate direction!`;
+      newState.bumpingZone.animals = [...zone].reverse();
+      newState.lastAction = `${player.name}'s beaver reversed the entire queue!`;
       break;
     }
 

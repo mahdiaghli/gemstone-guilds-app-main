@@ -17,6 +17,8 @@ export function DeadMansDrawBoardView({
   currentState,
   canReveal,
   canCollect,
+  glowingDeck = false,
+  glowingCollect = false,
   onReveal,
   onCollect,
   cardFlights,
@@ -233,18 +235,20 @@ export function DeadMansDrawBoardView({
         transition={{ duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] }}
         className="relative z-10 mx-auto max-w-md rounded-[28px] bg-slate-950/16 px-3 py-4 backdrop-blur-[1px] sm:max-w-lg sm:px-4"
       >
-        <div className="space-y-4 pb-8">
+        <div className="space-y-3 pb-8">
           <div className="flex items-center justify-end">
             <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={onOpenSummary}
-                className="flex h-11 w-11 items-center justify-center rounded-full bg-teal-300/10 text-teal-50 transition hover:bg-teal-300/20"
-                aria-label={t("deadMansDrawTutorialLabel")}
-                title={t("deadMansDrawTutorialLabel")}
-              >
-                <BookOpenText className="h-5 w-5" />
-              </button>
+              {onOpenSummary ? (
+                <button
+                  type="button"
+                  onClick={onOpenSummary}
+                  className="flex h-11 w-11 items-center justify-center rounded-full bg-teal-300/10 text-teal-50 transition hover:bg-teal-300/20"
+                  aria-label={t("deadMansDrawTutorialLabel")}
+                  title={t("deadMansDrawTutorialLabel")}
+                >
+                  <BookOpenText className="h-5 w-5" />
+                </button>
+              ) : null}
               {showExitButton ? (
                 <button
                   type="button"
@@ -343,6 +347,8 @@ export function DeadMansDrawBoardView({
             className={cn(
               "relative rounded-2xl border-2 border-transparent",
               focusElement === "deck-section" && highlightedSectionClass,
+              glowingDeck && "border-amber-400/70 shadow-[0_0_24px_rgba(251,191,36,0.88)] animate-[gem-pulse_1.5s_ease-in-out_infinite]",
+              glowingCollect && "border-amber-400/70 shadow-[0_0_24px_rgba(251,191,36,0.88)] animate-[gem-pulse_1.5s_ease-in-out_infinite]",
             )}
           >
             <div className="absolute left-0 top-0">
@@ -361,17 +367,35 @@ export function DeadMansDrawBoardView({
                 deckId="discard"
               />
             </div>
-            <div className="flex items-center justify-center pt-16">
+            <div className="flex items-center justify-center">
               <Button
                 variant="ghost"
                 onClick={onCollect}
                 disabled={!canCollect}
-                className="h-16 w-40 rounded-2xl border-2 border-amber-400/50 bg-gradient-to-br from-amber-500/20 to-amber-600/30 text-lg font-bold text-amber-100 shadow-[0_0_30px_rgba(251,191,36,0.4),0_8px_24px_rgba(2,6,23,0.5)] transition-all hover:scale-105 hover:shadow-[0_0_40px_rgba(251,191,36,0.6),0_12px_32px_rgba(2,6,23,0.6)] disabled:opacity-50 disabled:hover:scale-100"
+                className={cn(
+                  "h-10 w-40 rounded-2xl border-2 border-amber-400/50 bg-gradient-to-br from-amber-500/20 to-amber-600/30 text-lg font-bold text-amber-100 shadow-[0_0_30px_rgba(251,191,36,0.4),0_8px_24px_rgba(2,6,23,0.5)] transition-all hover:scale-105 hover:shadow-[0_0_40px_rgba(251,191,36,0.6),0_12px_32px_rgba(2,6,23,0.6)] disabled:opacity-50 disabled:hover:scale-100",
+                  glowingCollect && "ring-2 ring-amber-300/80 shadow-[0_0_38px_rgba(251,191,36,0.95)] animate-[gem-pulse_1.5s_ease-in-out_infinite]",
+                )}
               >
                 <span className="text-2xl">💰</span>
-                <span className="ml-2">{t("deadMansDrawCollect")}</span>
+                <span className="">{t("deadMansDrawCollect")}</span>
               </Button>
             </div>
+<div className="mt-1 flex justify-center px-3">
+  <div
+    className="
+      w-[210px]
+      rounded-2xl border border-white/10 bg-slate-950/55
+      px-4 py-1
+      text-center text-sm text-slate-100/85
+      shadow-[0_10px_24px_rgba(2,6,23,0.35)]
+      break-words whitespace-normal
+    "
+  >
+    {currentState.lastAction}
+  </div>
+</div>
+
           </motion.div>
 
           <motion.div
@@ -394,11 +418,12 @@ export function DeadMansDrawBoardView({
             }
             transition={{ duration: 2, repeat: Infinity }}
             className={cn(
-              "rounded-[30px] border-2 border-transparent bg-slate-950/48 p-4 shadow-[0_18px_55px_rgba(2,6,23,0.35)]",
+              "rounded-[30px] border-2 border-transparent bg-slate-950/48 p-1 shadow-[0_18px_55px_rgba(2,6,23,0.35)]",
               focusElement === "treasure-area" && highlightedSectionClass,
+              glowingCollect && "border-amber-400/70 shadow-[0_0_20px_rgba(251,191,36,0.8)]",
             )}
           >
-            <div className="flex items-center justify-between gap-3">
+            {/* <div className="flex items-center justify-between">
               <p className="text-[11px] uppercase tracking-[0.3em] text-teal-100/45">
                 {t("deadMansDrawTreasureArea")}
               </p>
@@ -409,10 +434,10 @@ export function DeadMansDrawBoardView({
                   )}
                 </span>
               ) : null}
-            </div>
+            </div> */}
 
             <div
-              className="mt-4 grid grid-cols-3 gap-2"
+              className="mt-4 grid grid-cols-4 gap-2"
               data-dead-draw-treasure-grid="true"
             >
               {visibleTreasureArea.length ? (
@@ -437,15 +462,16 @@ export function DeadMansDrawBoardView({
                       className="pointer-events-none absolute inset-2 z-10 flex items-center justify-center"
                     >
                       <div className="rounded-[18px] border border-white/15 bg-slate-950/90 px-2.5 py-2 text-center shadow-[0_16px_40px_rgba(2,6,23,0.55)] backdrop-blur-sm">
-                        <p className="font-cinzel text-[10px] uppercase tracking-[0.24em] text-amber-100/65">
+                        {/* <p className="font-cinzel text-[10px] uppercase tracking-[0.24em] text-amber-100/65">
                           {t(SUIT_TRANSLATION_KEYS[card.suit])}
-                        </p>
+                        </p> */}
                         <p className="mt-1 text-[11px] leading-4 text-slate-100/90">
                           {t(SUIT_DESCRIPTION_KEYS[card.suit])}
                         </p>
                       </div>
                     </motion.div>
                     <motion.div
+                      layout
                       initial={{
                         opacity: 0,
                         y: -50,
@@ -459,6 +485,11 @@ export function DeadMansDrawBoardView({
                         x: 0,
                       }}
                       transition={{
+                        layout: {
+                          type: "spring",
+                          stiffness: 210,
+                          damping: 24,
+                        },
                         duration: 0.5,
                         delay: index * 0.05,
                         type: "spring",
@@ -486,7 +517,7 @@ export function DeadMansDrawBoardView({
                   </div>
                 ))
               ) : (
-                <div className="col-span-3 rounded-3xl border border-dashed border-white/10 px-4 py-8 text-center text-sm text-white/35">
+                <div className="col-span-4 rounded-3xl border border-dashed border-white/10 px-4 py-8 text-center text-sm text-white/35">
                   {t("deadMansDrawRevealHint")}
                 </div>
               )}

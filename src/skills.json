@@ -1,0 +1,275 @@
+{
+  "name": "Gemstone Guilds – Multiplayer Card Game Platform",
+  "version": "1.0.0",
+  "description": "Skill for the Gemstone Guilds project: a web-based multiplayer card game platform (Splendor and Dead Man's Draw) with React, Node.js, Socket.io, and PostgreSQL, according to SRS v1.0 (2026-04-29).",
+  "tags": [
+    "game",
+    "multiplayer",
+    "card-game",
+    "react",
+    "node",
+    "socket.io",
+    "postgres",
+    "bilingual"
+  ],
+
+  "projectTechStack": {
+    "frontend": {
+      "framework": "React",
+      "language": "TypeScript",
+      "bundler": "Vite",
+      "uiFramework": "shadcn/ui",
+      "css": "Tailwind CSS"
+    },
+    "backend": {
+      "runtime": "Node.js",
+      "framework": "Express.js",
+      "realtime": "Socket.io"
+    },
+    "database": {
+      "engine": "PostgreSQL"
+    }
+  },
+
+  "languages": {
+    "default": "en",
+    "supported": ["en", "fa"],
+    "rtlLanguages": ["fa"]
+  },
+
+  "domain": {
+    "summary": "Gemstone Guilds is a web-based multiplayer card game platform that implements Splendor and Dead Man's Draw, with Solo (AI), online multiplayer, progression system (coins, gems, rank), shop, friends, groups, and a bilingual UI.",
+    "coreGames": [
+      {
+        "id": "splendor",
+        "name": "Splendor",
+        "rulesSummary": [
+          "Players collect gem tokens (diamond, sapphire, emerald, ruby, onyx, gold).",
+          "Initial token setup: for 2 players: 4 of each color, 5 gold; for 3 players: 5 of each color, 5 gold; for 4 players: 7 of each color, 5 gold.",
+          "On each turn, a player may perform exactly one of these actions: (1) take 3 tokens of different colors, or (2) take 2 tokens of the same color (if at least 4 tokens of that color are in the bank), or (3) purchase a visible card, or (4) reserve a card and gain 1 gold.",
+          "Cards provide: victory points (0–5), a permanent gem bonus, and a purchase cost (combination of gem types).",
+          "A Noble visits a player when they meet the required permanent bonuses.",
+          "The game ends when a player reaches 15 victory points; the winner is determined based on points (and official tie-breakers if needed)."
+        ]
+      },
+      {
+        "id": "dead-mans-draw",
+        "name": "Dead Man's Draw",
+        "rulesSummary": [
+          "Push-your-luck game: players draw treasure cards from a deck.",
+          "On their turn: draw a card (treasure + possibly a hazard). The player can choose to continue or stop.",
+          "If a duplicate hazard type is drawn, all current non-banked treasures are lost.",
+          "The game ends when the last treasure in the treasure area is collected and there are no cards left in the draw deck.",
+          "Winner: highest total of banked treasure points. If points are equal, the player with more cards wins; if both points and card counts are equal, all tied players win together."
+        ]
+      }
+    ],
+    "gameModes": [
+      {
+        "id": "solo",
+        "name": "Solo / Single-player",
+        "description": "Play against AI at three difficulty levels: Easy, Medium, Hard.",
+        "aiRules": {
+          "easy": "Random valid moves with simple heuristics.",
+          "medium": "Balanced strategy considering card values and board state.",
+          "hard": "Advanced strategy with lookahead and game state evaluation."
+        }
+      },
+      {
+        "id": "online",
+        "name": "Online Multiplayer",
+        "description": "Real-time multiplayer using Socket.io, 5-coin entry fee, real-time synchronization and in-game chat.",
+        "entryFeeCoins": 5
+      },
+      {
+        "id": "challenge",
+        "name": "Challenge Modes",
+        "description": "Daily Puzzle, Bot Survival, Turn Limit (some not fully implemented yet)."
+      }
+    ],
+    "economy": {
+      "coins": {
+        "startAmount": 1000,
+        "soloWinReward": 10,
+        "onlineWinReward": 20,
+        "onlineEntryFee": 5,
+        "minForOnline": 5
+      },
+      "gems": {
+        "startAmount": 150,
+        "weeklyRewardRange": [10, 50],
+        "groupCreationCost": 100
+      },
+      "rank": {
+        "startPoints": 0,
+        "winBaseReward": 12,
+        "prestigeMultiplierOnline": 2,
+        "splendorPrestigeContribution": "Each Splendor card generates prestige points which are factored into rank."
+      }
+    }
+  },
+
+  "architectureGuidelines": {
+    "frontendStructure": {
+      "folders": [
+        "src/components",
+        "src/features/game",
+        "src/features/auth",
+        "src/features/shop",
+        "src/features/social",
+        "src/features/groups",
+        "src/features/chat",
+        "src/hooks",
+        "src/store",
+        "src/utils"
+      ],
+      "stateManagement": "Centralized game state (e.g., Zustand, Redux, or context + reducer) for managing GameState and Socket.io events.",
+      "routing": "React Router (or equivalent) with routes: /login, /register, /lobby, /game/:id, /account, /shop, /groups, /events."
+    },
+    "backendStructure": {
+      "folders": [
+        "src/routes",
+        "src/controllers",
+        "src/services",
+        "src/models",
+        "src/sockets",
+        "src/middleware",
+        "src/config",
+        "src/utils"
+      ],
+      "sockets": "Use Socket.io for game rooms, events such as: join_room, leave_room, game_state_update, player_action, chat_message, reconnect.",
+      "apiConventions": {
+        "basePath": "/api",
+        "auth": "/api/auth",
+        "users": "/api/users",
+        "games": "/api/games",
+        "shop": "/api/shop",
+        "groups": "/api/groups",
+        "friends": "/api/friends",
+        "events": "/api/events"
+      }
+    },
+    "codingStandards": {
+      "language": "TypeScript strict mode (no implicit any).",
+      "eslint": true,
+      "tests": {
+        "unitCoverageMin": 0.6,
+        "unitCoverageTarget": 0.8
+      },
+      "namingConventions": {
+        "files": "kebab-case for files, PascalCase for components, camelCase for variables/functions."
+      }
+    }
+  },
+
+  "dataModels": {
+    "entities": [
+      "User",
+      "PlayerProgress",
+      "PlayerExtras",
+      "GameSession",
+      "Challenge",
+      "Group",
+      "Message",
+      "GameState",
+      "Player"
+    ],
+    "notes": [
+      "Use UUID as primary key.",
+      "Passwords should be hashed with bcrypt (minimum 10 rounds).",
+      "Sessions stored with httpOnly cookies and secure tokens.",
+      "language: 'en' | 'fa' and for 'fa', UI must switch to RTL."
+    ]
+  },
+
+  "nonFunctionalConstraints": {
+    "performance": {
+      "uiResponseMs": 100,
+      "gameUpdateMs": 200,
+      "pageLoadSeconds4G": 3
+    },
+    "security": {
+      "httpsOnly": true,
+      "passwordHash": "bcrypt>=10 rounds",
+      "rateLimitLogin": 5,
+      "csrfProtection": true,
+      "rbac": ["user", "moderator", "admin"]
+    },
+    "scalability": {
+      "targetConcurrentUsers": 10000,
+      "targetConcurrentGames": 1000
+    }
+  },
+
+  "bilingualUiGuidelines": {
+    "requireTranslations": true,
+    "locales": ["en", "fa"],
+    "rtlSupport": true,
+    "requirements": [
+      "All UI text must be internationalized (en/fa).",
+      "Layout must be RTL in 'fa' mode (appropriate flex-direction and text-align).",
+      "Chat must support both languages.",
+      "Error messages and toast notifications must be localized."
+    ]
+  },
+
+  "socialFeatures": {
+    "friends": {
+      "features": [
+        "friend request",
+        "accept/decline",
+        "online status",
+        "block/unblock",
+        "invite to game"
+      ]
+    },
+    "groups": {
+      "creationCostGems": 100,
+      "roles": ["leader", "officer", "member"],
+      "requirements": [
+        "Group name must be at least 5 characters.",
+        "Leader can disband the group (if no games are currently active)."
+      ]
+    },
+    "chat": {
+      "channels": ["game", "group", "friend"],
+      "historyLimit": 100,
+      "features": [
+        "profanity filter",
+        "@mentions",
+        "stickers/emotes",
+        "per-player mute",
+        "timestamps"
+      ]
+    }
+  },
+
+  "assistBehaviors": {
+    "gameLogic": {
+      "splendor": {
+        "validateTurnActions": true,
+        "enforceTokenRules": true,
+        "enforceNobleRules": true,
+        "winCondition": "First player to reach 15 points, then resolve the round and determine the winner."
+      },
+      "deadMansDraw": {
+        "enforceHazardDuplicates": true,
+        "bankingMechanic": true,
+        "winCondition": "Highest total banked treasure; tie-break by number of cards; shared victory possible."
+      }
+    },
+    "aiAssistance": {
+      "describeAiLevelsIfAsked": true,
+      "avoidCheating": "AI should only use allowed (non-hidden) information."
+    },
+    "progressionLogic": {
+      "applyEconomyRules": true,
+      "onlineOnlyAffectsRank": true,
+      "ensureEntryFee": true
+    },
+    "errorHandling": {
+      "invalidActionMessage": "When an action is illegal, return a clear error message.",
+      "localizeErrors": true
+    }
+  }
+}

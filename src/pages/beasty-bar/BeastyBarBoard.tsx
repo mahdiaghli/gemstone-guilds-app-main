@@ -1,15 +1,14 @@
+import { useEffect, useMemo, useRef, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import type {
   BeastyBarGameState,
-  BeastyBarPlayer,
   AnimalCard,
   AnimalType,
-  PendingEffect,
-  PlayerColor,
 } from "./types";
 import { AnimalCardComponent } from "./AnimalCard";
-import { ANIMAL_NAMES, getAnimalDescription, PLAYER_COLORS, getAnimalEmoji } from "./types";
+import { getAnimalEmoji } from "./types";
 import { ArrowRight, RotateCcw, Crown, DoorOpen, Ban } from "lucide-react";
 
 interface BeastyBarBoardProps {
@@ -26,6 +25,14 @@ interface BeastyBarBoardProps {
   aiThinkingText: string;
 }
 
+type QueueFlight = {
+  id: string;
+  card: AnimalCard;
+  start: { x: number; y: number };
+  end: { x: number; y: number };
+  destination: "cafe" | "exile";
+};
+
 export function BeastyBarBoard({
   state,
   currentPlayerIndex,
@@ -40,32 +47,112 @@ export function BeastyBarBoard({
   aiThinkingText,
 }: BeastyBarBoardProps) {
   const { bumpingZone, players, pendingEffect, lastAction, gameOver, winnerIndices } = state;
+  const [queueFlights, setQueueFlights] = useState<QueueFlight[]>([]);
+  const queueCardRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const previousQueuePositionsRef = useRef<Record<string, { x: number; y: number }>>({});
+  const previousStateRef = useRef<BeastyBarGameState | null>(null);
+  const flightTimersRef = useRef<number[]>([]);
 
   const currentPlayer = players[currentPlayerIndex];
   const direction = bumpingZone.heavenGateDirection;
+  const gateLabel = useMemo(() => getGateLabel(), [direction, lang]);
+  const exileLabel = useMemo(() => getExileLabel(), [direction, lang]);
 
-  const getDirectionIcon = () => {
+  useEffect(() => {
+    return () => {
+      flightTimersRef.current.forEach((timerId) => window.clearTimeout(timerId));
+    };
+  }, []);
+
+  useEffect(() => {
+    const previousState = previousStateRef.current;
+    if (!previousState) {
+      previousStateRef.current = state;
+      return;
+    }
+
+    const currentQueueIds = new Set(state.bumpingZone.animals.map((animal) => animal.id));
+    const nextFlights: QueueFlight[] = [];
+
+    previousState.bumpingZone.animals.forEach((animal) => {
+      if (currentQueueIds.has(animal.id)) return;
+
+      const start = previousQueuePositionsRef.current[animal.id];
+      if (!start) return;
+
+      const enteredCafe = state.players[animal.ownerIndex]?.wildCafe.some((card) => card.id === animal.id);
+      const enteredExile = state.players[animal.ownerIndex]?.thatsIt.some((card) => card.id === animal.id);
+      if (!enteredCafe && !enteredExile) return;
+
+      const targetSelector = enteredCafe
+        ? `[data-beasty-destination="cafe-${animal.ownerIndex}"]`
+        : `[data-beasty-destination="exile-${animal.ownerIndex}"]`;
+      const targetNode = document.querySelector(targetSelector) as HTMLElement | null;
+      if (!targetNode) return;
+
+      const rect = targetNode.getBoundingClientRect();
+      nextFlights.push({
+        id: `${animal.id}-${Date.now()}-${enteredCafe ? "cafe" : "exile"}`,
+        card: animal,
+        start,
+        end: {
+          x: rect.left + rect.width / 2,
+          y: rect.top + rect.height / 2,
+        },
+        destination: enteredCafe ? "cafe" : "exile",
+      });
+    });
+
+    if (nextFlights.length) {
+      setQueueFlights((current) => [...current, ...nextFlights]);
+      nextFlights.forEach((flight) => {
+        const timerId = window.setTimeout(() => {
+          setQueueFlights((current) => current.filter((item) => item.id !== flight.id));
+          flightTimersRef.current = flightTimersRef.current.filter((id) => id !== timerId);
+        }, 680);
+        flightTimersRef.current.push(timerId);
+      });
+    }
+
+    previousStateRef.current = state;
+  }, [state]);
+
+  useEffect(() => {
+    const nextPositions: Record<string, { x: number; y: number }> = {};
+    bumpingZone.animals.forEach((animal) => {
+      const node = queueCardRefs.current[animal.id];
+      if (!node) return;
+      const rect = node.getBoundingClientRect();
+      nextPositions[animal.id] = {
+        x: rect.left + rect.width / 2,
+        y: rect.top + rect.height / 2,
+      };
+    });
+    previousQueuePositionsRef.current = nextPositions;
+  }, [bumpingZone.animals]);
+
+  function getDirectionIcon() {
     if (direction === "normal") {
       return <ArrowRight className="w-6 h-6" />;
     }
     return <RotateCcw className="w-6 h-6" />;
-  };
+  }
 
-  const getGateLabel = () => {
+  function getGateLabel() {
     if (direction === "normal") {
       return { icon: <DoorOpen className="w-5 h-5" />, text: lang === "fa" ? "درگاه بهشت" : "Heaven's Gate", color: "text-amber-400" };
     }
     // Reversed - swap labels
     return { icon: <Ban className="w-5 h-5" />, text: lang === "fa" ? "تبعید" : "Exile", color: "text-rose-400" };
-  };
+  }
 
-  const getExileLabel = () => {
+  function getExileLabel() {
     if (direction === "normal") {
       return { icon: <Ban className="w-5 h-5" />, text: lang === "fa" ? "تبعید" : "Exile", color: "text-rose-400" };
     }
     // Reversed - swap labels
     return { icon: <DoorOpen className="w-5 h-5" />, text: lang === "fa" ? "درگاه بهشت" : "Heaven's Gate", color: "text-amber-400" };
-  };
+  }
 
   // Check if the current local player is the one who needs to resolve the effect
   const isCurrentPlayerEffect = pendingEffect?.playerIndex === currentPlayerIndex;
@@ -268,20 +355,20 @@ export function BeastyBarBoard({
       <div className="max-w-4xl mx-auto mb-6">
         <div className="flex items-center justify-between bg-slate-900 rounded-2xl p-4 border border-slate-800">
           <div className="flex items-center gap-4">
-            <div className={cn("flex items-center gap-2", getGateLabel().color)}>
-              {getGateLabel().icon}
+            <div className={cn("flex items-center gap-2", gateLabel.color)}>
+              {gateLabel.icon}
               <span className="font-cinzel text-sm">
-                {getGateLabel().text}
+                {gateLabel.text}
               </span>
             </div>
             <div className="flex items-center gap-2 text-slate-400">
               {getDirectionIcon()}
             </div>
           </div>
-          <div className={cn("flex items-center gap-2", getExileLabel().color)}>
-            {getExileLabel().icon}
+          <div className={cn("flex items-center gap-2", exileLabel.color)}>
+            {exileLabel.icon}
             <span className="font-cinzel text-sm">
-              {getExileLabel().text}
+              {exileLabel.text}
             </span>
           </div>
         </div>
@@ -312,11 +399,22 @@ export function BeastyBarBoard({
             </div>
           ) : (
             <>
-              <div className="flex items-center justify-center gap-2 flex-wrap">
+              <motion.div
+                layout
+                transition={{ type: "spring", stiffness: 180, damping: 20, mass: 0.7 }}
+                className="flex items-center justify-center gap-2 flex-wrap"
+              >
                 {bumpingZone.animals.map((animal, index) => (
-                  <div
+                  <motion.div
                     key={animal.id}
-                    className="relative animate-in fade-in slide-in-from-bottom-2 duration-300"
+                    ref={(node) => {
+                      queueCardRefs.current[animal.id] = node;
+                    }}
+                    layout
+                    initial={{ opacity: 0, y: 24, scale: 0.9 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    transition={{ type: "spring", stiffness: 200, damping: 18, mass: 0.75 }}
+                    className="relative"
                   >
                     <AnimalCardComponent
                       card={animal}
@@ -328,9 +426,9 @@ export function BeastyBarBoard({
                     <div className="absolute -top-3 left-1/2 -translate-x-1/2 w-5 h-5 rounded-full bg-slate-700 text-white text-xs flex items-center justify-center">
                       {index + 1}
                     </div>
-                  </div>
+                  </motion.div>
                 ))}
-              </div>
+              </motion.div>
 
               {/* 5-card resolution warning */}
               {bumpingZone.animals.length === 5 && (
@@ -351,9 +449,9 @@ export function BeastyBarBoard({
       <div className="max-w-4xl mx-auto mb-6">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {players.map((player) => (
-            <div
-              key={player.id}
-              className={cn(
+                <div
+                  key={player.id}
+                  className={cn(
                 "bg-slate-900 rounded-xl p-3 border-2",
                 player.index === currentPlayerIndex
                   ? "border-amber-400"
@@ -369,10 +467,16 @@ export function BeastyBarBoard({
                 )}
               </div>
               <div className="flex justify-between text-sm">
-                <span className="text-slate-400">
+                <span
+                  data-beasty-destination={`cafe-${player.index}`}
+                  className="text-slate-400"
+                >
                   🏠 {player.wildCafe.length}
                 </span>
-                <span className="text-rose-400">
+                <span
+                  data-beasty-destination={`exile-${player.index}`}
+                  className="text-rose-400"
+                >
                   ✕ {player.thatsIt.length}
                 </span>
               </div>
@@ -435,6 +539,36 @@ export function BeastyBarBoard({
 
       {/* Pending Effect Modal */}
       {renderPendingEffect()}
+
+      <AnimatePresence>
+        {queueFlights.map((flight) => (
+          <motion.div
+            key={flight.id}
+            className="pointer-events-none fixed z-[80]"
+            style={{
+              left: flight.start.x - 44,
+              top: flight.start.y - 56,
+            }}
+            initial={{ x: 0, y: 0, scale: 1, opacity: 1, rotate: 0 }}
+            animate={{
+              x: flight.end.x - flight.start.x,
+              y: flight.end.y - flight.start.y,
+              scale: [1, 1.04, 0.9],
+              opacity: [1, 0.96, 0.15],
+              rotate: flight.destination === "exile" ? [0, 4, 12] : [0, -3, -8],
+            }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.64, ease: [0.22, 1, 0.36, 1] }}
+          >
+            <AnimalCardComponent
+              card={flight.card}
+              ownerName={players[flight.card.ownerIndex].name}
+              showOwner={true}
+              lang={lang}
+            />
+          </motion.div>
+        ))}
+      </AnimatePresence>
     </div>
   );
 }
