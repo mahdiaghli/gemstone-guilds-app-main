@@ -657,6 +657,7 @@ export default function DeadMansDrawGame(props: DeadMansDrawGameProps = {}) {
       />
       <DeadMansDrawExitModal
         open={showExitConfirm}
+        dir={dir}
         t={t}
         onClose={() => setShowExitConfirm(false)}
         onLeave={handleMenu}

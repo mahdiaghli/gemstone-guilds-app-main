@@ -3,6 +3,7 @@ import { Copy, Lock, MessageCircle, Pencil, Search, Trophy, UserRound, Users } f
 import { motion } from "framer-motion";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -118,12 +119,12 @@ export function GroupsChatSection({
         onClick={() => onOpenGroupInfo(currentGroup.id)}
         className={`flex w-full items-center justify-between gap-3 rounded-[28px] border border-primary/20 bg-background/40 px-4 py-4 ${dir === "rtl" ? "flex-row-reverse text-right" : "text-left"}`}
       >
-        <div className={`flex items-center gap-3 ${dir === "rtl" ? "flex-row-reverse" : ""}`}>
+            <div className={cn("flex items-center gap-3", dir === "rtl" && "flex-row-reverse")}>
           <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10">
             {renderFlag(currentGroup.flag, currentGroup.name)}
           </div>
           <div>
-            <h2 className="font-cinzel text-xl text-primary">{currentGroup.name}</h2>
+            <h2 className={cn("text-xl text-primary", dir === "rtl" ? "font-persian" : "font-cinzel")}>{currentGroup.name}</h2>
             <div className={`mt-1 flex flex-wrap gap-3 text-xs text-muted-foreground ${dir === "rtl" ? "justify-end" : ""}`}>
               <span>{t("groupCode")}: {currentGroup.code}</span>
               <span className="inline-flex items-center gap-1"><Users className="h-3.5 w-3.5" /> {currentGroup.members.length}</span>
@@ -148,10 +149,10 @@ export function GroupsChatSection({
                     <AvatarFallback>{getUserDisplayName(entry.senderId).slice(0, 1)}</AvatarFallback>
                   </Avatar>
                   <div className={`rounded-[24px] px-4 py-3 text-sm ${mine ? "bg-primary text-primary-foreground" : "bg-background/70"}`}>
-                    <div className={`mb-1 text-xs font-semibold ${mine ? "text-primary-foreground/80" : "text-primary"}`}>
+                    <div className={cn("mb-1 text-xs font-semibold", mine ? "text-primary-foreground/80" : "text-primary", dir === "rtl" && "font-persian")}>
                       {getUserDisplayName(entry.senderId)}
                     </div>
-                    <div className={dir === "rtl" ? "text-right" : "text-left"}>{entry.text}</div>
+                    <div className={dir === "rtl" ? "text-right font-persian" : "text-left"}>{entry.text}</div>
                   </div>
                 </div>
               </div>

@@ -9,18 +9,18 @@ import { getGameById } from "@/lib/gameCatalog";
 import { shellBackgrounds } from "@/lib/pageBackgrounds";
 
 // تصاویر
-import tutorialImg from "@/assets/tutorial.png";
-import manualImg from "@/assets/manual.png";
-import youtubeImg from "@/assets/youtube.png";
-import aparatImg from "@/assets/aparat.png";
-import goalImg from "@/assets/goal.png";
-import diceImg from "@/assets/dice.png";
+import tutorialImg from "@/assets/tutorial.webp";
+import manualImg from "@/assets/manual.webp";
+import youtubeImg from "@/assets/youtube.webp";
+import aparatImg from "@/assets/aparat.webp";
+import goalImg from "@/assets/goal.webp";
+import diceImg from "@/assets/dice.webp";
 import cardImg from "@/assets/card.png";
-import reserveImg from "@/assets/reserve.png";
-import cupImg from "@/assets/cup.png";
-import bagImg from "@/assets/bag of money.png";
+import reserveImg from "@/assets/reserve.webp";
+import cupImg from "@/assets/cup.webp";
+import bagImg from "@/assets/bag of money.webp";
 import card2Img from "@/assets/card2.png";
-import mindImg from "@/assets/mind.png";
+import mindImg from "@/assets/mind.webp";
 import krakenImg from "@/assets/kraken.png";
 import chestImg from "@/assets/chest.png";
 

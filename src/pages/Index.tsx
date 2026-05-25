@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 import { useLanguage } from "@/hooks/useLanguage";
 import PageTopBar from "@/components/game/PageTopBar";
 import AppBottomNav from "@/components/game/AppBottomNav";
-import robotIcon from "@/assets/play with robots.png";
+import robotIcon from "@/assets/play with robots.webp";
 import localIcon from "@/assets/two player.png";
 import onlineIcon from "@/assets/internet.png";
 import tutorialIcon from "@/assets/manual.png";

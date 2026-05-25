@@ -104,37 +104,37 @@ export default function DeadMansDrawTutorial() {
       1: {
         title: "How Dead Man's Draw Works",
         body: "Players reveal cards from the draw deck, different suits trigger different powers, and your goal is to collect treasure before you bust and lose the haul.",
-        action: "Read this overview, then continue.",
+        // action: "Read this overview, then continue.",
         lastAction: "Welcome to the tutorial. Learn the flow before you touch the deck.",
       },
       2: {
         title: "Step 2: Draw Deck, Collect Treasure, and Burn Pile",
         body: "The draw deck reveals the next card, Collect Treasure safely banks your haul, and the burn pile stores busted or discarded cards.",
-        action: "Click the draw deck to reveal a card.",
+        // action: "Click the draw deck to reveal a card.",
         lastAction: "Reveal the first scripted card from the draw deck.",
       },
       3: {
         title: "Step 3: Oracle",
         body: "Oracle lets you see what is coming next before you commit. It gives you information so you can manage risk.",
-        action: "Click the draw deck again to reveal the top card.",
+        // action: "Click the draw deck again to reveal the top card.",
         lastAction: "Oracle is revealed. Draw again to see the next scripted card.",
       },
       4: {
         title: "Step 4: Kraken",
         body: "Kraken increases pressure by forcing more action. Some suits immediately change how the turn continues.",
-        action: "Acknowledge this explanation to continue.",
+        // action: "Acknowledge this explanation to continue.",
         lastAction: "Kraken is now in the treasure area. Continue when ready.",
       },
       5: {
         title: "Step 5: Map Options",
         body: "Map is revealed. Here are 3 options from the burn pile: oracle, kraken, key. You will not take the key from opponent. Click continue to reveal the key and go to next step.",
-        action: "Click continue.",
+        // action: "Click continue.",
         lastAction: "Map is revealed. Continue when ready.",
       },
       6: {
         title: "Step 6: Chest",
         body: "Chest becomes important when you also have Key. Together they create bonus value whenever the haul is safely collected.",
-        action: "Continue when you understand the combo.",
+        // action: "Continue when you understand the combo.",
         lastAction: "Chest is revealed. Continue to learn how Anchor protects the haul.",
       },
       7: {
@@ -152,13 +152,13 @@ export default function DeadMansDrawTutorial() {
       9: {
         title: "Step 9: Sword Power",
         body: "Sword is revealed. A coin card is automatically dragged from opponent. Click continue.",
-        action: "Click continue.",
+        // action: "Click continue.",
         lastAction: "Sword is revealed. Continue to view the special powers.",
       },
       10: {
         title: "Step 10: Hook",
         body: "Hook brings one of your banked cards back into the action, giving you flexibility from cards you already secured.",
-        action: "Continue to the special powers lesson.",
+        // action: "Continue to the special powers lesson.",
         lastAction: "Hook is revealed. Continue to view the special powers.",
       },
       11: {
@@ -242,12 +242,14 @@ export default function DeadMansDrawTutorial() {
   }, [lang, step]);
 
   const mockPendingEffect = useMemo<DeadMansDrawPendingEffect | null>(() => {
-    if (step === 8) {
+    if (step === 10) {
+      // show horseshoe (hook) own-choice highlight for player's collected cards
       return {
-        kind: "pistol",
-        sourceCardId: SCRIPTED.cannon.id,
-        options: [{ playerIndex: 1, cards: opponentCards }],
-      };
+        kind: "horseshoe",
+        sourceCardId: SCRIPTED.hook.id,
+        options: playerBank,
+        remaining: 1,
+      } as any;
     }
     return null;
   }, [opponentCards, step]);
@@ -331,22 +333,65 @@ export default function DeadMansDrawTutorial() {
   };
 
   const handleContinue = () => {
-    if (step === 1) setStep(2);
-    else if (step === 4) {
+    if (step === 1) {
+      setStep(2);
+      return;
+    }
+
+    // Steps 2 & 3: next also reveals the scripted cards
+    if (step === 2 || step === 3) {
+      handleReveal();
+      return;
+    }
+
+    if (step === 4) {
       setRevealedCards((current) => appendUnique(current, SCRIPTED.map));
       setStep(5);
+      return;
     }
-    else if (step === 5) {
-      setRevealedCards((current) =>
-        appendUnique(appendUnique(current, SCRIPTED.burnKey), SCRIPTED.chest),
-      );
+
+    if (step === 5) {
+      setRevealedCards((current) => appendUnique(appendUnique(current, SCRIPTED.burnKey), SCRIPTED.chest));
       setStep(6);
+      return;
     }
-    else if (step === 6) {
+
+    if (step === 6) {
       setRevealedCards((current) => appendUnique(current, SCRIPTED.anchor));
       setStep(7);
-    } else if (step === 9) setStep(10);
-    else if (step === 10) setStep(11);
+      return;
+    }
+
+    // Step 7: next acts like collect (but collect button still glows)
+    if (step === 7) {
+      handleCollect();
+      return;
+    }
+
+    // Step 8: simulate pistol/cannon effect and continue
+    if (step === 8) {
+      // pick a target from opponentCards (first one)
+      const targetCard = opponentCards[0];
+      if (targetCard) {
+        setOpponentCards((current) => current.filter((card) => card.id !== targetCard.id));
+        setBurnPile((current) => [...current, targetCard]);
+      }
+      setRevealedCards((current) => appendUnique(current, SCRIPTED.sword));
+      setStep(9);
+      return;
+    }
+
+    if (step === 9) {
+      // reveal hook as part of step 10
+      setRevealedCards((current) => appendUnique(current, SCRIPTED.hook));
+      setStep(10);
+      return;
+    }
+
+    if (step === 10) {
+      setStep(11);
+      return;
+    }
   }; 
 
   const handleCollect = () => {
@@ -387,7 +432,7 @@ export default function DeadMansDrawTutorial() {
         currentState={currentState}
         canReveal={step === 2 || step === 3}
         canCollect={step === 7}
-        glowingDeck={step === 2}
+        glowingDeck={step === 2 || step === 3}
         glowingCollect={step === 7}
         onReveal={handleReveal}
         onCollect={handleCollect}
@@ -448,7 +493,7 @@ export default function DeadMansDrawTutorial() {
             <RotateCcw className="h-4 w-4" />
             {lang === "fa" ? "شروع دوباره" : "Restart"}
           </Button> */}
-          {[1, 4, 5, 6, 9, 10].includes(step) ? (
+          {[1,2,3,4,5,6,7,8,9,10].includes(step) ? (
             <Button onClick={handleContinue} className="pointer-events-auto">
               {lang === "fa" ? "ادامه" : "Continue"}
             </Button>
@@ -481,33 +526,29 @@ export default function DeadMansDrawTutorial() {
         </div>
       ) : null}
 
-      {step === 11 ? (
-        <div className="fixed inset-x-0 bottom-4 z-50 flex justify-center px-4">
-          <div className="pointer-events-auto w-full max-w-4xl rounded-[30px] border border-fuchsia-300/25 bg-[linear-gradient(180deg,rgba(10,16,28,0.96),rgba(5,8,18,0.96))] p-4 shadow-[0_24px_50px_rgba(2,6,23,0.55)] backdrop-blur-md">
-            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-              {POWER_ORDER.map((ring) => {
-                const visual = POWER_VISUALS[ring];
-                return (
-                  <button
-                    key={ring}
-                    type="button"
-                    onClick={() => setSelectedPower(ring)}
-                    className={`rounded-[24px] border p-3 text-left transition hover:-translate-y-1 ${selectedPower === ring ? "border-amber-300 bg-amber-400/10" : "border-white/10 bg-black/20"}`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <img src={visual.character} alt={visual.label} className="h-16 w-16 rounded-2xl object-cover" />
-                      <div>
-                        <p className="font-cinzel text-amber-100">{visual.label}</p>
-                        <p className="mt-1 text-xs text-white/70">{t(getPowerAbilityKey(ring))}</p>
-                      </div>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-      ) : null}
+{step === 11 ? (
+  <div className="fixed inset-x-0 bottom-2 z-50 flex justify-center px-2">
+    <div
+      className={cn(
+        "pointer-events-auto w-full max-w-4xl rounded-[24px] border border-fuchsia-300/25",
+        "bg-[linear-gradient(180deg,rgba(10,16,28,0.96),rgba(5,8,18,0.96))]",
+        "p-2.5 shadow-[0_18px_40px_rgba(2,6,23,0.55)] backdrop-blur-md",
+        "origin-bottom scale-[0.8]"
+      )}
+    >
+      <PowerChoiceScreen
+        playerName={getPlayerDisplayName(0)}
+        playerIndex={0}
+        options={POWER_ORDER.slice(0, 2)}
+        onSelect={(ring) => setSelectedPower(ring)}
+        locked={false}
+        t={t}
+        // compact
+      />
+    </div>
+  </div>
+) : null}
+
     </div>
   );
 }

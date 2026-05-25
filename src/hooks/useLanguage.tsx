@@ -586,6 +586,9 @@ const translations = {
     en: "Different ways to learn the rules and strategies",
   },
   // ...
+  accountSectionTitle: { fa: "حساب", en: "Account" },
+gameSectionTitle: { fa: "بازی", en: "Game" },
+
 
   logoutConfirmStay: { fa: "ماندن", en: "Stay" },
   logoutConfirmApprove: { fa: "خروج از حساب", en: "Log Out the Account" },
@@ -791,11 +794,13 @@ const translations = {
   deadMansDrawFirstCard: { fa: "اول", en: "First" },
   deadMansDrawSecondCard: { fa: "دوم", en: "Second" },
   deadMansDrawThirdCard: { fa: "سوم", en: "Third" },
+  deadMansDrawVisibleCards: { fa: "کارت‌های قابل دیدن", en: "Visible Cards" },
   deadMansDrawRevealTopCard: { fa: "رو کردن کارت بالا", en: "Reveal top card" },
   deadMansDrawCollectNow: { fa: "الان جمع کن", en: "Collect now" },
   deadMansDrawTargetPlayer: { fa: "بازیکن هدف {{player}}", en: "Target player {{player}}" },
   deadMansDrawChooseStashCard: { fa: "یک کارت از انبار خودت انتخاب کن", en: "Choose a card from your stash" },
   deadMansDrawChooseBurnedCard: { fa: "یک کارت سوخته برای بازی دوباره انتخاب کن", en: "Choose a burnt card to replay" },
+  deadMansDrawChooseBurnedCardTitle: { fa: "کارت سوخته را انتخاب کنید", en: "Choose a Burned Card" },
   deadMansDrawExplorerLabel: { fa: "کاوشگر {{number}}", en: "Explorer {{number}}" },
   deadMansDrawCardCount: { fa: "{{count}} کارت", en: "{{count}} cards" },
   deadMansDrawStackTopValue: { fa: "بالاترین امتیاز: {{value}}", en: "Top value: {{value}}" },
@@ -932,6 +937,7 @@ const translations = {
   deadMansDrawTutorialLabel: { fa: "آموزش کامل", en: "Full tutorial" },
   deadMansDrawTutorialTitle: { fa: "آموزش مرحله‌به‌مرحلهٔ Dead Man's Draw", en: "Step-by-step Dead Man's Draw tutorial" },
   deadMansDrawTutorialIntro: { fa: "اگر اولین بار است بازی می‌کنی، این ۸ مرحله تو را از شروع بازی تا امتیازگیری نهایی جلو می‌برد. قدرت‌های ویژه هم داخل همین آموزش آمده‌اند.", en: "If this is your first game, these 8 steps take you from setup to final scoring. The special powers are included inside the tutorial too." },
+  deadMansDrawWalkthroughProgress: { fa: "آموزش {{current}} / {{total}}", en: "Walkthrough {{current}} / {{total}}" },
   tutorialStep: { fa: "مرحله {{current}} از {{total}}", en: "Step {{current}} of {{total}}" },
   tutorialPrev: { fa: "قبلی", en: "Previous" },
   tutorialNext: { fa: "بعدی", en: "Next" },

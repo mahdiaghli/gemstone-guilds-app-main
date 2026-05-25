@@ -19,26 +19,26 @@ import {
   getCurrentRewardState,
   type ShopSection,
 } from "@/lib/shop";
-import bannerImage from "@/assets/banner.png";
-import coinImage from "@/assets/coin.png";
-import coinStackImage from "@/assets/5coins.png";
-import coinBagImage from "@/assets/bag of coins.png";
-import coinChestImage from "@/assets/chest of coins.png";
-import coinComboImage from "@/assets/chest and bag of coins.png";
-import coinDoubleChestImage from "@/assets/2chests of coins.png";
-import diamondImage from "@/assets/diamond.png";
-import diamondTripleImage from "@/assets/3gems.png";
-import diamondBagImage from "@/assets/bag of diamonds.png";
-import diamondChestImage from "@/assets/chest of diamonds.png";
-import diamondComboImage from "@/assets/chest and bag of diamonds.png";
-import diamondDoubleChestImage from "@/assets/2chests of diamonds.png";
-import merchantImage from "@/assets/merchant.png";
-import merchantGirlImage from "@/assets/merchant girl.png";
-import merchantTwoImage from "@/assets/merchant2.png";
-import merchantGirlTwoImage from "@/assets/merchant girl2.png";
-import merchantThreeImage from "@/assets/merchant3.png";
-import merchantGirlThreeImage from "@/assets/merchant girl3.png";
-import fireImage from "@/assets/fire.png";
+import bannerImage from "@/assets/banner.webp";
+import coinImage from "@/assets/coin.webp";
+import coinStackImage from "@/assets/5coins.webp";
+import coinBagImage from "@/assets/bag of coins.webp";
+import coinChestImage from "@/assets/chest of coins.webp";
+import coinComboImage from "@/assets/chest and bag of coins.webp";
+import coinDoubleChestImage from "@/assets/2chests of coins (1).webp";
+import diamondImage from "@/assets/diamond.webp";
+import diamondTripleImage from "@/assets/3gems.webp";
+import diamondBagImage from "@/assets/bag of diamonds.webp";
+import diamondChestImage from "@/assets/chest of diamonds.webp";
+import diamondComboImage from "@/assets/chest and bag of diamonds.webp";
+import diamondDoubleChestImage from "@/assets/2chests of diamonds.webp";
+import merchantImage from "@/assets/merchant.webp";
+import merchantGirlImage from "@/assets/merchant girl.webp";
+import merchantTwoImage from "@/assets/merchant2.webp";
+import merchantGirlTwoImage from "@/assets/merchant girl2.webp";
+import merchantThreeImage from "@/assets/merchant3.webp";
+import merchantGirlThreeImage from "@/assets/merchant girl3.webp";
+import fireImage from "@/assets/fire.webp";
 
 const sectionParamMap: Record<string, ShopSection["id"]> = {
   coins: "coins",

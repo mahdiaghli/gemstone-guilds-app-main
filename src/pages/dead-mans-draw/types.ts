@@ -122,6 +122,7 @@ export type DeadMansDrawBoardViewProps = {
 
 export type DeadMansDrawSummaryModalProps = {
   open: boolean;
+  dir: "ltr" | "rtl";
   t: Translate;
   tutorialSteps: number[];
   tutorialStep: number;
@@ -132,6 +133,7 @@ export type DeadMansDrawSummaryModalProps = {
 
 export type DeadMansDrawExitModalProps = {
   open: boolean;
+  dir: "ltr" | "rtl";
   t: Translate;
   onClose: () => void;
   onLeave: () => void;

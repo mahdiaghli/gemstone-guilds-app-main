@@ -20,9 +20,9 @@ import {
 } from "@/lib/gameLogic";
 import SplendorGameShell from "@/pages/game/SplendorGameShell";
 import splendorBackground from "@/assets/background-game-splendor.png";
-import backcard1Img from "@/assets/backcard1.png";
-import backcard2Img from "@/assets/backcard2.png";
-import backcard3Img from "@/assets/backcard3.png";
+import backcard1Img from "@/assets/backcard1.webp";
+import backcard2Img from "@/assets/backcard2.webp";
+import backcard3Img from "@/assets/backcard3.webp";
 import { gemTokenImages } from "@/components/game/GemToken";
 
 const FIRST_CARD_ID = "tutorial-first-card";
@@ -63,15 +63,27 @@ const makeBonusCard = (id: string, gemBonus: Card["gemBonus"]): Card =>
   makeCard(id, 1, gemBonus, {}, 0);
 
 const createTutorialState = (): GameState => {
-  const firstCard = makeCard(FIRST_CARD_ID, 1, "ruby", {
-    diamond: 1,
-    sapphire: 1,
-    emerald: 1,
-  }, 1);
-  const secondCard = makeCard(SECOND_CARD_ID, 1, "onyx", {
-    ruby: 2,
-    onyx: 2,
-  }, 1);
+  const firstCard = makeCard(
+    FIRST_CARD_ID,
+    1,
+    "ruby",
+    {
+      diamond: 1,
+      sapphire: 1,
+      emerald: 1,
+    },
+    1,
+  );
+  const secondCard = makeCard(
+    SECOND_CARD_ID,
+    1,
+    "onyx",
+    {
+      ruby: 2,
+      onyx: 2,
+    },
+    1,
+  );
   const reservedCard = makeCard(
     RESERVED_CARD_ID,
     2,
@@ -197,10 +209,10 @@ export default function SplendorStepByStepTutorial() {
           lang === "fa"
             ? "کارت‌ها سه سطح دارند: سطح‌های بالاتر معمولاً امتیاز بیشتر و هزینهٔ بیشتری دارند."
             : "Cards come in three levels. Higher levels usually cost more but give more points.",
-        helper:
-          lang === "fa"
-            ? "به سه ردیف کارت با قاب‌های متفاوت نگاه کنید."
-            : "Look at the three rows of cards with different backs.",
+        // helper:
+        //   lang === "fa"
+        //     ? "به سه ردیف کارت با قاب‌های متفاوت نگاه کنید."
+        //     : "Look at the three rows of cards with different backs.",
         cta: lang === "fa" ? "بعدی" : "Next",
       },
       2: {
@@ -212,10 +224,10 @@ export default function SplendorStepByStepTutorial() {
           lang === "fa"
             ? "۱) گرفتن ۳ ژتون متفاوت، یا ۲) گرفتن ۲ ژتون هم‌رنگ، یا ۳) خرید یک کارت، یا ۴) رزرو یک کارت و گرفتن یک ژتون طلا."
             : "1) take 3 different tokens, 2) take 2 of a same token, 3) buy a card, or 4) reserve a card and gain a gold token.",
-        helper:
-          lang === "fa"
-            ? "در مراحل بعد هر کدام از این کارها را جداگانه تمرین می‌کنید."
-            : "You’ll practice each of these actions in the next steps.",
+        // helper:
+        //   lang === "fa"
+        //     ? "در مراحل بعد هر کدام از این کارها را جداگانه تمرین می‌کنید."
+        //     : "You’ll practice each of these actions in the next steps.",
         cta: lang === "fa" ? "شروع حرکت‌ها" : "Start actions",
       },
       3: {
@@ -225,12 +237,13 @@ export default function SplendorStepByStepTutorial() {
             : "1. Take 3 different tokens",
         body:
           lang === "fa"
-            ? "این‌جا فقط یک الماس سفید، یک یاقوت آبی و یک زمرد سبز بردارید. سایر گزینه‌ها در این گام غیرفعال است. اگر بیشتر  از 10 ژتون داشته باشید، باید ژتون های اضافی را برگردانید."
-            : "Here, take exactly one diamond, one sapphire, and one emerald. if you have more than 10 tokens, you should give the extra tokens back.",
-        helper:
-          lang === "fa"
-            ? "روی سه ژتون درخشان کلیک کنید و سپس دکمهٔ Take را بزنید."
-            : "Click the three glowing tokens, then press Take.",
+            ? "در این مرحله به صورت خودکار یک الماس سفید، یک یاقوت آبی و یک زمرد سبز برداشته می‌شود تا این حرکت را ببینید."
+            : "In this step the game will automatically take one diamond, one sapphire, and one emerald to demonstrate this action.",
+        // helper:
+        //   lang === "fa"
+        //     ? "ژتون‌های درخشان را نگاه کنید، سپس روی «بعدی» بزنید."
+        //     : "Watch the glowing tokens, then press Next.",
+        cta: lang === "fa" ? "بعدی" : "Next",
       },
       4: {
         title:
@@ -239,8 +252,13 @@ export default function SplendorStepByStepTutorial() {
             : "2. Buy a card",
         body:
           lang === "fa"
-            ? "فقط کارت پایینِ سمت راست فعال است. با سه ژتونی که گرفتید، آن را بخرید تا یک پاداش دائمی قرمز بگیرید."
-            : "Only the bottom-right card is active. Buy it with your three tokens to gain a permanent red bonus.",
+            ? "کارت پایینِ سمت راست به صورت خودکار با سه ژتون برداشته‌شده خریداری می‌شود و یک پاداش قرمز دائمی می‌گیرید."
+            : "The bottom-right card will be bought automatically using your three tokens, giving you a permanent red bonus.",
+        // helper:
+        //   lang === "fa"
+        //     ? "کارت درخشان را نگاه کنید، سپس روی «بعدی» بزنید."
+        //     : "Watch the glowing card, then press Next.",
+        cta: lang === "fa" ? "بعدی" : "Next",
       },
       5: {
         title:
@@ -249,8 +267,13 @@ export default function SplendorStepByStepTutorial() {
             : "3. Take 2 same-color tokens",
         body:
           lang === "fa"
-            ? "حالا دقیقاً 2 ژتون قهوه ای بردارید تا قانون گرفتن دو ژتون هم‌رنگ را ببینید."
-            : "Now take exactly two onyx tokens. it's possible when there are 4 tokens or more of that token.",
+            ? "در این مرحله، دو ژتون قهوه‌ای (اونیكس) به صورت خودکار برداشته می‌شود تا قانون گرفتن دو ژتون هم‌رنگ را ببینید."
+            : "In this step, two onyx tokens will be taken automatically to demonstrate taking two tokens of the same color.",
+        // helper:
+        //   lang === "fa"
+        //     ? "به ژتون‌های قهوه‌ای درخشان نگاه کنید، سپس روی «بعدی» بزنید."
+        //     : "Watch the glowing onyx tokens, then press Next.",
+        cta: lang === "fa" ? "بعدی" : "Next",
       },
       6: {
         title:
@@ -259,8 +282,13 @@ export default function SplendorStepByStepTutorial() {
             : "Buy the next card",
         body:
           lang === "fa"
-            ? "کارت پایینِ سمت راست به ۲ قرمز و ۲ قهوه ای نیاز دارد. پاداش قرمز دائمی شما هم در حسابِ هزینه شمرده می‌شود."
-            : "The bottom-right card costs 2 red and 2 onyx. Your permanent red bonus also counts toward this cost.",
+            ? "کارت پایینِ سمت راست که به ۲ قرمز و ۲ قهوه‌ای نیاز دارد، به صورت خودکار با پاداش‌ها و ژتون‌های شما خریداری می‌شود."
+            : "The bottom-right card, costing 2 red and 2 onyx, will be bought automatically using your bonuses and tokens.",
+        // helper:
+        //   lang === "fa"
+        //     ? "کارت درخشان را نگاه کنید، سپس روی «بعدی» بزنید."
+        //     : "Watch the glowing card, then press Next.",
+        cta: lang === "fa" ? "بعدی" : "Next",
       },
       7: {
         title:
@@ -269,15 +297,15 @@ export default function SplendorStepByStepTutorial() {
             : "4. Reserve a card",
         body:
           lang === "fa"
-            ? "با رزرو کردن کارت، آن را کنار دست خود نگه می‌دارید و یک ژتون طلا می‌گیرید که می‌تواند جای هر رنگی استفاده شود. روی کارت رزرو شده در دستتان در پایین صفحه کلیک کنید."
-            : "Reserving keeps a card just for you and gives you a gold token that can act as any color. click the reserved card in your hand at the bottom of the page",
-        helper:
-          lang === "fa"
-            ? "روی کارت درخشان کلیک کنید تا آن را رزرو کنید."
-            : "Click the glowing card to reserve it.",
+            ? "کارت مشخص‌شده به صورت خودکار برای شما رزرو می‌شود و یک ژتون طلا می‌گیرید که می‌تواند جای هر رنگی استفاده شود."
+            : "The highlighted card will be reserved automatically for you, and you gain a gold token that can act as any color.",
+        // helper:
+        //   lang === "fa"
+        //     ? "کارت درخشان و ژتون طلایی را نگاه کنید، سپس روی «بعدی» بزنید."
+        //     : "Watch the glowing card and the gold token, then press Next.",
+        cta: lang === "fa" ? "بعدی" : "Next",
       },
       8: {
-        // فقط نجیب‌ها
         title:
           lang === "fa"
             ? "نجیب‌ها"
@@ -286,14 +314,13 @@ export default function SplendorStepByStepTutorial() {
           lang === "fa"
             ? "وقتی با کارت‌های خود(نه ژتون ها)، شرایط یک نجیب را برآورده کنید، او خودکار به شما می‌پیوندد و امتیاز آن را به دست می آورید."
             : "When your cards (not tokens) meet a noble’s requirement, they join you automatically and give you points.",
-        helper:
-          lang === "fa"
-            ? "به نجیب درخشان در بالا نگاه کنید؛ وقتی شرایطش را داشته باشید خودکار به شما اضافه می‌شود."
-            : "Watch the glowing noble above; once you meet their requirement, they join you automatically.",
+        // helper:
+        //   lang === "fa"
+        //     ? "به نجیب درخشان در بالا نگاه کنید؛ وقتی شرایطش را داشته باشید خودکار به شما اضافه می‌شود."
+            // : "Watch the glowing noble above; once you meet their requirement, they join you automatically.",
         cta: lang === "fa" ? "بعدی" : "Next",
       },
       9: {
-        // پایان بازی، استپ جداگانه
         title:
           lang === "fa"
             ? "پایان بازی"
@@ -389,17 +416,20 @@ export default function SplendorStepByStepTutorial() {
     };
   }, []);
 
-  const spawnFlight = useCallback((flight: Omit<TutorialFlightAnimation, "id">) => {
-    const id = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-    setFlightAnimations((current) => [...current, { ...flight, id }]);
-    const timeoutId = window.setTimeout(() => {
-      setFlightAnimations((current) => current.filter((item) => item.id !== id));
-      flightTimeoutsRef.current = flightTimeoutsRef.current.filter(
-        (item) => item !== timeoutId,
-      );
-    }, FLIGHT_DURATION_MS);
-    flightTimeoutsRef.current.push(timeoutId);
-  }, []);
+  const spawnFlight = useCallback(
+    (flight: Omit<TutorialFlightAnimation, "id">) => {
+      const id = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      setFlightAnimations((current) => [...current, { ...flight, id }]);
+      const timeoutId = window.setTimeout(() => {
+        setFlightAnimations((current) => current.filter((item) => item.id !== id));
+        flightTimeoutsRef.current = flightTimeoutsRef.current.filter(
+          (item) => item !== timeoutId,
+        );
+      }, FLIGHT_DURATION_MS);
+      flightTimeoutsRef.current.push(timeoutId);
+    },
+    [],
+  );
 
   const animateTokensToPanel = useCallback(
     (gems: GemType[]) => {
@@ -435,113 +465,20 @@ export default function SplendorStepByStepTutorial() {
     [getElementCenter, spawnFlight],
   );
 
+  // این‌ها الان عملاً برای این نسخه استفاده نمی‌شن، اما نگه داشته شده‌اند
   const handleGemClick = (gem: GemType) => {
-    if (step !== 3 && step !== 5) return;
-
-    if (step === 3 && !["diamond", "sapphire", "emerald"].includes(gem)) return;
-    if (step === 5 && gem !== "onyx") return;
-
-    let nextSelected: GemType[] = selectedGems;
-    if (step === 3) {
-      nextSelected = selectedGems.includes(gem)
-        ? selectedGems.filter((item) => item !== gem)
-        : selectedGems.length >= 3
-        ? selectedGems
-        : [...selectedGems, gem];
-    } else {
-      if (selectedGems.length >= 2) return;
-      nextSelected = [...selectedGems, gem];
-    }
-
-    setSelectedGems(nextSelected);
-    updateTempPool(nextSelected);
+    // در نسخه اتوماتیک، کلیک روی ژتون‌ها کاری انجام نمی‌دهد
+    return;
   };
 
   const handleConfirmTokens = () => {
-    if (step === 3) {
-      const wanted = ["diamond", "sapphire", "emerald"];
-      const isValid =
-        selectedGems.length === 3 &&
-        wanted.every((gem) => selectedGems.includes(gem));
-      if (!isValid) return;
-
-      animateTokensToPanel(selectedGems);
-      const nextState = performTakeTokens(state, selectedGems);
-      setState(nextState);
-      setSelectedGems([]);
-      setTempPoolDisplay(null);
-      setStep(4);
-      return;
-    }
-
-    if (step === 5) {
-      const isValid =
-        selectedGems.length === 2 &&
-        selectedGems.every((gem) => gem === "onyx");
-      if (!isValid) return;
-
-      animateTokensToPanel(selectedGems);
-      const nextState = performTakeTokens(state, selectedGems);
-      setState(nextState);
-      setSelectedGems([]);
-      setTempPoolDisplay(null);
-      setStep(6);
-    }
+    // در نسخه اتوماتیک، گرفتن ژتون با دکمه بعدی انجام می‌شود
+    return;
   };
 
   const handleCardClick = (card: Card) => {
-    if (step === 4 && card.id === FIRST_CARD_ID) {
-      animateCardToPanel(card, `[data-player-bonus-slot="0-${card.gemBonus}"]`);
-      const nextState = performPurchaseCard(state, card.id);
-      if (nextState !== state) {
-        setState(nextState);
-        setStep(5);
-      }
-      return;
-    }
-
-    if (step === 6 && card.id === SECOND_CARD_ID) {
-      animateCardToPanel(card, `[data-player-bonus-slot="0-${card.gemBonus}"]`);
-      const nextState = performPurchaseCard(state, card.id);
-      if (nextState !== state) {
-        setState(nextState);
-        setStep(7);
-      }
-      return;
-    }
-
-    if (step === 7 && card.id === RESERVED_CARD_ID) {
-      setState((current) => {
-        const player = current.players[0];
-
-        if (player.reservedCards.some((c) => c.id === card.id)) {
-          return current;
-        }
-
-        const nextVisible = { ...current.visibleCards };
-        const level = card.level;
-        nextVisible[level] = nextVisible[level].filter((c) => c.id !== card.id);
-
-        const nextPlayers = [...current.players];
-        nextPlayers[0] = {
-          ...player,
-          reservedCards: [...player.reservedCards, card],
-          tokens: {
-            ...player.tokens,
-            gold: player.tokens.gold + 1,
-          },
-        };
-
-        return {
-          ...current,
-          players: nextPlayers,
-          visibleCards: nextVisible,
-        };
-      });
-
-      setStep(8);
-      return;
-    }
+    // در نسخه اتوماتیک، خرید/رزرو کارت با دکمه بعدی انجام می‌شود
+    return;
   };
 
   const finishTutorial = () => {
@@ -566,6 +503,118 @@ export default function SplendorStepByStepTutorial() {
     return lang === "fa" ? "بازیکن ۲" : "Player 2";
   };
 
+  // منطق جابه‌جا شدن استپ‌ها با انجام اتوماتیک اکشن‌ها
+  const goToNextStep = () => {
+    if (step === 0) {
+      setStep(1);
+      return;
+    }
+    if (step === 1) {
+      setStep(2);
+      return;
+    }
+    if (step === 2) {
+      setStep(3);
+      return;
+    }
+
+    // استپ ۳: خودکار گرفتن ۳ ژتون متفاوت
+    if (step === 3) {
+      const gems: GemType[] = ["diamond", "sapphire", "emerald"];
+      animateTokensToPanel(gems);
+      const nextState = performTakeTokens(state, gems);
+      setState(nextState);
+      setSelectedGems([]);
+      setTempPoolDisplay(null);
+      setStep(4);
+      return;
+    }
+
+    // استپ ۴: خودکار خرید FIRST_CARD_ID
+    if (step === 4) {
+      const card = Object.values(state.visibleCards)
+        .flat()
+        .find((c) => c.id === FIRST_CARD_ID);
+      if (card) {
+        animateCardToPanel(card, `[data-player-bonus-slot="0-${card.gemBonus}"]`);
+        const nextState = performPurchaseCard(state, card.id);
+        setState(nextState);
+      }
+      setStep(5);
+      return;
+    }
+
+    // استپ ۵: خودکار گرفتن ۲ ژتون اونیکس
+    if (step === 5) {
+      const gems: GemType[] = ["onyx", "onyx"];
+      animateTokensToPanel(gems);
+      const nextState = performTakeTokens(state, gems);
+      setState(nextState);
+      setSelectedGems([]);
+      setTempPoolDisplay(null);
+      setStep(6);
+      return;
+    }
+
+    // استپ ۶: خودکار خرید SECOND_CARD_ID
+    if (step === 6) {
+      const card = Object.values(state.visibleCards)
+        .flat()
+        .find((c) => c.id === SECOND_CARD_ID);
+      if (card) {
+        animateCardToPanel(card, `[data-player-bonus-slot="0-${card.gemBonus}"]`);
+        const nextState = performPurchaseCard(state, card.id);
+        setState(nextState);
+      }
+      setStep(7);
+      return;
+    }
+
+    // استپ ۷: خودکار رزرو کارت RESERVED_CARD_ID و گرفتن طلا
+    if (step === 7) {
+      setState((current) => {
+        const player = current.players[0];
+        const allVisibleCards = Object.values(current.visibleCards).flat();
+        const card = allVisibleCards.find((c) => c.id === RESERVED_CARD_ID);
+        if (!card) return current;
+
+        const level = card.level;
+        const nextVisible = { ...current.visibleCards };
+        nextVisible[level] = nextVisible[level].filter((c) => c.id !== card.id);
+
+        const nextPlayers = [...current.players];
+        nextPlayers[0] = {
+          ...player,
+          reservedCards: [...player.reservedCards, card],
+          tokens: {
+            ...player.tokens,
+            gold: player.tokens.gold + 1,
+          },
+        };
+
+        return {
+          ...current,
+          players: nextPlayers,
+          visibleCards: nextVisible,
+        };
+      });
+
+      setStep(8);
+      return;
+    }
+
+    if (step === 8) {
+      setStep(9);
+      return;
+    }
+
+    if (step === 9) {
+      finishTutorial();
+    }
+  };
+
+  const currentCTA = copy[step].cta;
+
   return (
     <SplendorGameShell
       dir={dir as "ltr" | "rtl"}
@@ -587,7 +636,7 @@ export default function SplendorStepByStepTutorial() {
           state={state}
           currentPlayer={currentPlayer}
           panelCount={2}
-          phase={selectedGems.length > 0 ? "selectingTokens" : "idle"}
+          phase={"idle"}
           tempPoolDisplay={tempPoolDisplay}
           selectedGems={selectedGems}
           selectedCard={null}
@@ -695,19 +744,18 @@ export default function SplendorStepByStepTutorial() {
           <p className="text-sm leading-6 text-slate-100/92">
             {copy[step].body}
           </p>
+          {copy[step].helper && (
+            <p className="mt-2 text-xs text-amber-200/80">
+              {copy[step].helper}
+            </p>
+          )}
 
           <div className="flex flex-wrap gap-2 mt-3">
-            {step === 0 && copy[step].cta ? (
-              <Button onClick={() => setStep(1)}>{copy[step].cta}</Button>
-            ) : step === 1 && copy[step].cta ? (
-              <Button onClick={() => setStep(2)}>{copy[step].cta}</Button>
-            ) : step === 2 && copy[step].cta ? (
-              <Button onClick={() => setStep(3)}>{copy[step].cta}</Button>
-            ) : step === 8 && copy[step].cta ? (
-              <Button onClick={() => setStep(9)}>{copy[step].cta}</Button>
-            ) : step === 9 && copy[step].cta ? (
-              <Button onClick={finishTutorial}>{copy[step].cta}</Button>
-            ) : null}
+            {currentCTA && (
+              <Button onClick={goToNextStep}>
+                {currentCTA}
+              </Button>
+            )}
           </div>
         </motion.div>
       </div>

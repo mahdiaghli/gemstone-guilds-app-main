@@ -1,6 +1,7 @@
 import DeadMansDrawGame from "@/pages/DeadMansDrawGame";
 import SplendorGame from "@/pages/SplendorGame";
 import BeastyBarGame from "@/pages/BeastyBarGame";
+import JungleSpeedGame from "@/pages/JungleSpeedGame";
 import { getGameById } from "@/lib/gameCatalog";
 import type { GameProps } from "@/pages/game/gamePageUtils";
 
@@ -29,6 +30,10 @@ export default function GameRouterView({ gameId, ...props }: GameRouterViewProps
 
   if (selectedGame.id === "beasty-bar") {
     return <BeastyBarGame />;
+  }
+
+  if (selectedGame.id === "totem") {
+    return <JungleSpeedGame {...props} />;
   }
 
   return <SplendorGame {...props} />;

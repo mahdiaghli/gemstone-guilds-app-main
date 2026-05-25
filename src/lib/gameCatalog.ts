@@ -36,9 +36,9 @@ export const GAME_CATALOG: GameConfig[] = [
   },
   {
     id: "totem",
-    name: "Totem",
-    subtitle: "Read the table, play symbols fast, and outmaneuver the room.",
-    badge: "Tribal",
+    name: "Jungle Speed",
+    subtitle: "Race to the totem, react first, and survive the jungle.",
+    badge: "Reaction",
     accentFrom: "#22c55e",
     accentTo: "#eab308",
   },

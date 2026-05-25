@@ -2,7 +2,8 @@ import type { DeadMansDrawCard } from "@/lib/deadMansDraw";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
 
-import { SUIT_IMAGES } from "./shared";
+import { SUIT_IMAGES, SUIT_TRANSLATION_KEYS } from "./shared";
+import { useLanguage } from "@/hooks/useLanguage";
 
 export function CardChip({
   card,
@@ -20,6 +21,7 @@ export function CardChip({
   isBusting?: boolean;
 }) {
   const suitImage = SUIT_IMAGES[card.suit];
+  const { t, dir } = useLanguage();
 
   return (
     <motion.button
@@ -43,7 +45,22 @@ export function CardChip({
       <div className="absolute inset-0 bg-gradient-to-t from-slate-950/65 via-transparent to-slate-950/10" />
       {highlighted ? <div className="absolute inset-0 bg-rose-500/10" /> : null}
       {isBusting ? <div className="absolute inset-0 bg-red-500/30 animate-pulse" /> : null}
-      <div className={cn("absolute right-2 top-2 rounded-full bg-black/75 px-2.5 py-1.5 font-cinzel font-bold text-white shadow-lg", compact ? "text-base" : "text-xl")}>{card.value}</div>
+      <div className={cn("absolute right-2 top-2 rounded-full bg-black/75 px-2.5 py-1.5 font-cinzel font-bold text-white shadow-lg", compact ? "text-base" : "text-xl")}>
+        {card.value}
+      </div>
+
+      {/* Card name at bottom */}
+      <div className={cn(
+        "absolute inset-x-0 bottom-0 flex items-center justify-center rounded-b-[18px] bg-black/60 py-1.5 px-2",
+      )}>
+        <p className={cn(
+          "truncate text-center text-xs font-medium text-white/90",
+          dir === "rtl" ? "font-persian text-sm" : "font-cinzel",
+          compact ? "text-[10px]" : "text-sm",
+        )}>
+          {t(SUIT_TRANSLATION_KEYS[card.suit])}
+        </p>
+      </div>
     </motion.button>
   );
 }

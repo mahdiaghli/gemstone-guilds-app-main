@@ -8,6 +8,7 @@ import { GameState } from '@/lib/gameData';
 import { Button } from '@/components/ui/button';
 import Game from './Game';
 import DeadMansDrawGame from './DeadMansDrawGame';
+import JungleSpeedGame from './JungleSpeedGame';
 import { useAuth } from '@/hooks/useAuth';
 import PageTopBar from '@/components/game/PageTopBar';
 import { getGameById, getGameMenuPath } from '@/lib/gameCatalog';
@@ -426,6 +427,24 @@ export default function OnlineGame() {
   if (selectedGame.id === "dead-mans-draw") {
     return (
       <DeadMansDrawGame
+        mode="online"
+        roomId={roomId}
+        playerId={playerId}
+        playerName={playerName}
+        playerIndex={playerIndex}
+        roomPlayers={roomPlayers}
+        playerNamesList={playerNamesList}
+        socket={socket}
+        serverGameState={gameState as any}
+        onGameStateChange={lastSyncedGameStateRef as any}
+        onGameEnd={leaveRoom}
+      />
+    );
+  }
+
+  if (selectedGame.id === "totem") {
+    return (
+      <JungleSpeedGame
         mode="online"
         roomId={roomId}
         playerId={playerId}

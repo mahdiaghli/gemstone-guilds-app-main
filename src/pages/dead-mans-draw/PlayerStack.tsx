@@ -3,10 +3,10 @@ import { useState } from "react";
 import { getDeadMansDrawScore, getPlayerCardCount, type DeadMansDrawPendingEffect, type DeadMansDrawPlayer, type DeadMansDrawSuit } from "@/lib/deadMansDraw";
 import { cn } from "@/lib/utils";
 import zirkhakiBackground from "@/assets/background-zirkhaki.png";
-import canonIcon from "@/assets/canon-icon.png";
+import canonIcon from "@/assets/canon-icon.webp";
 import coinIcon from "@/assets/coin-icon.png";
-import hookIcon from "@/assets/hook.png";
-import carpetIcon from "@/assets/carpet-icon.png";
+import hookIcon from "@/assets/hook-svg.png";
+import carpetIcon from "@/assets/map-icon.png";
 import ancorIcon from "@/assets/ancor-icon.png";
 import chestIcon from "@/assets/chest-icon.png";
 import keyIcon from "@/assets/key-icon.png";
@@ -111,6 +111,7 @@ export function PlayerStack({
         {Object.entries(player.collected).map(([suit, cards]) => {
           const topCard = cards[cards.length - 1];
           const highestValue = cards.length > 0 ? Math.max(...cards.map((c) => c.value)) : 0;
+          const stackValues = cards.map((card) => card.value).join(" · ");
 
           if (!topCard) {
             return (
@@ -140,7 +141,12 @@ export function PlayerStack({
                 />
                 <span className="absolute right-0 top-0 rounded-full bg-black/70 px-1 py-0.5 font-cinzel text-[10px] text-white shadow-lg">{highestValue}</span>
               </div>
-              <p className="mt-1 text-[9px] leading-3 text-amber-100/85 text-center">{cards.length}</p>
+              <p
+                className="mt-1 min-h-[1.1rem] text-center text-[8px] leading-3 text-amber-100/90"
+                title={t("deadMansDrawStackBehindValues", { values: stackValues })}
+              >
+                {stackValues}
+              </p>
             </>
           );
 

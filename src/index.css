@@ -58,43 +58,54 @@
     @apply border-border;
   }
 
+  /* فونت پیش‌فرض برای کل سایت (بخش انگلیسی) */
   body {
     @apply bg-background text-foreground;
     font-family: Georgia, "Times New Roman", serif;
   }
 
-  /* .font-cinzel {
-    font-family: Georgia, "Times New Roman", serif;
-  }
+  /* ===== کلاس‌های مختلف فونت فارسی (بدون دانلود) ===== */
+  /* هر کدام ترکیبی از فونت‌های معمول روی ویندوز/مک/لینوکس است */
 
-  .font-body {
-    font-family: Georgia, "Times New Roman", serif;
-  }
-
+  /* کلاس اصلی که قبلاً استفاده می‌کردی */
   .font-persian {
-    font-family: Tahoma, "Segoe UI", sans-serif;
-  } */
+    font-family: Tahoma, "Segoe UI", "IRANSans", "B Nazanin",
+      "B Mitra", "Arial", sans-serif;
+  }
 
-  /* [dir="rtl"] body,
-  [dir="rtl"] .font-body {
-    font-family: Tahoma, "Segoe UI", sans-serif;
-  } */
+  /* نسخه‌های جایگزین برای تست */
+  .font-persian-tahoma {
+    font-family: Tahoma, "Segoe UI", Arial, sans-serif;
+  }
 
-  /* [dir="rtl"] .font-cinzel {
-    font-family: Tahoma, "Segoe UI", sans-serif;
-    font-weight: 700;
-  }  */
+  .font-persian-segoe {
+    font-family: "Segoe UI", Tahoma, Arial, sans-serif;
+  }
 
+  .font-persian-arial {
+    font-family: Arial, "Helvetica Neue", Helvetica, Tahoma, sans-serif;
+  }
+
+  .font-persian-system {
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+      Tahoma, sans-serif;
+  }
+
+  .font-persian-georgia {
+    font-family: Georgia, "Times New Roman", "IRANSans", Tahoma, serif;
+  }
+
+  /* پیش‌فرض برای تمام متن RTL (فارسی) */
+  [dir="rtl"],
+  [dir="rtl"] * {
+    /* این‌جا یکی از کلاس‌ها را به عنوان پایه گذاشتم */
+    font-family: Tahoma, "Segoe UI", "IRANSans", "B Nazanin",
+      "B Mitra", "Arial", sans-serif;
+  }
+
+  /* اندازه‌ی پایه متن در LTR */
   [dir="ltr"] {
     font-size: 17px;
-  }
-
-  [dir="rtl"] {
-    font-family: Tahoma, "Segoe UI", sans-serif;
-  }
-
-  .font-persian {
-    font-family: Tahoma, "Segoe UI", sans-serif;
   }
 }
 

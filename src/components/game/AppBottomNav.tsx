@@ -22,7 +22,7 @@ export default function AppBottomNav({ currentPath }: AppBottomNavProps) {
   const { t, dir } = useLanguage();
 
   return (
-    <div className="fixed inset-x-0 bottom-0 z-50 px-3 pb-4" dir={dir}>
+    <div className="fixed inset-x-0 bottom-0 z-50 px-3 pb-4" dir="ltr">
       {/* کانتینر اصلی نوار */}
       <div
         className={cn(

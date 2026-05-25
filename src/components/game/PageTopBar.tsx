@@ -10,7 +10,8 @@ import cupIcon from "@/assets/cup.png";
 import { useAuth } from "@/hooks/useAuth";
 import { useLanguage } from "@/hooks/useLanguage";
 import { readPlayerExtras } from "@/lib/playerExtras";
-import rankIcon from "@/assets/boronze rank.png"; // مسیر درست آیکن ربات
+// import rankIcon from "@/assets/boronze rank.png"; // مسیر درست آیکن ربات
+import rankIcon from "@/assets/boronze rank.webp"; // مسیر درست آیکن ربات
 
 import {
   getLevelFromXp,
@@ -78,7 +79,7 @@ export default function PageTopBar() {
   <>
     <div
       className={cn("fixed inset-x-0 top-0 z-50 px-2 pt-2 sm:px-3 md:px-4", dir === "rtl" ? "font-persian" : "")}
-      dir={dir}
+  dir="ltr"   // 👈 جهت این تاپ‌بار را همیشه LTR نگه می‌داریم
     >
       <div className="mx-auto flex w-full max-w-md flex-col gap-1 sm:max-w-lg md:max-w-6xl">
         {/* ردیف بالا: Coins + Gems وسط، Settings گوشه راست */}
@@ -145,14 +146,24 @@ export default function PageTopBar() {
             {/* Level */}
             <div className="flex-1 flex items-center justify-center">
               <div className="flex w-full flex-col rounded-2xl border border-primary/35 bg-black/60 px-2.5 py-1.5 text-[11px] text-foreground shadow-[0_0_12px_rgba(250,204,21,0.35)] backdrop-blur-sm">
-                <div className="flex items-center justify-between gap-2">
-                  <span className="truncate">
-                    {t("level")} {levelInfo.level}
-                  </span>
-                  <span className="shrink-0 text-[10px]">
-                    {levelInfo.currentXp}/{levelInfo.requiredXp}
-                  </span>
-                </div>
+<div className="flex items-center justify-between gap-2">
+  {/* سمت چپ: xp */}
+  <span className="shrink-0 text-[10px]">
+    {levelInfo.currentXp}/{levelInfo.requiredXp}
+  </span>
+
+  {/* سمت راست: مرحله [label راست، عدد چپ] */}
+  <span className="truncate">
+    <span className="inline-flex items-center gap-1">
+      {/* راست: متن مرحله */}
+            <span>{levelInfo.level}</span>
+
+      <span>{t("level")}</span>
+      {/* چپ: عدد مرحله */}
+    </span>
+  </span>
+</div>
+
                 <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-background/70">
                   <div
                     className="h-full rounded-full bg-gradient-to-r from-yellow-400 via-amber-300 to-emerald-300 transition-all"

@@ -311,7 +311,9 @@ export default function Friends() {
         <TabsContent value="requests">
           <div className="space-y-3">
             {requests.length === 0 && groupRequests.length === 0 && gameInvites.length === 0 && (
-              <p className="text-sm text-muted-foreground">{t("noRequestsYet")}</p>
+              <p className={dir === "rtl" ? "text-right font-persian text-sm text-muted-foreground" : "text-sm text-muted-foreground"}>
+                {t("noRequestsYet")}
+              </p>
             )}
 
             {gameInvites.map((invite) => (

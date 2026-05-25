@@ -76,7 +76,7 @@ export default function MenuSettingsDialog({
           {/* ACCOUNT SECTION */}
           <div className="space-y-2">
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-yellow-400/80">
-              Account
+    {t("accountSectionTitle")}
             </p>
 
             <div className="rounded-2xl border border-yellow-500/20 bg-gradient-to-br from-slate-900/80 via-slate-900/60 to-slate-950/90 shadow-[0_0_24px_rgba(15,23,42,0.8)] overflow-hidden">
@@ -111,7 +111,7 @@ export default function MenuSettingsDialog({
           {/* GAME & AUDIO */}
           <div className="space-y-3">
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-yellow-400/80">
-              Game
+    {t("gameSectionTitle")}
             </p>
 
             {/* LANGUAGE */}

@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import { CardChip } from "./CardChip";
 import { DeckCounter } from "./DeckCounter";
 import { PlayerStack } from "./PlayerStack";
+import { translateActionLabel } from "./helpers";
 import { SUIT_DESCRIPTION_KEYS, SUIT_IMAGES, SUIT_TRANSLATION_KEYS } from "./shared";
 import type { DeadMansDrawBoardViewProps } from "./types";
 import backgroundImage from "@/assets/background-game-splendor.png";
@@ -148,6 +149,10 @@ export function DeadMansDrawBoardView({
         ? "bottom-4"
         : "top-4";
   const highlightedSectionClass = "relative z-[41]";
+  const cardNameClass = cn(
+    "mt-2 rounded-full border px-2 py-1 text-center text-[10px] leading-4 shadow-[0_8px_18px_rgba(2,6,23,0.28)] backdrop-blur-sm",
+    dir === "rtl" ? "font-persian" : "font-cinzel",
+  );
 
   return (
     <div dir={dir} className="relative min-h-screen overflow-hidden text-white">
@@ -373,7 +378,7 @@ export function DeadMansDrawBoardView({
                 onClick={onCollect}
                 disabled={!canCollect}
                 className={cn(
-                  "h-10 w-40 rounded-2xl border-2 border-amber-400/50 bg-gradient-to-br from-amber-500/20 to-amber-600/30 text-lg font-bold text-amber-100 shadow-[0_0_30px_rgba(251,191,36,0.4),0_8px_24px_rgba(2,6,23,0.5)] transition-all hover:scale-105 hover:shadow-[0_0_40px_rgba(251,191,36,0.6),0_12px_32px_rgba(2,6,23,0.6)] disabled:opacity-50 disabled:hover:scale-100",
+                  "h-10 w-41 rounded-2xl border-2 border-amber-400/50 bg-gradient-to-br from-amber-500/20 to-amber-600/30 text-lg font-bold text-amber-100 shadow-[0_0_30px_rgba(251,191,36,0.4),0_8px_24px_rgba(2,6,23,0.5)] transition-all hover:scale-105 hover:shadow-[0_0_40px_rgba(251,191,36,0.6),0_12px_32px_rgba(2,6,23,0.6)] disabled:opacity-50 disabled:hover:scale-100",
                   glowingCollect && "ring-2 ring-amber-300/80 shadow-[0_0_38px_rgba(251,191,36,0.95)] animate-[gem-pulse_1.5s_ease-in-out_infinite]",
                 )}
               >
@@ -381,20 +386,16 @@ export function DeadMansDrawBoardView({
                 <span className="">{t("deadMansDrawCollect")}</span>
               </Button>
             </div>
-<div className="mt-1 flex justify-center px-3">
-  <div
-    className="
-      w-[210px]
-      rounded-2xl border border-white/10 bg-slate-950/55
-      px-4 py-1
-      text-center text-sm text-slate-100/85
-      shadow-[0_10px_24px_rgba(2,6,23,0.35)]
-      break-words whitespace-normal
-    "
-  >
-    {currentState.lastAction}
-  </div>
-</div>
+            <div className="mt-1 flex justify-center px-3">
+              <div
+                className={cn(
+                  "w-[210px] rounded-2xl border border-white/10 bg-slate-950/55 px-4 py-1 text-sm text-slate-100/85 shadow-[0_10px_24px_rgba(2,6,23,0.35)] break-words whitespace-normal",
+                  dir === "rtl" ? "font-persian text-right" : "text-center",
+                )}
+              >
+                {translateActionLabel(currentState.lastAction, t)}
+              </div>
+            </div>
 
           </motion.div>
 
@@ -438,6 +439,7 @@ export function DeadMansDrawBoardView({
 
             <div
               className="mt-4 grid grid-cols-4 gap-2"
+              dir="ltr"
               data-dead-draw-treasure-grid="true"
             >
               {visibleTreasureArea.length ? (
@@ -497,22 +499,27 @@ export function DeadMansDrawBoardView({
                       }}
                       className="w-full"
                     >
-                      <CardChip
-                        card={card}
-                        compact
-                        highlighted={highlightedTreasureIds.has(
-                          card.id,
-                        )}
-                        isBusting={highlightedTreasureIds.has(card.id)}
-                        onClick={() =>
-                          onToggleTreasureHelp(card.id)
-                        }
-                        className={
-                          selectedTreasureHelpId === card.id
-                            ? "border-amber-300/70 shadow-[0_0_0_2px_rgba(252,211,77,0.35),0_10px_30px_rgba(2,6,23,0.35)]"
-                            : undefined
-                        }
-                      />
+                      <div className="flex flex-col items-center">
+                        <CardChip
+                          card={card}
+                          compact
+                          highlighted={highlightedTreasureIds.has(
+                            card.id,
+                          )}
+                          isBusting={highlightedTreasureIds.has(card.id)}
+                          onClick={() =>
+                            onToggleTreasureHelp(card.id)
+                          }
+                          className={
+                            selectedTreasureHelpId === card.id
+                              ? "border-amber-300/70 shadow-[0_0_0_2px_rgba(252,211,77,0.35),0_10px_30px_rgba(2,6,23,0.35)]"
+                              : undefined
+                          }
+                        />
+                        {/* <p className={cn(cardNameClass, "border-amber-300/20 bg-amber-400/10 text-amber-50/95")}>
+                          {t(SUIT_TRANSLATION_KEYS[card.suit])}
+                        </p> */}
+                      </div>
                     </motion.div>
                   </div>
                 ))
@@ -631,7 +638,12 @@ export function DeadMansDrawBoardView({
                         disabled={decisionDisabled}
                         className="rounded-[24px] border border-rose-200/30 bg-white/5 p-1 transition hover:-translate-y-1 hover:border-rose-200/60 disabled:cursor-not-allowed disabled:opacity-60"
                       >
-                        <CardChip card={card} compact />
+                        <div className="flex flex-col items-center">
+                          <CardChip card={card} compact />
+                          <p className={cn(cardNameClass, "border-rose-200/25 bg-rose-400/10 text-rose-50/95")}>
+                            {t(SUIT_TRANSLATION_KEYS[card.suit])}
+                          </p>
+                        </div>
                       </button>
                     ))}
                 </div>
@@ -653,9 +665,7 @@ export function DeadMansDrawBoardView({
             {pendingEffect.kind === "astrolabe" ? (
               <div className="space-y-4">
                 <p className="text-center text-xs uppercase tracking-[0.24em] text-teal-100/70 font-cinzel">
-                  {dir === "rtl"
-                    ? "کارت‌های قابل دیدن"
-                    : "Visible Cards"}
+                  {t("deadMansDrawVisibleCards")}
                 </p>
                 <div className="grid grid-cols-3 gap-2">
                   {pendingEffect.peekCards.map((card, index) => (
@@ -670,18 +680,23 @@ export function DeadMansDrawBoardView({
                             ? t("deadMansDrawSecondCard")
                             : t("deadMansDrawThirdCard")}
                       </p>
-                      <div className="mx-auto w-fit rounded-[22px] border border-teal-200/25 bg-white/5 p-1 shadow-[0_10px_24px_rgba(2,6,23,0.35)]">
-                        <CardChip card={card} compact />
+                      <div className="mx-auto flex w-fit flex-col items-center">
+                        <div className="rounded-[22px] border border-teal-200/25 bg-white/5 p-1 shadow-[0_10px_24px_rgba(2,6,23,0.35)]">
+                          <CardChip card={card} compact />
+                        </div>
+                        <p className={cn(cardNameClass, "border-teal-200/25 bg-teal-400/10 text-teal-50/95")}>
+                          {t(SUIT_TRANSLATION_KEYS[card.suit])}
+                        </p>
                       </div>
                     </div>
                   ))}
                 </div>
-                <div className="flex flex-wrap justify-center gap-3">
+                <div className="grid grid-cols-2 gap-3">
                   <Button
                     variant="game"
                     onClick={onAstrolabeReveal}
                     disabled={decisionDisabled}
-                    className="min-w-40 rounded-2xl border border-teal-200/35 bg-gradient-to-br from-teal-500/35 to-sky-500/30 shadow-[0_10px_24px_rgba(13,148,136,0.32)]"
+                    className="w-full rounded-2xl border border-teal-200/35 bg-gradient-to-br from-teal-500/35 to-sky-500/30 shadow-[0_10px_24px_rgba(13,148,136,0.32)]"
                   >
                     {t("deadMansDrawRevealTopCard")}
                   </Button>
@@ -689,7 +704,7 @@ export function DeadMansDrawBoardView({
                     variant="ghost"
                     onClick={onAstrolabeCollect}
                     disabled={decisionDisabled}
-                    className="min-w-40 rounded-2xl border border-amber-300/35 bg-amber-400/12 text-amber-50 shadow-[0_10px_24px_rgba(245,158,11,0.18)] hover:bg-amber-400/18"
+                    className="w-full rounded-2xl border border-amber-300/35 bg-amber-400/12 text-amber-50 shadow-[0_10px_24px_rgba(245,158,11,0.18)] hover:bg-amber-400/18"
                   >
                     {t("deadMansDrawCollectNow")}
                   </Button>
@@ -700,9 +715,7 @@ export function DeadMansDrawBoardView({
             {pendingEffect.kind === "map" ? (
               <div className="space-y-3">
                 <p className="text-center text-xs uppercase tracking-[0.24em] text-amber-100/70 font-cinzel">
-                  {dir === "rtl"
-                    ? "کارت سوخته را انتخاب کنید"
-                    : "Choose a Burned Card"}
+                  {t("deadMansDrawChooseBurnedCardTitle")}
                 </p>
                 <div className="flex flex-wrap justify-center gap-3">
                   {pendingEffect.options.map((card) => (
@@ -713,7 +726,12 @@ export function DeadMansDrawBoardView({
                       disabled={decisionDisabled}
                       className="rounded-[24px] border border-amber-200/30 bg-white/5 p-1 transition hover:-translate-y-1 hover:border-amber-200/60 disabled:cursor-not-allowed disabled:opacity-60"
                     >
-                      <CardChip card={card} compact />
+                      <div className="flex flex-col items-center">
+                        <CardChip card={card} compact />
+                        <p className={cn(cardNameClass, "border-amber-200/25 bg-amber-400/10 text-amber-50/95")}>
+                          {t(SUIT_TRANSLATION_KEYS[card.suit])}
+                        </p>
+                      </div>
                     </button>
                   ))}
                 </div>
