@@ -1,7 +1,7 @@
-import backcard1Img from "@/assets/backcard1.png";
-import backcard2Img from "@/assets/backcard2.png";
-import backcard3Img from "@/assets/backcard3.png";
-import royalCardBackImg from "@/assets/Gemini_Generated_Image_5om85h5om85h5om8.png";
+import backcard1Img from "@/assets/backcard1.webp";
+import backcard2Img from "@/assets/backcard2.webp";
+import backcard3Img from "@/assets/backcard3.webp";
+import royalCardBackImg from "@/assets/Gemini_Generated_Image_5om85h5om85h5om8.webp";
 
 export type CardBackId = "classic" | "royal";
 

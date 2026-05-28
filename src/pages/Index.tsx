@@ -7,9 +7,9 @@ import { useLanguage } from "@/hooks/useLanguage";
 import PageTopBar from "@/components/game/PageTopBar";
 import AppBottomNav from "@/components/game/AppBottomNav";
 import robotIcon from "@/assets/play with robots.webp";
-import localIcon from "@/assets/two player.png";
-import onlineIcon from "@/assets/internet.png";
-import tutorialIcon from "@/assets/manual.png";
+import localIcon from "@/assets/two player.webp";
+import onlineIcon from "@/assets/internet.webp";
+import tutorialIcon from "@/assets/manual.webp";
 import { findGameById, getGameById } from "@/lib/gameCatalog";
 import { getPageBackground } from "@/lib/pageBackgrounds";
 

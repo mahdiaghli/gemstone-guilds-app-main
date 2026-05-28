@@ -344,34 +344,34 @@ export function GroupsFindView({
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: index * 0.04 }}
-            className="rounded-[32px] border border-primary/20 bg-card/70 p-4 shadow-xl backdrop-blur"
+            className="overflow-hidden rounded-[32px] border border-primary/20 bg-[radial-gradient(circle_at_top_right,rgba(251,191,36,0.18),transparent_34%),linear-gradient(135deg,rgba(15,23,42,0.88),rgba(30,41,59,0.72))] p-4 shadow-[0_24px_70px_rgba(2,6,23,0.42)] backdrop-blur"
           >
             <div className={`flex flex-col gap-4 ${dir === "rtl" ? "text-right" : ""}`}>
               <div className={`flex items-start justify-between gap-3 ${dir === "rtl" ? "flex-row-reverse" : ""}`}>
                 <div className={`flex items-center gap-3 ${dir === "rtl" ? "flex-row-reverse" : ""}`}>
-                  <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10">{renderFlag(group.flag, group.name)}</div>
+                  <div className="flex h-16 w-16 items-center justify-center rounded-3xl border border-primary/25 bg-primary/10 shadow-[0_0_24px_rgba(251,191,36,0.16)]">{renderFlag(group.flag, group.name)}</div>
                   <div>
                     <div className={`flex items-center gap-2 ${dir === "rtl" ? "flex-row-reverse justify-end" : ""}`}>
                       <h3 className="text-lg font-semibold">{group.name}</h3>
                       {group.visibility !== "public" && <Lock className="h-4 w-4 text-muted-foreground" />}
                     </div>
                     <p className="mt-1 text-xs text-muted-foreground">{t("groupCode")}: {group.code}</p>
-                    <p className="mt-2 text-sm text-muted-foreground">{group.description || t("noDescription")}</p>
+                    <p className="mt-2 line-clamp-3 text-sm leading-6 text-muted-foreground">{group.description || t("noDescription")}</p>
                   </div>
                 </div>
                 <button
                   type="button"
                   onClick={() => navigator.clipboard.writeText(group.code)}
-                  className="rounded-full border border-primary/20 p-2 text-primary"
+                  className="rounded-full border border-primary/25 bg-background/40 p-2 text-primary transition hover:bg-primary/10"
                 >
                   <Copy className="h-4 w-4" />
                 </button>
               </div>
 
-              <div className={`flex flex-wrap gap-3 text-xs text-muted-foreground ${dir === "rtl" ? "justify-end" : ""}`}>
-                <span className="inline-flex items-center gap-1"><Users className="h-3.5 w-3.5" /> {group.members.length}</span>
-                <span className="inline-flex items-center gap-1"><img src={cupImg} alt="cup" className="h-3.5 w-3.5 object-contain" /> {t("minimumEntryScore")}: {group.minScore}</span>
-                <span className="inline-flex items-center gap-1"><img src={cupImg} alt="cup" className="h-3.5 w-3.5 object-contain" /> {t("scoresLabel")}: {getGroupScore(group)}</span>
+              <div className={`flex flex-wrap gap-2 text-xs text-muted-foreground ${dir === "rtl" ? "justify-end" : ""}`}>
+                <span className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-background/35 px-3 py-1"><Users className="h-3.5 w-3.5" /> {group.members.length}</span>
+                <span className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-background/35 px-3 py-1"><img src={cupImg} alt="cup" className="h-3.5 w-3.5 object-contain" /> {t("minimumEntryScore")}: {group.minScore}</span>
+                <span className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-background/35 px-3 py-1"><img src={cupImg} alt="cup" className="h-3.5 w-3.5 object-contain" /> {t("scoresLabel")}: {getGroupScore(group)}</span>
               </div>
 
               <div className="flex flex-wrap gap-2">
@@ -502,21 +502,33 @@ export function PlayerInfoDetails({
   t: (key: string) => string;
 }) {
   return (
-    <div className={`space-y-4 ${dir === "rtl" ? "text-right" : ""}`}>
+    <div className={`overflow-hidden rounded-[30px] border border-primary/20 bg-[radial-gradient(circle_at_top,rgba(56,189,248,0.18),transparent_38%),linear-gradient(135deg,rgba(15,23,42,0.92),rgba(30,41,59,0.78))] p-5 shadow-2xl ${dir === "rtl" ? "text-right" : ""}`}>
       <div className={`flex items-center gap-4 ${dir === "rtl" ? "flex-row-reverse" : ""}`}>
-        <Avatar className="h-20 w-20 border border-primary/20">
+        <Avatar className="h-20 w-20 border-2 border-primary/35 shadow-[0_0_28px_rgba(56,189,248,0.2)]">
           <AvatarImage src={getUserAvatar(playerInfo.id)} alt={playerInfo.username} />
           <AvatarFallback>{playerInfo.username.slice(0, 1)}</AvatarFallback>
         </Avatar>
-        <div className="space-y-1 text-sm text-muted-foreground">
-          <p>{t("scoresLabel")}: {readProgress(playerInfo.id).points}</p>
-          <p>{t("coinsLabel")}: {readProgress(playerInfo.id).coins}</p>
-          <p>{t("gemsLabel")}: {readPlayerExtras(playerInfo.id).gems}</p>
-          <p>{t("level")}: {getLevelFromXp(readProgress(playerInfo.id).xp)}</p>
-          <p>{t("userCode")}: {getUserCode(playerInfo.id)}</p>
-          <p>{t("emailLabel")}: {playerInfo.email || t("noEmailSaved")}</p>
-          <p>{t("memberSince")}: {playerInfo.createdAt ? new Date(playerInfo.createdAt).toLocaleDateString() : "-"}</p>
+        <div className="min-w-0 flex-1">
+          <h3 className="truncate text-2xl font-semibold text-primary">{playerInfo.username}</h3>
+          <p className="mt-1 text-xs text-muted-foreground">{t("userCode")}: {getUserCode(playerInfo.id)}</p>
         </div>
+      </div>
+      <div className="mt-5 grid grid-cols-2 gap-2 text-sm">
+        {[
+          [t("scoresLabel"), readProgress(playerInfo.id).points],
+          [t("coinsLabel"), readProgress(playerInfo.id).coins],
+          [t("gemsLabel"), readPlayerExtras(playerInfo.id).gems],
+          [t("level"), getLevelFromXp(readProgress(playerInfo.id).xp)],
+        ].map(([label, value]) => (
+          <div key={String(label)} className="rounded-2xl border border-white/10 bg-background/35 px-3 py-2">
+            <p className="text-xs text-muted-foreground">{label}</p>
+            <p className="mt-1 font-semibold text-foreground">{value}</p>
+          </div>
+        ))}
+      </div>
+      <div className="mt-3 space-y-2 rounded-2xl border border-white/10 bg-background/30 p-3 text-sm text-muted-foreground">
+        <p>{t("emailLabel")}: {playerInfo.email || t("noEmailSaved")}</p>
+        <p>{t("memberSince")}: {playerInfo.createdAt ? new Date(playerInfo.createdAt).toLocaleDateString() : "-"}</p>
       </div>
     </div>
   );
@@ -552,15 +564,18 @@ export function GroupInfoCard({
   const isCreator = currentUserId === infoGroup.creatorId;
 
   return (
-    <div className="rounded-[32px] border border-primary/20 bg-card/80 p-5 shadow-2xl backdrop-blur">
+    <div className="overflow-hidden rounded-[32px] border border-primary/20 bg-[radial-gradient(circle_at_top_right,rgba(251,191,36,0.20),transparent_34%),linear-gradient(135deg,rgba(15,23,42,0.94),rgba(30,41,59,0.82))] p-5 shadow-2xl backdrop-blur">
       <div className={`flex items-start justify-between gap-3 ${dir === "rtl" ? "flex-row-reverse" : ""}`}>
         <div className={dir === "rtl" ? "text-right" : ""}>
-          <h3 className="flex items-center gap-2 font-cinzel text-xl text-primary">{renderFlag(infoGroup.flag, infoGroup.name)} <span>{infoGroup.name}</span></h3>
-          <div className={`mt-2 flex flex-wrap gap-3 text-xs text-muted-foreground ${dir === "rtl" ? "justify-end" : ""}`}>
-            <span>{t("groupCode")}: {infoGroup.code}</span>
-            <span>{t("groupStatus")}: {getVisibilityLabel(infoGroup.visibility)}</span>
-            <span>{t("minimumEntryScore")}: {infoGroup.minScore}</span>
-            <span>{t("scoresLabel")}: {getGroupScore(infoGroup)}</span>
+          <h3 className={`flex items-center gap-3 text-2xl text-primary ${dir === "rtl" ? "flex-row-reverse font-persian" : "font-cinzel"}`}>
+            <span className="flex h-14 w-14 items-center justify-center rounded-2xl border border-primary/25 bg-primary/10">{renderFlag(infoGroup.flag, infoGroup.name)}</span>
+            <span>{infoGroup.name}</span>
+          </h3>
+          <div className={`mt-3 flex flex-wrap gap-2 text-xs text-muted-foreground ${dir === "rtl" ? "justify-end" : ""}`}>
+            <span className="rounded-full border border-white/10 bg-background/35 px-3 py-1">{t("groupCode")}: {infoGroup.code}</span>
+            <span className="rounded-full border border-white/10 bg-background/35 px-3 py-1">{t("groupStatus")}: {getVisibilityLabel(infoGroup.visibility)}</span>
+            <span className="rounded-full border border-white/10 bg-background/35 px-3 py-1">{t("minimumEntryScore")}: {infoGroup.minScore}</span>
+            <span className="rounded-full border border-white/10 bg-background/35 px-3 py-1">{t("scoresLabel")}: {getGroupScore(infoGroup)}</span>
           </div>
         </div>
         <div className="flex gap-2">

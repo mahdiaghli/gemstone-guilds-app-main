@@ -31,8 +31,8 @@ import { getWinRate, readPlayerAnalytics } from "@/lib/playerAnalytics";
 import { getUserCode } from "@/lib/social";
 import { getLevelFromXp, getLevelProgress, readProgress } from "@/lib/progression";
 
-import avatarArt from "@/assets/avatar.png";
-import fireArt from "@/assets/fire.png";
+import avatarArt from "@/assets/avatar.webp";
+import fireArt from "@/assets/fire.webp";
 
 // اگر type برای t سخت‌گیر است، این helper کمک می‌کند fallback داشته باشیم
 function useSafeT() {

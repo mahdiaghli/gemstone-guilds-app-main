@@ -4,9 +4,9 @@ import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 
 import MenuSettingsDialog from "@/components/game/MenuSettingsDialog";
-import coinIcon from "@/assets/coin.png";
-import diamondIcon from "@/assets/diamond.png";
-import cupIcon from "@/assets/cup.png";
+import coinIcon from "@/assets/coin.webp";
+import diamondIcon from "@/assets/diamond.webp";
+import cupIcon from "@/assets/cup.webp";
 import { useAuth } from "@/hooks/useAuth";
 import { useLanguage } from "@/hooks/useLanguage";
 import { readPlayerExtras } from "@/lib/playerExtras";
@@ -22,7 +22,7 @@ import {
 
 export default function PageTopBar() {
   const { user } = useAuth();
-  const { t, dir } = useLanguage();
+  const { t, dir, lang } = useLanguage();
   const navigate = useNavigate();
   const [progress, setProgress] = useState<PlayerProgress>({
     points: 0,
@@ -146,23 +146,17 @@ export default function PageTopBar() {
             {/* Level */}
             <div className="flex-1 flex items-center justify-center">
               <div className="flex w-full flex-col rounded-2xl border border-primary/35 bg-black/60 px-2.5 py-1.5 text-[11px] text-foreground shadow-[0_0_12px_rgba(250,204,21,0.35)] backdrop-blur-sm">
-<div className="flex items-center justify-between gap-2">
-  {/* سمت چپ: xp */}
-  <span className="shrink-0 text-[10px]">
-    {levelInfo.currentXp}/{levelInfo.requiredXp}
-  </span>
-
-  {/* سمت راست: مرحله [label راست، عدد چپ] */}
-  <span className="truncate">
-    <span className="inline-flex items-center gap-1">
-      {/* راست: متن مرحله */}
-            <span>{levelInfo.level}</span>
-
-      <span>{t("level")}</span>
-      {/* چپ: عدد مرحله */}
-    </span>
-  </span>
-</div>
+                <div className="flex items-center justify-between gap-2">
+                  <span className="truncate">
+                    <span className={cn("inline-flex items-center gap-1", lang === "fa" ? "flex-row-reverse" : "")}>
+                      <span>{t("level")}</span>
+                      <span>{levelInfo.level}</span>
+                    </span>
+                  </span>
+                  <span className="shrink-0 text-[10px]" dir="ltr">
+                    {levelInfo.currentXp}/{levelInfo.requiredXp}
+                  </span>
+                </div>
 
                 <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-background/70">
                   <div

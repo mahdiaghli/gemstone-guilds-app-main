@@ -1,6 +1,6 @@
-import splendorBackground from "@/assets/background-game-splendor.png";
-import deadMansDrawBackground from "@/assets/background-zirkhaki.png";
-import defaultBackground from "@/assets/background.png";
+import splendorBackground from "@/assets/background-game-splendor.webp";
+import deadMansDrawBackground from "@/assets/background-zirkhaki.webp";
+import defaultBackground from "@/assets/background.webp";
 
 import type { GameId } from "@/lib/gameCatalog";
 

@@ -1,5 +1,5 @@
 import { API_SERVER_URL } from "@/lib/socketConfig";
-import defaultAvatar from "@/assets/avatar.png";
+import defaultAvatar from "@/assets/avatar.webp";
 import { readPlayerExtras } from "@/lib/playerExtras";
 import { getLevelFromXp, readProgress } from "@/lib/progression";
 

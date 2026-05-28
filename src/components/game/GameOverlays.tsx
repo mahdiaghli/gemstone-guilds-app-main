@@ -91,6 +91,7 @@ export default function GameOverlays({
   gameOverActions,
   postGameNoticeDialog,
 }: GameOverlaysProps) {
+  const isPersian = t("level") === "مرحله";
   const currentPlayerBonuses = getPlayerBonuses(currentPlayer);
   const selectedCardCostStatus: Partial<Record<GemType, boolean>> | undefined = selectedCard
     ? Object.fromEntries(
@@ -108,11 +109,6 @@ export default function GameOverlays({
   } as const;
 
   const showReturnDrawer = phase === "mustReturnTokens" && !state.gameOver;
-  const showWaitingDrawer =
-    !showReturnDrawer &&
-    !state.gameOver &&
-    gameMode === "online" &&
-    !isCurrentPlayerMe();
   const resolvedGameOverActions = gameOverActions ?? [
     { key: "play-again", label: t("playAgain"), onClick: onPlayAgain, variant: "game" as const },
     { key: "menu", label: t("menu"), onClick: onMenu, variant: "ghost" as const },
@@ -121,7 +117,7 @@ export default function GameOverlays({
   return (
     <>
       <AnimatePresence>
-        {(showReturnDrawer || showWaitingDrawer) && (
+        {showReturnDrawer && (
           <motion.div
             initial={{ opacity: 0, y: -120 }}
             animate={{ opacity: 1, y: 0 }}
@@ -130,43 +126,28 @@ export default function GameOverlays({
             className="fixed inset-x-0 top-0 z-40 flex justify-center px-4 pt-20"
           >
             <div
-              className={`w-full max-w-3xl rounded-b-[28px] border px-5 py-4 shadow-2xl backdrop-blur-md ${
-                showReturnDrawer
-                  ? "border-red-400/40 bg-[linear-gradient(180deg,rgba(127,29,29,0.96),rgba(69,10,10,0.94))]"
-                  : "border-amber-300/40 bg-[linear-gradient(180deg,rgba(120,53,15,0.95),rgba(67,20,7,0.93))]"
-              }`}
+              className="w-full max-w-3xl rounded-b-[28px] border border-red-400/40 bg-[linear-gradient(180deg,rgba(127,29,29,0.96),rgba(69,10,10,0.94))] px-5 py-4 shadow-2xl backdrop-blur-md"
             >
-              {showReturnDrawer ? (
-                <>
-                  <div className="text-center">
-                    <p className="font-cinzel text-lg tracking-[0.18em] text-red-100">Return Tokens</p>
-                    <p className="mt-1 text-sm text-red-50/85">
-                      {t("tooManyTokens")} ({getTotalTokens(currentPlayer)} / 10)
-                    </p>
-                  </div>
-                  <div className="mt-4 flex flex-wrap justify-center gap-2">
-                    {TOKEN_TYPES.map(
-                      (type) =>
-                        currentPlayer.tokens[type] > 0 && (
-                          <GemToken
-                            key={type}
-                            type={type}
-                            count={currentPlayer.tokens[type]}
-                            size="sm"
-                            onClick={() => handleReturnToken(type)}
-                          />
-                        ),
-                    )}
-                  </div>
-                </>
-              ) : (
-                <div className="text-center">
-                  <p className="font-cinzel text-lg tracking-[0.18em] text-amber-100">Wait For Your Turn</p>
-                  <p className="mt-1 text-sm text-amber-50/85">
-                    {getPlayerDisplayName(stateCurrentPlayerIndex)} is playing right now.
-                  </p>
-                </div>
-              )}
+              <div className="text-center">
+                <p className="font-cinzel text-lg tracking-[0.18em] text-red-100">Return Tokens</p>
+                <p className="mt-1 text-sm text-red-50/85">
+                  {t("tooManyTokens")} ({getTotalTokens(currentPlayer)} / 10)
+                </p>
+              </div>
+              <div className="mt-4 flex flex-wrap justify-center gap-2">
+                {TOKEN_TYPES.map(
+                  (type) =>
+                    currentPlayer.tokens[type] > 0 && (
+                      <GemToken
+                        key={type}
+                        type={type}
+                        count={currentPlayer.tokens[type]}
+                        size="sm"
+                        onClick={() => handleReturnToken(type)}
+                      />
+                    ),
+                )}
+              </div>
             </div>
           </motion.div>
         )}
@@ -212,7 +193,10 @@ export default function GameOverlays({
               animate={{ scale: 1, y: 0, opacity: 1 }}
               exit={{ scale: 0.95, y: 20, opacity: 0 }}
               transition={{ type: "spring", damping: 18 }}
-              className="w-full max-w-lg rounded-2xl border border-primary/30 p-6 shadow-2xl"
+              dir={isPersian ? "rtl" : "ltr"}
+              className={`w-full max-w-lg rounded-2xl border border-primary/30 p-6 shadow-2xl ${
+                isPersian ? "mr-0 ml-auto text-right" : ""
+              }`}
               style={modalBackgroundStyle}
               onClick={(event) => event.stopPropagation()}
             >
@@ -226,7 +210,7 @@ export default function GameOverlays({
                 <li>• {t("quickRulesNobles")}</li>
                 <li>• {t("quickRulesWin")}</li>
               </ul>
-              <div className="mt-6 flex justify-end">
+              <div className={`mt-6 flex ${isPersian ? "justify-start" : "justify-end"}`}>
                 <Button variant="game" onClick={onCloseQuickRules}>
                   {t("quickRulesClose")}
                 </Button>
@@ -332,18 +316,20 @@ export default function GameOverlays({
               </p>
               <div className="space-y-2">
                 {state.players.map((player) => (
-                  <div key={player.id} className="flex items-center justify-between text-sm">
-                    <div className="text-left">
+                  <div key={player.id} className="flex items-center justify-between gap-3 text-sm">
+                    <div className="min-w-0 text-left">
                       <span className="text-muted-foreground">
                         {getPlayerDisplayName(player.id)}
+                      </span>
+                    </div>
+                    <div className="text-right">
+                      <span className="font-bold text-foreground">
+                        {getPlayerScore(player)} {t("pts")}
                       </span>
                       <p className="text-xs text-muted-foreground">
                         {t("splendorBoughtCardsLine", { count: player.cards.length })}
                       </p>
                     </div>
-                    <span className="font-bold text-foreground">
-                      {getPlayerScore(player)} {t("pts")}
-                    </span>
                   </div>
                 ))}
               </div>

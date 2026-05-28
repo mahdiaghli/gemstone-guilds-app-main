@@ -40,6 +40,20 @@ export default function Chat({
   const [newMessage, setNewMessage] = useState("");
   const [hasUnread, setHasUnread] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const palette = [
+    "border-sky-400/25 bg-sky-500/15 text-sky-100",
+    "border-emerald-400/25 bg-emerald-500/15 text-emerald-100",
+    "border-amber-400/25 bg-amber-500/15 text-amber-100",
+    "border-fuchsia-400/25 bg-fuchsia-500/15 text-fuchsia-100",
+  ];
+
+  const getPlayerColorClass = (id: string) => {
+    let hash = 0;
+    for (let index = 0; index < id.length; index += 1) {
+      hash = (hash + id.charCodeAt(index) * (index + 1)) % palette.length;
+    }
+    return palette[hash];
+  };
 
   // Listen for chat messages
   useEffect(() => {
@@ -120,7 +134,7 @@ export default function Chat({
   const panel = (
     <div
       className={cn(
-        "w-[min(20rem,calc(100vw-2rem))] rounded-lg border border-border bg-card shadow-lg flex flex-col max-h-96",
+        "w-[min(22rem,calc(100vw-2rem))] rounded-2xl border border-border bg-card shadow-lg flex flex-col max-h-[28rem] overflow-hidden",
         lang === "fa" && "text-right",
       )}
     >
@@ -154,33 +168,48 @@ export default function Chat({
       </div>
 
       {/* Messages */}
-      <ScrollArea className="flex-1 p-3">
-        <div className="space-y-3">
+      <ScrollArea className="h-72 flex-1 p-3">
+        <div className="flex min-h-full flex-col gap-3">
           {messages.length === 0 && (
             <div className="text-center text-muted-foreground text-xs py-4">
               {t("noMessagesYet")}
             </div>
           )}
-          {messages.map((msg) => (
-            <div key={msg.id} className="text-xs">
+          {messages.map((msg) => {
+            const mine = msg.playerId === playerId;
+            return (
               <div
-                className={cn(
-                  "flex gap-2",
-                  lang === "fa" ? "flex-row-reverse" : "flex-row",
-                )}
+                key={msg.id}
+                className={cn("flex text-xs", mine ? "justify-end" : "justify-start")}
               >
-                <span className="font-semibold text-primary flex-1">
-                  {msg.playerName}
-                </span>
-                <span className="text-muted-foreground text-[10px] whitespace-nowrap">
-                  {formatTime(msg.timestamp)}
-                </span>
+                <div
+                  className={cn(
+                    "max-w-[82%] rounded-2xl border px-3 py-2 shadow-sm",
+                    getPlayerColorClass(msg.playerId),
+                    mine ? "rounded-br-sm" : "rounded-bl-sm",
+                  )}
+                >
+                  <div className={cn("mb-1 flex items-center gap-2", lang === "fa" ? "flex-row-reverse" : "")}>
+                    <span className="min-w-0 flex-1 truncate font-semibold">
+                      {msg.playerName}
+                    </span>
+                    <span className="shrink-0 text-[10px] text-white/55">
+                      {formatTime(msg.timestamp)}
+                    </span>
+                  </div>
+                  <p
+                    className={cn(
+                      "whitespace-pre-wrap break-words leading-relaxed text-slate-100 [overflow-wrap:anywhere]",
+                      lang === "fa" ? "text-right" : "text-left",
+                    )}
+                    dir={lang === "fa" ? "rtl" : "ltr"}
+                  >
+                    {msg.message}
+                  </p>
+                </div>
               </div>
-              <p className="text-muted-foreground break-words leading-relaxed">
-                {msg.message}
-              </p>
-            </div>
-          ))}
+            );
+          })}
           <div ref={scrollRef} />
         </div>
       </ScrollArea>

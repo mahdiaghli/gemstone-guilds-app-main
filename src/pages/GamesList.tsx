@@ -7,14 +7,14 @@ import { useLanguage } from "@/hooks/useLanguage";
 import { GAME_CATALOG } from "@/lib/gameCatalog";
 import { shellBackgrounds } from "@/lib/pageBackgrounds";
 import deadMansDrawImage from "@/assets/background-zirkhaki.png";
-import splendorWidePoster from "@/assets/wide-poster-splendor.png";
-import splendorSquarePoster from "@/assets/poster-square-splendor (4).png";
-import deadMansDrawWidePoster from "@/assets/poster-wide-zirkhaki.png";
-import deadMansDrawSquarePoster from "@/assets/poster-square-zirkhaki.png";
-import totemImage from "@/assets/play with robots.png";
-import beastyBarImage from "@/assets/play with robots.png";
+import splendorWidePoster from "@/assets/wide-poster-splendor.webp";
+import splendorSquarePoster from "@/assets/poster-square-splendor (4).webp";
+import deadMansDrawWidePoster from "@/assets/poster-wide-zirkhaki.webp";
+import deadMansDrawSquarePoster from "@/assets/poster-square-zirkhaki.webp";
+import totemImage from "@/assets/play with robots.webp";
+import beastyBarImage from "@/assets/play with robots.webp";
 import coupImage from "@/assets/card2.png";
-import ticketImage from "@/assets/banner.png";
+import ticketImage from "@/assets/banner.webp";
 
 const GAME_IMAGES: Record<string, string> = {
   splendor: splendorSquarePoster,

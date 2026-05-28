@@ -1,4 +1,4 @@
-import backCardZirkhaki from "@/assets/backCard-zirkhaki.png";
+import backCardZirkhaki from "@/assets/backCard-zirkhaki.webp";
 import { cn } from "@/lib/utils";
 
 export function DeckCounter({

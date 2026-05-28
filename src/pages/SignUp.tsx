@@ -6,16 +6,16 @@ import { useAuth } from "@/hooks/useAuth";
 import { useLanguage } from "@/hooks/useLanguage";
 
 import splendorBg from "@/assets/background.png"; 
-import gameLogo from "@/assets/logo.png";    
+import gameLogo from "@/assets/logo.webp";    
 
-import avatar1 from "@/assets/merchant.png";
-import avatar2 from "@/assets/merchant2.png";
-import avatar3 from "@/assets/merchant girl.png";
+import avatar1 from "@/assets/merchant.webp";
+import avatar2 from "@/assets/merchant2.webp";
+import avatar3 from "@/assets/merchant girl.webp";
 
 
-import emailImage from "@/assets/email.png";
-import userImage from "@/assets/user.png";
-import lockImage from "@/assets/lock.png";
+import emailImage from "@/assets/email.webp";
+import userImage from "@/assets/user.webp";
+import lockImage from "@/assets/lock.webp";
 
 export default function SignUp() {
   const navigate = useNavigate();

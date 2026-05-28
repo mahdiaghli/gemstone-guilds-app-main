@@ -1,4 +1,4 @@
-import defaultAvatar from "@/assets/avatar.png";
+import defaultAvatar from "@/assets/avatar.webp";
 import { syncSelectedAvatar } from "@/lib/social";
 import type { CardBackId } from "@/lib/cosmetics";
 

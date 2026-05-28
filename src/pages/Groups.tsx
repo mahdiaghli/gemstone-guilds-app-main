@@ -31,17 +31,17 @@ import {
   updateGroupRemote,
   type GroupEntry,
 } from "@/lib/social";
-import cupImg from "@/assets/cup.png";
-import flag1Img from "@/assets/flag1.png";
-import flag2Img from "@/assets/flag2.png";
-import flag3Img from "@/assets/flag3.png";
-import flag4Img from "@/assets/flag4.png";
-import flag5Img from "@/assets/flag5.png";
-import flag6Img from "@/assets/flag6.png";
-import flag7Img from "@/assets/flag7.png";
-import flag8Img from "@/assets/flag8.png";
-import flag9Img from "@/assets/flag9.png";
-import flag10Img from "@/assets/flag10.png";
+import cupImg from "@/assets/cup.webp";
+import flag1Img from "@/assets/flag1.webp";
+import flag2Img from "@/assets/flag2.webp";
+import flag3Img from "@/assets/flag3.webp";
+import flag4Img from "@/assets/flag4.webp";
+import flag5Img from "@/assets/flag5.webp";
+import flag6Img from "@/assets/flag6.webp";
+import flag7Img from "@/assets/flag7.webp";
+import flag8Img from "@/assets/flag8.webp";
+import flag9Img from "@/assets/flag9.webp";
+import flag10Img from "@/assets/flag10.webp";
 
 type GroupSettingsDraft = {
   name: string;

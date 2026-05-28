@@ -1,5 +1,5 @@
 import type { GameState, GemType, Card } from "@/lib/gameData";
-import merchantImage from "@/assets/merchant.png";
+import merchantImage from "@/assets/merchant.webp";
 import { awardCoins } from "@/lib/progression";
 import { CardBackId } from "@/lib/cosmetics";
 import { readPlayerExtras, updatePlayerExtras } from "@/lib/playerExtras";

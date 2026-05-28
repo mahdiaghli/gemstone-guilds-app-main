@@ -8,11 +8,11 @@ import { getGameEntryFee, payGameEntryFee } from "@/lib/progression";
 import { AIDifficulty } from "@/lib/aiPlayer";
 import { Button } from "@/components/ui/button";
 import PageTopBar from "@/components/game/PageTopBar";
-import easyIcon from "@/assets/easy game.png";
-import mediumIcon from "@/assets/medium game.png";
-import hardIcon from "@/assets/hard game.png";
-import manualRoomIcon from "@/assets/manual.png";
-import matchmakingIcon from "@/assets/internet.png";
+import easyIcon from "@/assets/easy game.webp";
+import mediumIcon from "@/assets/medium game.webp";
+import hardIcon from "@/assets/hard game.webp";
+import manualRoomIcon from "@/assets/manual.webp";
+import matchmakingIcon from "@/assets/internet.webp";
 import { getGameById } from "@/lib/gameCatalog";
 import { getPageBackground } from "@/lib/pageBackgrounds";
 

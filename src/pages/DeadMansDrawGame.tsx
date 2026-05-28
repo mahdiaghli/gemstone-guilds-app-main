@@ -30,6 +30,7 @@ import { recordFinishedGame } from "@/lib/playerAnalytics";
 import { DeadMansDrawBoardView } from "./dead-mans-draw/DeadMansDrawBoardView";
 import {
   DeadMansDrawExitModal,
+  DeadMansDrawSummaryModal,
 } from "./dead-mans-draw/DeadMansDrawOverlays";
 import { PowerChoiceScreen } from "./dead-mans-draw/PowerChoiceScreen";
 import { PowerTargetScreen } from "./dead-mans-draw/PowerTargetScreen";
@@ -53,6 +54,8 @@ export default function DeadMansDrawGame(props: DeadMansDrawGameProps = {}) {
   const initialState = useMemo(() => initializeDeadMansDrawGame(playerCount, true), [playerCount]);
   const [localState, setLocalState] = useState<DeadMansDrawState>(initialState);
   const [showExitConfirm, setShowExitConfirm] = useState(false);
+  const [summaryOpen, setSummaryOpen] = useState(false);
+  const [summaryStep, setSummaryStep] = useState(0);
   const [selectedTreasureHelpId, setSelectedTreasureHelpId] = useState<string | null>(null);
   const [bustPreview, setBustPreview] = useState<{ cards: DeadMansDrawCard[]; highlightIds: string[] } | null>(null);
   const bustPreviewTimerRef = useRef<number | null>(null);
@@ -653,7 +656,18 @@ export default function DeadMansDrawGame(props: DeadMansDrawGameProps = {}) {
             originSelector: `[data-dead-draw-player-slot="${currentState.currentPlayerIndex}-${suit}"]`,
           });
         }}
+        onOpenSummary={() => setSummaryOpen(true)}
         onOpenExit={() => setShowExitConfirm(true)}
+      />
+      <DeadMansDrawSummaryModal
+        open={summaryOpen}
+        dir={dir}
+        t={t}
+        tutorialSteps={[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]}
+        tutorialStep={summaryStep}
+        onNext={() => setSummaryStep((current) => Math.min(10, current + 1))}
+        onPrev={() => setSummaryStep((current) => Math.max(0, current - 1))}
+        onClose={() => setSummaryOpen(false)}
       />
       <DeadMansDrawExitModal
         open={showExitConfirm}

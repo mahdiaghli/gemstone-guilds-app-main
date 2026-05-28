@@ -1,12 +1,12 @@
 import type { TranslationKey } from "@/hooks/useLanguage";
 import { awardCoins } from "@/lib/progression";
 import { readPlayerExtras, updatePlayerExtras } from "@/lib/playerExtras";
-import merchantImage from "@/assets/merchant.png";
-import merchantGirlImage from "@/assets/merchant girl.png";
-import merchantTwoImage from "@/assets/merchant2.png";
-import merchantGirlTwoImage from "@/assets/merchant girl2.png";
-import merchantThreeImage from "@/assets/merchant3.png";
-import merchantGirlThreeImage from "@/assets/merchant girl3.png";
+import merchantImage from "@/assets/merchant.webp";
+import merchantGirlImage from "@/assets/merchant girl.webp";
+import merchantTwoImage from "@/assets/merchant2.webp";
+import merchantGirlTwoImage from "@/assets/merchant girl2.webp";
+import merchantThreeImage from "@/assets/merchant3.webp";
+import merchantGirlThreeImage from "@/assets/merchant girl3.webp";
 
 export interface ShopOffer {
   id: string;

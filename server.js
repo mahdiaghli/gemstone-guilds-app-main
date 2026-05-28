@@ -1101,14 +1101,7 @@ io.on("connection", (socket) => {
     console.log(`   Socket ID: ${socket.id} | نام: ${playerName}`);
 
     const existingRoom = rooms.get(roomId);
-    if (!isHost && !existingRoom) {
-      socket.emit("join-room-error", {
-        message: "Room code does not exist.",
-      });
-      return;
-    }
-
-    const room = isHost ? getOrCreateRoom(roomId) : existingRoom;
+    const room = existingRoom || getOrCreateRoom(roomId);
     if (!room) return;
 
     if (!isHost && room.status !== "waiting") {
@@ -1176,7 +1169,7 @@ io.on("connection", (socket) => {
     console.log(`🎮 [START-GAME] Starting game in room ${roomId} | شروع بازی`);
 
     const room = rooms.get(roomId);
-    if (room && room.players.size >= 2) {
+    if (room && room.players.size >= 2 && (!room.maxPlayers || room.players.size === room.maxPlayers)) {
       room.status = "playing";
       room.gameState = gameState;
 

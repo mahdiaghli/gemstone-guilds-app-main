@@ -232,6 +232,11 @@ export function useVoiceChat(
   }, [microphoneEnabled, enableMicrophone, disableMicrophone]);
 
   useEffect(() => {
+    if (!socket || microphoneEnabled) return;
+    enableMicrophone();
+  }, [socket, microphoneEnabled, enableMicrophone]);
+
+  useEffect(() => {
     if (!socket) return;
 
     const onOffer = async (data: any) => {

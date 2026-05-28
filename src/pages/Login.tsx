@@ -8,13 +8,13 @@ import { useLanguage } from "@/hooks/useLanguage";
 
 /* === IMPORT ALL IMAGES HERE === */
 import backgroundImg from "@/assets/background.png";
-// import backCardImg from "@/assets/backcard1.png"; // اگر نیاز داری در کارت استفاده شود
+// import backCardImg from "@/assets/backcard1.webp"; // اگر نیاز داری در کارت استفاده شود
 
-import gemRed from "@/assets/lock.png";
-// import gemBlue from "@/assets/gem-blue.png";
-// // import gemGreen from "@/assets/gem-green.png";
-import gemEmeraldBig from "@/assets/user.png";
-// import gemDiamond from "@/assets/gem-diamond.png";
+import gemRed from "@/assets/lock.webp";
+// import gemBlue from "@/assets/gem-blue.webp";
+// // import gemGreen from "@/assets/gem-green.webp";
+import gemEmeraldBig from "@/assets/user.webp";
+// import gemDiamond from "@/assets/gem-diamond.webp";
 /* ================================= */
 
 export default function Login() {

@@ -621,16 +621,14 @@ export default function SplendorStepByStepTutorial() {
       backgroundImage={splendorBackground}
     >
       <div className="relative">
-        {!isFirstTimeTutorial && (
           <button
             type="button"
             onClick={leaveTutorial}
-            className="fixed right-4 top-4 z-50 inline-flex h-11 w-11 items-center justify-center rounded-full border border-border/60 bg-slate-950/80 text-slate-100 shadow-lg transition-colors hover:border-amber-300/70 hover:text-amber-100"
+            className={`fixed top-4 z-50 inline-flex h-11 w-11 items-center justify-center rounded-full border border-border/60 bg-slate-950/80 text-slate-100 shadow-lg transition-colors hover:border-amber-300/70 hover:text-amber-100 ${dir === "rtl" ? "left-4" : "right-4"}`}
             aria-label={lang === "fa" ? "خروج از آموزش" : "Exit tutorial"}
           >
             <X className="h-5 w-5" />
           </button>
-        )}
         <GameBoard
           t={t}
           state={state}

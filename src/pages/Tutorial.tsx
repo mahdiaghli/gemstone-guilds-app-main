@@ -21,8 +21,8 @@ import cupImg from "@/assets/cup.webp";
 import bagImg from "@/assets/bag of money.webp";
 import card2Img from "@/assets/card2.png";
 import mindImg from "@/assets/mind.webp";
-import krakenImg from "@/assets/kraken.png";
-import chestImg from "@/assets/chest.png";
+import krakenImg from "@/assets/kraken.webp";
+import chestImg from "@/assets/chest.webp";
 
 // یک کارت عمومی برای منوی آموزش (گلاس + حاشیه رنگی)
 function TutorialMenuCard({

@@ -201,9 +201,13 @@ export default function OnlineGame() {
       setErrorMsg(t('onlyHostStart'));
       return;
     }
-    const playerCount = Object.keys(roomPlayers).length;
-    if (playerCount < 2) {
-      setErrorMsg(t('needAtLeastTwo'));
+    const joinedPlayerCount = Object.keys(roomPlayers).length;
+    if (joinedPlayerCount !== playerCount) {
+      setErrorMsg(
+        lang === 'fa'
+          ? `برای شروع این بازی باید دقیقاً ${playerCount} بازیکن حاضر باشند.`
+          : `This match needs exactly ${playerCount} players before it can start.`,
+      );
       return;
     }
     startGame(initialOnlineState as any, turnTime);
@@ -398,7 +402,7 @@ export default function OnlineGame() {
 
           {/* Controls */}
           <div className="flex gap-3">
-            {isHost && Object.keys(roomPlayers).length >= 2 && (
+            {isHost && Object.keys(roomPlayers).length === playerCount && (
               <Button onClick={handleStartGame} variant="game" className="flex-1">
                 {t("startGame")}
               </Button>
@@ -408,7 +412,7 @@ export default function OnlineGame() {
             </Button>
           </div>
 
-          {isHost && Object.keys(roomPlayers).length < 2 && (
+          {isHost && Object.keys(roomPlayers).length < playerCount && (
             <motion.div
               animate={{ opacity: [0.5, 1, 0.5] }}
               transition={{ repeat: Infinity, duration: 1.5 }}

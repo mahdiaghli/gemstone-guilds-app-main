@@ -1,12 +1,12 @@
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { GemType, GEM_INFO } from '@/lib/gameData';
-import gemDiamondImg from '@/assets/gem-diamond.png';
-import gemSapphireImg from '@/assets/gem-blue.png';
-import gemEmeraldImg from '@/assets/gem-emerald.png';
-import gemRubyImg from '@/assets/gem-red.png';
-import gemOnyxImg from '@/assets/gem-onyx.png';
-import gemGoldImg from '@/assets/gem-gold.png';
+import gemDiamondImg from '@/assets/gem-diamond.webp';
+import gemSapphireImg from '@/assets/gem-blue.webp';
+import gemEmeraldImg from '@/assets/gem-emerald.webp';
+import gemRubyImg from '@/assets/gem-red.webp';
+import gemOnyxImg from '@/assets/gem-onyx.webp';
+import gemGoldImg from '@/assets/gem-gold.webp';
 
 interface GemTokenProps {
   type: GemType | 'gold';

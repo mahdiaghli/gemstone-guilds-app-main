@@ -2,17 +2,17 @@ import { useState } from "react";
 
 import { getDeadMansDrawScore, getPlayerCardCount, type DeadMansDrawPendingEffect, type DeadMansDrawPlayer, type DeadMansDrawSuit } from "@/lib/deadMansDraw";
 import { cn } from "@/lib/utils";
-import zirkhakiBackground from "@/assets/background-zirkhaki.png";
+import zirkhakiBackground from "@/assets/background-zirkhaki.webp";
 import canonIcon from "@/assets/canon-icon.webp";
-import coinIcon from "@/assets/coin-icon.png";
+import coinIcon from "@/assets/coin-icon.webp";
 import hookIcon from "@/assets/hook-svg.png";
-import carpetIcon from "@/assets/map-icon.png";
-import ancorIcon from "@/assets/ancor-icon.png";
-import chestIcon from "@/assets/chest-icon.png";
-import keyIcon from "@/assets/key-icon.png";
-import krakenIcon from "@/assets/kraken-icon.png";
-import oracleIcon from "@/assets/oracle-icon.png";
-import swordIcon from "@/assets/sword-icon.png";
+import carpetIcon from "@/assets/map-icon.webp";
+import ancorIcon from "@/assets/ancor-icon.webp";
+import chestIcon from "@/assets/chest-icon.webp";
+import keyIcon from "@/assets/key-icon.webp";
+import krakenIcon from "@/assets/kraken-icon.webp";
+import oracleIcon from "@/assets/oracle-icon.webp";
+import swordIcon from "@/assets/sword-icon.webp";
 
 import type { Translate } from "./helpers";
 import { getPowerAbilityKey, POWER_VISUALS } from "./shared";
