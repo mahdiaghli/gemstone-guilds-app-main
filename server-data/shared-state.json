@@ -58,7 +58,8 @@
       "username": "aaa",
       "email": "laptop5",
       "password": "aaa",
-      "createdAt": "2026-04-30T20:37:16.532Z"
+      "createdAt": "2026-04-30T20:37:16.532Z",
+      "selectedAvatar": "/src/assets/merchant.webp"
     },
     {
       "id": "1777582142609",
@@ -179,6 +180,13 @@
     ]
   },
   "friendRequests": [
+    {
+      "id": "1780038178468-1777581436532-1775552047292",
+      "fromUserId": "1777581436532",
+      "toUserId": "1775552047292",
+      "createdAt": "2026-05-29T07:02:58.468Z",
+      "status": "pending"
+    },
     {
       "id": "1779196315496-1775552047292-6f010246-73ef-4202-a0c6-f809c3f396a8",
       "fromUserId": "1775552047292",

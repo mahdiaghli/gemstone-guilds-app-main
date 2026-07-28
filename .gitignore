@@ -38,3 +38,5 @@ yarn-error.log*
 
 # Ignore large zip archives
 *.zip
+
+/android/
