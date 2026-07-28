@@ -1,73 +1,230 @@
-# Welcome to your Lovable project
+# 🎲 Gemstone Guilds
 
-## Project info
+Gemstone Guilds is a modern cross-platform board game platform built with React, TypeScript, and Vite. It brings classic and modern board games into a single online experience with multiplayer gameplay, AI opponents, social features, and an intuitive interface.
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+> Built with ❤️ using React, TypeScript, Tailwind CSS, and shadcn/ui.
 
-## How can I edit this code?
+---
 
-There are several ways of editing your application.
+# ✨ Features
 
-**Use Lovable**
+## 🎮 Board Games
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
+Currently available games include:
 
-Changes made via Lovable will be committed automatically to this repo.
+- Dead Man's Draw
+- (Add other implemented games here)
 
-**Use your preferred IDE**
+Each game has its own rules, assets, and gameplay logic while sharing a common platform experience.
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+---
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+## 👥 Multiplayer
 
-Follow these steps:
+- Real-time multiplayer
+- Private game rooms
+- Invite friends
+- Join by room code
+- Match history
+- Reconnect support
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+---
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+## 🤖 Single Player
 
-# Step 3: Install the necessary dependencies.
-npm i
+- Play against AI
+- Solo challenges
+- Practice mode
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
+---
+
+## 🌐 Social Features
+
+- User authentication
+- Friends system
+- Groups / Guilds
+- Global leaderboard
+- Chat system
+- Player profiles
+- Notifications
+
+---
+
+## 🎨 User Experience
+
+- Responsive design
+- Dark / Light theme
+- Mobile-friendly UI
+- Smooth animations
+- Accessibility improvements
+
+---
+
+# 🛠 Tech Stack
+
+- React
+- TypeScript
+- Vite
+- Tailwind CSS
+- shadcn/ui
+- React Router
+- Node.js (local backend)
+- Local Storage (development)
+- Socket-ready architecture
+
+---
+
+# 📁 Project Structure
+
+```
+src/
+│
+├── assets/
+├── components/
+│   ├── game/
+│   ├── layout/
+│   ├── social/
+│   └── ui/
+│
+├── hooks/
+├── lib/
+├── pages/
+│   ├── home/
+│   ├── dead-mans-draw/
+│   ├── friends/
+│   ├── groups/
+│   ├── leaderboard/
+│   ├── profile/
+│   └── ...
+│
+├── styles/
+└── main.tsx
+```
+
+---
+
+# 🚀 Getting Started
+
+## Prerequisites
+
+- Node.js 20+
+- npm
+
+---
+
+## Installation
+
+Clone the repository
+
+```bash
+git clone <repository-url>
+```
+
+Go into the project
+
+```bash
+cd gemstone-guilds
+```
+
+Install dependencies
+
+```bash
+npm install
+```
+
+Start the development server
+
+```bash
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+Open
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+```
+http://localhost:5173
+```
 
-**Use GitHub Codespaces**
+---
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+# 📦 Production Build
 
-## What technologies are used for this project?
+```bash
+npm run build
+```
 
-This project is built with:
+Preview production build
 
-- Vite
-- TypeScript
+```bash
+npm run preview
+```
+
+---
+
+# 🖥 Local Backend
+
+Start the local development server
+
+```bash
+node server.js
+```
+
+The backend is currently intended for local development and stores data in `shared-state.json`.
+
+Future versions will migrate to PostgreSQL and a production-ready API.
+
+---
+
+# 📱 Mobile Roadmap
+
+The project is designed to be packaged as a native mobile application using **Capacitor**, allowing deployment to:
+
+- Android
+- iOS
+- Google Play
+- Bazaar
+- Myket
+- Apple App Store
+
+---
+
+# 🔮 Planned Features
+
+- Voice chat
+- Ranked matchmaking
+- Tournament mode
+- Spectator mode
+- Cloud save
+- Cross-device synchronization
+- Push notifications
+- Achievement system
+- Statistics dashboard
+- More board games
+
+---
+
+# 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Commit your changes
+4. Push the branch
+5. Open a Pull Request
+
+---
+
+# 📄 License
+
+This project is licensed under the MIT License.
+
+---
+
+# ❤️ Acknowledgements
+
+Built with:
+
 - React
-- shadcn-ui
+- Vite
 - Tailwind CSS
+- shadcn/ui
 
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+Special thanks to the open-source community.
