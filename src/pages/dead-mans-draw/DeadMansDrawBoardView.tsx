@@ -377,8 +377,9 @@ export function DeadMansDrawBoardView({
                 variant="ghost"
                 onClick={onCollect}
                 disabled={!canCollect}
+                //////////////////////
                 className={cn(
-                  "h-10 w-41 rounded-2xl border-2 border-amber-400/50 bg-gradient-to-br from-amber-500/20 to-amber-600/30 text-lg font-bold text-amber-100 shadow-[0_0_30px_rgba(251,191,36,0.4),0_8px_24px_rgba(2,6,23,0.5)] transition-all hover:scale-105 hover:shadow-[0_0_40px_rgba(251,191,36,0.6),0_12px_32px_rgba(2,6,23,0.6)] disabled:opacity-50 disabled:hover:scale-100",
+                  "h-10 w-40 rounded-2xl border-2 border-amber-400/50 bg-gradient-to-br from-amber-500/20 to-amber-600/30 text-lg font-bold text-amber-100 shadow-[0_0_30px_rgba(251,191,36,0.4),0_8px_24px_rgba(2,6,23,0.5)] transition-all hover:scale-105 hover:shadow-[0_0_40px_rgba(251,191,36,0.6),0_12px_32px_rgba(2,6,23,0.6)] disabled:opacity-50 disabled:hover:scale-100",
                   glowingCollect && "ring-2 ring-amber-300/80 shadow-[0_0_38px_rgba(251,191,36,0.95)] animate-[gem-pulse_1.5s_ease-in-out_infinite]",
                 )}
               >

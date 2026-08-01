@@ -103,7 +103,7 @@ export default function Login() {
             {/* TOP BAR */}
             <div className="mb-8 flex items-center justify-between gap-4">
               <h1 className="text-4xl font-cinzel font-bold text-[#f5d47a] drop-shadow-[0_0_10px_rgba(0,0,0,0.8)]">
-                Splendor
+                Swift
               </h1>
 
               <div className="flex items-center gap-4 text-sm text-gray-300/90">

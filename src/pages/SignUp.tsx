@@ -84,7 +84,7 @@ export default function SignUp() {
             />
 
             <h1 className="mt-4 text-3xl sm:text-4xl font-cinzel font-bold text-[#fdf2c5] drop-shadow-[0_0_10px_rgba(0,0,0,0.9)]">
-              {t("signupTitle")}
+              {"Swift"}
             </h1>
 
             <p className="mt-1 text-sm sm:text-base text-[#f6e3a0] italic">
