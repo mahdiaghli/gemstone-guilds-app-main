@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { motion } from "framer-motion";
-import { RotateCcw, X } from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { motion } from "framer-motion";
 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -17,10 +16,15 @@ import { DEAD_MANS_DRAW_SUITS } from "@/lib/deadMansDraw";
 import { CardChip } from "@/pages/dead-mans-draw/CardChip";
 import { DeadMansDrawBoardView } from "@/pages/dead-mans-draw/DeadMansDrawBoardView";
 import { PowerChoiceScreen } from "@/pages/dead-mans-draw/PowerChoiceScreen";
-import { POWER_VISUALS, getPowerAbilityKey } from "@/pages/dead-mans-draw/shared";
 
+type TutorialStep = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12;
 
-type TutorialStep = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11;
+type TutorialCopy = {
+  title: string;
+  body: string;
+  action?: string;
+  lastAction: string;
+};
 
 const SCRIPTED = {
   oracle: { id: "tutorial-oracle", suit: "astrolabe", value: 7 } as DeadMansDrawCard,
@@ -52,10 +56,13 @@ const POWER_ORDER: DeadMansDrawRing[] = [
 ];
 
 function createCollected() {
-  return DEAD_MANS_DRAW_SUITS.reduce((acc, suit) => {
-    acc[suit] = [];
-    return acc;
-  }, {} as Record<DeadMansDrawSuit, DeadMansDrawCard[]>);
+  return DEAD_MANS_DRAW_SUITS.reduce(
+    (acc, suit) => {
+      acc[suit] = [];
+      return acc;
+    },
+    {} as Record<DeadMansDrawSuit, DeadMansDrawCard[]>
+  );
 }
 
 function toCollected(cards: DeadMansDrawCard[]) {
@@ -69,6 +76,140 @@ function toCollected(cards: DeadMansDrawCard[]) {
 function appendUnique(cards: DeadMansDrawCard[], card: DeadMansDrawCard) {
   return cards.some((entry) => entry.id === card.id) ? cards : [...cards, card];
 }
+
+const ENGLISH_COPY: Record<TutorialStep, TutorialCopy> = {
+  1: {
+    title: "Step 1: How the Game Works",
+    body: "Players reveal cards from the deck. Each card has its own power, and if you reveal two cards of the same suit in one turn, the revealed cards burn and your turn ends.",
+    lastAction: "Welcome to the tutorial. Learn the game flow before touching the deck.",
+  },
+  2: {
+    title: "Step 2: Draw Deck, Collect Treasure, and Burn Pile",
+    body: "Use the Collect Treasure button to bank the cards on the table. Use the button to its left to reveal a new card. The burn pile is where busted or discarded cards go.",
+    lastAction: "Reveal the first tutorial card from the deck.",
+  },
+  3: {
+    title: "Step 3: Oracle",
+    body: "Oracle lets you see the next card before deciding whether to reveal it or collect your treasure.",
+    lastAction: "Oracle has been revealed. Draw again to see the next card.",
+  },
+  4: {
+    title: "Step 4: Kraken",
+    body: "When Kraken is revealed, you must reveal two more cards.",
+    lastAction: "Kraken is now in the treasure area. Continue when you are ready.",
+  },
+  5: {
+    title: "Step 5: Map",
+    body: "Map reveals the top three cards of the burn pile. You choose one of them and add it to your treasure.",
+    lastAction: "Map has been revealed. Continue when you are ready.",
+  },
+  6: {
+    title: "Step 6: Chest",
+    body: "If Chest and Key are both in play, then when you collect your treasure, you gain bonus cards from the burn pile equal to the number of cards currently in the treasure area.",
+    lastAction: "Chest has been revealed. Continue to learn how Anchor works.",
+  },
+  7: {
+    title: "Step 7: Anchor",
+    body: "Anchor protects the cards revealed before it. Even if you bust later by revealing two matching suits, the earlier cards are still safely collected.",
+    action: "Click Collect Treasure to bank this hand.",
+    lastAction: "Click Collect Treasure to save this hand.",
+  },
+  8: {
+    title: "Step 8: Cannon",
+    body: "Cannon lets you choose and destroy one card from your opponent.",
+    action: "Choose one of the opponent's cards to use Cannon.",
+    lastAction: "Cannon is ready. Destroy one of the opponent's cards.",
+  },
+  9: {
+    title: "Step 9: Sword",
+    body: "Sword takes one card from the opponent and moves it into the treasure area.",
+    lastAction: "Sword has been revealed. Continue to see the special powers.",
+  },
+  10: {
+    title: "Step 10: Hook",
+    body: "Hook lets you bring one of your banked cards back into play.",
+    lastAction: "Hook has been revealed. Continue to see the special powers.",
+  },
+  11: {
+    title: "Step 11: Special Powers",
+    body: "At the start of the main game, each player chooses one special power.",
+    action: "Click a power to view its description, then continue.",
+    lastAction: "Choose a special power to view its effect.",
+  },
+  12: {
+    title: "Step 12: Score and Winning",
+    body: "The values of the highest card of each suit are added together. The player with the higher total score wins. If the scores are tied, the player with more cards wins. Player panels display these scores, and clicking a portrait shows that player's special power.",
+    action: "Finish the tutorial when you are ready.",
+    lastAction: "You now know how scoring and winning work.",
+  },
+};
+
+const PERSIAN_COPY: Record<TutorialStep, TutorialCopy> = {
+  1: {
+    title: "مرحله ۱: بازی چگونه کار می‌کند",
+    body: "بازیکن‌ها از دسته کارت رو می‌کنند. هر کارت قدرت خودش را دارد و اگر در یک نوبت دو کارت هم‌شکل رو شود، کارت‌های رو شده می‌سوزند و نوبت بازیکن تمام می‌شود.",
+    lastAction: "به آموزش خوش آمدید. قبل از لمس دسته، روند بازی را یاد بگیرید.",
+  },
+  2: {
+    title: "مرحله ۲: دسته کارت، جمع گنج و پشته سوخته",
+    body: "با دکمهٔ جمع‌کردن گنج، کارت‌های روی زمین برای شما ذخیره می‌شوند. با دکمهٔ سمت چپ آن، کارت جدید رو می‌کنید. پشتهٔ سوخته محل کارت‌های سوخته یا دورریخته است.",
+    lastAction: "اولین کارت آموزشی را از دسته رو کنید.",
+  },
+  3: {
+    title: "مرحله ۳: پیشگو",
+    body: "پیشگو کارت بعدی را به شما نشان می‌دهد تا تصمیم بگیرید آن را رو کنید یا گنج خود را جمع کنید.",
+    lastAction: "پیشگو رو شده است. دوباره بکشید تا کارت بعدی را ببینید.",
+  },
+  4: {
+    title: "مرحله ۴: کراکن",
+    body: "وقتی کراکن رو شود، باید دو کارت دیگر هم رو کنید.",
+    lastAction: "کراکن در ناحیهٔ گنج قرار دارد. وقتی آماده بودید ادامه دهید.",
+  },
+  5: {
+    title: "مرحله ۵: نقشه",
+    body: "نقشه سه کارت بالایی پشتهٔ سوخته را رو می‌کند. شما یکی از آن‌ها را انتخاب می‌کنید و به گنج خود اضافه می‌کنید.",
+    lastAction: "نقشه رو شده است. وقتی آماده بودید ادامه دهید.",
+  },
+  6: {
+    title: "مرحله ۶: صندوقچه",
+    body: "اگر صندوقچه و کلید هم‌زمان در زمین باشند، هنگام جمع‌کردن کارت‌ها، به تعداد کارت‌های ناحیهٔ گنج از پشتهٔ سوخته کارت جایزه می‌گیرید.",
+    lastAction: "صندوقچه رو شده است. ادامه دهید تا نقش لنگر را ببینید.",
+  },
+  7: {
+    title: "مرحله ۷: لنگر",
+    body: "لنگر از کارت‌هایی که قبل از آن رو شده‌اند محافظت می‌کند. حتی اگر بعداً با رو شدن دو کارت هم‌شکل بسوزید.",
+    // action: "برای ذخیره این دست، روی جمع گنج کلیک کنید.",
+    lastAction: "برای ذخیره این دست، روی جمع گنج کلیک کنید.",
+  },
+  8: {
+    title: "مرحله ۸: توپ",
+    body: "با توپ می‌توانید یک کارت از حریف را انتخاب و نابود کنید.",
+    // action: "برای استفاده از توپ، یکی از کارت‌های حریف را انتخاب کنید.",
+    lastAction: "توپ آماده است. یکی از کارت‌های حریف را نابود کنید.",
+  },
+  9: {
+    title: "مرحله ۹: شمشیر",
+    body: "شمشیر یک کارت از حریف را انتخاب می‌کند و آن را وارد زمین بازی می‌کند. سکه هم امتیاز خالصه.",
+    lastAction: "شمشیر رو شده است. برای دیدن قدرت‌های ویژه ادامه دهید.",
+  },
+  10: {
+    title: "مرحله ۱۰: قلاب",
+    body: "قلاب یکی از کارت‌های ذخیره‌شدهٔ شما را دوباره وارد بازی می‌کند.",
+    lastAction: "قلاب رو شده است. برای دیدن قدرت‌های ویژه ادامه دهید.",
+  },
+  11: {
+    title: "مرحله ۱۱: قدرت‌های ویژه",
+    body: "در شروع بازی اصلی، هر بازیکن باید یک قدرت ویژه انتخاب کند.",
+    // action: "روی یکی از قدرت‌ها کلیک کنید تا توضیح آن را ببینید، سپس ادامه دهید.",
+    lastAction: "یکی از قدرت‌های ویژه را برای دیدن توضیح آن انتخاب کنید.",
+  },
+  12: {
+    title: "مرحله آخر: برنده شدن",
+    body: "امتیاز باارزش‌ترین کارت های هر شکل با هم جمع می‌شوند. بازیکنی که امتیاز کل بیشتری داشته باشد برنده است. اگر امتیازها برابر شوند، بازیکنی که کارت بیشتری دارد برنده می‌شود. با زدن روی عکس هر بازیکن می‌توانید قدرت ویژهٔ او را ببینید.",
+    // action: "وقتی آماده بودید، آموزش را تمام کنید.",
+    lastAction: "اکنون نحوهٔ امتیازدهی و برنده شدن را یاد گرفتید.",
+  },
+};
 
 export default function DeadMansDrawTutorial() {
   const navigate = useNavigate();
@@ -87,179 +228,44 @@ export default function DeadMansDrawTutorial() {
   const [selectedTreasureHelpId, setSelectedTreasureHelpId] = useState<string | null>(null);
   const [selectedPower, setSelectedPower] = useState<DeadMansDrawRing | null>(null);
 
-  const returnTo = searchParams.get("returnTo") || "/tutorial?game=dead-mans-draw";
+  const returnTo = searchParams.get("returnTo") || "/";
+  const copy = (lang === "fa" ? PERSIAN_COPY : ENGLISH_COPY)[step];
 
   useEffect(() => {
-    if (step === 9) {
-      const coin = opponentCards.find(c => c.suit === 'coin');
-      if (coin) {
-        setOpponentCards(current => current.filter(c => c.id !== coin.id));
-        setRevealedCards(current => appendUnique(current, coin));
-      }
+    if (step !== 9) return;
+
+    const coin = opponentCards.find((card) => card.suit === "coin");
+    if (coin) {
+      setOpponentCards((current) => current.filter((card) => card.id !== coin.id));
+      setRevealedCards((current) => appendUnique(current, coin));
     }
   }, [step, opponentCards]);
 
-  const copy = useMemo(() => {
-    const en = {
-      1: {
-        title: "How Dead Man's Draw Works",
-        body: "Players reveal cards from the draw deck, different suits trigger different powers, and your goal is to collect treasure before you bust and lose the haul.",
-        // action: "Read this overview, then continue.",
-        lastAction: "Welcome to the tutorial. Learn the flow before you touch the deck.",
-      },
-      2: {
-        title: "Step 2: Draw Deck, Collect Treasure, and Burn Pile",
-        body: "The draw deck reveals the next card, Collect Treasure safely banks your haul, and the burn pile stores busted or discarded cards.",
-        // action: "Click the draw deck to reveal a card.",
-        lastAction: "Reveal the first scripted card from the draw deck.",
-      },
-      3: {
-        title: "Step 3: Oracle",
-        body: "Oracle lets you see what is coming next before you commit. It gives you information so you can manage risk.",
-        // action: "Click the draw deck again to reveal the top card.",
-        lastAction: "Oracle is revealed. Draw again to see the next scripted card.",
-      },
-      4: {
-        title: "Step 4: Kraken",
-        body: "Kraken increases pressure by forcing more action. Some suits immediately change how the turn continues.",
-        // action: "Acknowledge this explanation to continue.",
-        lastAction: "Kraken is now in the treasure area. Continue when ready.",
-      },
-      5: {
-        title: "Step 5: Map Options",
-        body: "Map is revealed. Here are 3 options from the burn pile: oracle, kraken, key. You will not take the key from opponent. Click continue to reveal the key and go to next step.",
-        // action: "Click continue.",
-        lastAction: "Map is revealed. Continue when ready.",
-      },
-      6: {
-        title: "Step 6: Chest",
-        body: "Chest becomes important when you also have Key. Together they create bonus value whenever the haul is safely collected.",
-        // action: "Continue when you understand the combo.",
-        lastAction: "Chest is revealed. Continue to learn how Anchor protects the haul.",
-      },
-      7: {
-        title: "Step 7: Anchor",
-        body: "Anchor protects part of your haul and reduces risk. It is one of the tools that helps you push a turn a bit further.",
-        action: "Click Collect Treasure to bank this scripted haul.",
-        lastAction: "Click Collect Treasure to bank Oracle, Kraken, Chest, Anchor, and the selected Key.",
-      },
-      8: {
-        title: "Step 8: Cannon",
-        body: "Cannon destroys an opponent card. It is a direct attack and lets you remove important treasure from the other side.",
-        action: "Click one opponent card to use Cannon.",
-        lastAction: "Cannon is ready. Choose one opponent card to destroy.",
-      },
-      9: {
-        title: "Step 9: Sword Power",
-        body: "Sword is revealed. A coin card is automatically dragged from opponent. Click continue.",
-        // action: "Click continue.",
-        lastAction: "Sword is revealed. Continue to view the special powers.",
-      },
-      10: {
-        title: "Step 10: Hook",
-        body: "Hook brings one of your banked cards back into the action, giving you flexibility from cards you already secured.",
-        // action: "Continue to the special powers lesson.",
-        lastAction: "Hook is revealed. Continue to view the special powers.",
-      },
-      11: {
-        title: "Step 11: Special Powers",
-        body: "At the beginning of a full game, each player chooses one special power. Click a power to read what it does.",
-        action: "Click at least one power, then finish the tutorial.",
-        lastAction: "Choose a special power to inspect its ability.",
-      },
-    };
-
-    const fa = {
-      1: {
-        title: "مرحله ۱: بازی چگونه کار می‌کند",
-        body: "بازیکن‌ها از دسته کارت رو می‌کنند، هر خال قدرت خودش را دارد و هدف این است که قبل از ترکیدن، گنج را جمع کنید.",
-        action: "این توضیح را بخوانید و ادامه دهید.",
-        lastAction: "به آموزش خوش آمدید. قبل از لمس دسته، جریان بازی را یاد بگیرید.",
-      },
-      2: {
-        title: "مرحله ۲: دسته کارت، جمع گنج و پشته سوخته",
-        body: "دسته کارت، کارت بعدی را رو می‌کند؛ جمع گنج، دست فعلی شما را امن می‌کند؛ و پشته سوخته جای کارت‌های ترکیده یا دورریخته است.",
-        action: "برای رو کردن کارت، روی دسته کلیک کنید.",
-        lastAction: "اولین کارت آموزشی را از دسته رو کنید.",
-      },
-      3: {
-        title: "مرحله ۳: اوراکل",
-        body: "اوراکل به شما اطلاعات می‌دهد تا قبل از ادامه، بهتر درباره ریسک تصمیم بگیرید.",
-        action: "دوباره روی دسته کارت کلیک کنید.",
-        lastAction: "اوراکل رو شده است. دوباره بکشید تا کارت بعدی را ببینید.",
-      },
-      4: {
-        title: "مرحله ۴: کراکن",
-        body: "کراکن فشار نوبت را بیشتر می‌کند و نشان می‌دهد بعضی خال‌ها بلافاصله روند نوبت را عوض می‌کنند.",
-        action: "توضیح را تایید کنید و ادامه دهید.",
-        lastAction: "کراکن در ناحیه گنج قرار دارد. وقتی آماده بودید ادامه دهید.",
-      },
-      5: {
-        title: "مرحله ۵: گزینه‌های نقشه",
-        body: "نقشه رو شده است. اینجا ۳ گزینه از پشته سوخته است: اوراکل، کراکن، کلید. شما کلید را از حریف نمی‌گیرید. روی ادامه کلیک کنید تا کلید رو شود و به مرحله بعدی بروید.",
-        action: "روی ادامه کلیک کنید.",
-        lastAction: "نقشه رو شده است. وقتی آماده بودید ادامه دهید.",
-      },
-      6: {
-        title: "مرحله ۶: صندوقچه",
-        body: "صندوقچه وقتی همراه کلید باشد ارزش بیشتری پیدا می‌کند و هنگام جمع کردن، امتیاز جایزه می‌سازد.",
-        action: "وقتی ترکیب را فهمیدید ادامه دهید.",
-        lastAction: "صندوقچه رو شده است. ادامه دهید تا نقش لنگر را ببینید.",
-      },
-      7: {
-        title: "مرحله ۷: لنگر",
-        body: "لنگر بخشی از گنج شما را امن نگه می‌دارد و به شما کمک می‌کند با ریسک کنترل‌شده‌تر ادامه دهید.",
-        action: "روی جمع گنج کلیک کنید تا این دست ذخیره شود.",
-        lastAction: "برای ذخیره این دست، روی جمع گنج کلیک کنید.",
-      },
-      8: {
-        title: "مرحله ۸: توپ",
-        body: "توپ یک کارت از حریف را نابود می‌کند و یک حمله مستقیم به حساب می‌آید.",
-        action: "برای استفاده از توپ، یکی از کارت‌های حریف را انتخاب کنید.",
-        lastAction: "توپ آماده است. یکی از کارت‌های حریف را نابود کنید.",
-      },
-      9: {
-        title: "مرحله ۹: قدرت شمشیر",
-        body: "شمشیر رو شده است. یک کارت سکه به طور خودکار از حریف کشیده می‌شود. روی ادامه کلیک کنید.",
-        action: "روی ادامه کلیک کنید.",
-        lastAction: "شمشیر رو شده است. برای دیدن قدرت‌های ویژه ادامه دهید.",
-      },
-      10: {
-        title: "مرحله ۱۰: قلاب",
-        body: "قلاب یکی از کارت‌های ذخیره‌شدهٔ شما را دوباره وارد جریان بازی می‌کند و انعطاف زیادی می‌دهد.",
-        action: "برای رفتن به بخش قدرت‌های ویژه ادامه دهید.",
-        lastAction: "قلاب رو شده است. برای دیدن قدرت‌های ویژه ادامه دهید.",
-      },
-      11: {
-        title: "مرحله ۱۱: قدرت‌های ویژه",
-        body: "در شروع بازی اصلی، هر بازیکن باید یک قدرت ویژه انتخاب کند. روی یکی از آن‌ها کلیک کنید تا توضیحش را ببینید.",
-        action: "حداقل روی یکی از قدرت‌ها کلیک کنید و بعد آموزش را تمام کنید.",
-        lastAction: "یکی از قدرت‌های ویژه را برای دیدن توضیح آن انتخاب کنید.",
-      },
-    };
-
-    return (lang === "fa" ? fa : en)[step];
-  }, [lang, step]);
-
   const mockPendingEffect = useMemo<DeadMansDrawPendingEffect | null>(() => {
-    if (step === 10) {
-      // show horseshoe (hook) own-choice highlight for player's collected cards
-      return {
-        kind: "horseshoe",
-        sourceCardId: SCRIPTED.hook.id,
-        options: playerBank,
-        remaining: 1,
-      } as any;
-    }
-    return null;
-  }, [opponentCards, step]);
+    if (step !== 10) return null;
+
+    return {
+      kind: "horseshoe",
+      sourceCardId: SCRIPTED.hook.id,
+      options: playerBank,
+      remaining: 1,
+    } as DeadMansDrawPendingEffect;
+  }, [step, playerBank]);
 
   const currentState = useMemo<DeadMansDrawState>(() => {
-    const drawPile = Array.from({ length: Math.max(0, 24 - revealedCards.length - playerBank.length - burnPile.length) }, (_, index) => ({
-      id: `tutorial-draw-${index}`,
-      suit: "coin" as DeadMansDrawSuit,
-      value: 4,
-    }));
+    const drawPile = Array.from(
+      {
+        length: Math.max(
+          0,
+          24 - revealedCards.length - playerBank.length - burnPile.length
+        ),
+      },
+      (_, index) => ({
+        id: `tutorial-draw-${index}`,
+        suit: "coin" as DeadMansDrawSuit,
+        value: 4,
+      })
+    );
 
     return {
       players: [
@@ -267,7 +273,7 @@ export default function DeadMansDrawTutorial() {
           id: 0,
           collected: toCollected(playerBank),
           ringOptions: [],
-          ring: null,
+          ring: selectedPower,
           markedOpponentIndex: null,
         },
         {
@@ -293,32 +299,23 @@ export default function DeadMansDrawTutorial() {
       gameOver: false,
       winnerIndices: [],
     };
-  }, [burnPile, copy.lastAction, mockPendingEffect, opponentCards, playerBank, revealedCards]);
+  }, [
+    burnPile,
+    copy.lastAction,
+    mockPendingEffect,
+    opponentCards,
+    playerBank,
+    revealedCards,
+    selectedPower,
+  ]);
 
   const highlightedTreasureIds = useMemo(() => {
     const ids = new Set<string>();
-    if (revealedCards.length) {
-      ids.add(revealedCards[revealedCards.length - 1].id);
-    }
+    const latestCard = revealedCards[revealedCards.length - 1];
+
+    if (latestCard) ids.add(latestCard.id);
     return ids;
   }, [revealedCards]);
-
-  const restartTutorial = () => {
-    setStep(1);
-    setRevealedCards([]);
-    setPlayerBank([]);
-    setOpponentCards([SCRIPTED.opponentOracle, SCRIPTED.opponentKey, SCRIPTED.opponentChest, SCRIPTED.coinA]);
-    setBurnPile([]);
-    setSelectedTreasureHelpId(null);
-    setSelectedPower(null);
-  };
-
-  const finishTutorial = () => {
-    try {
-      localStorage.setItem("deadmansdraw-tutorial-completed", "true");
-    } catch {}
-    navigate(returnTo);
-  };
 
   const handleReveal = () => {
     if (step === 2) {
@@ -326,10 +323,19 @@ export default function DeadMansDrawTutorial() {
       setStep(3);
       return;
     }
+
     if (step === 3) {
       setRevealedCards((current) => appendUnique(current, SCRIPTED.kraken));
       setStep(4);
     }
+  };
+
+  const handleCollect = () => {
+    if (step !== 7) return;
+
+    setPlayerBank(revealedCards);
+    setRevealedCards([SCRIPTED.cannon]);
+    setStep(8);
   };
 
   const handleContinue = () => {
@@ -338,7 +344,6 @@ export default function DeadMansDrawTutorial() {
       return;
     }
 
-    // Steps 2 & 3: next also reveals the scripted cards
     if (step === 2 || step === 3) {
       handleReveal();
       return;
@@ -351,7 +356,9 @@ export default function DeadMansDrawTutorial() {
     }
 
     if (step === 5) {
-      setRevealedCards((current) => appendUnique(appendUnique(current, SCRIPTED.burnKey), SCRIPTED.chest));
+      setRevealedCards((current) =>
+        appendUnique(appendUnique(current, SCRIPTED.burnKey), SCRIPTED.chest)
+      );
       setStep(6);
       return;
     }
@@ -362,27 +369,27 @@ export default function DeadMansDrawTutorial() {
       return;
     }
 
-    // Step 7: next acts like collect (but collect button still glows)
     if (step === 7) {
       handleCollect();
       return;
     }
 
-    // Step 8: simulate pistol/cannon effect and continue
     if (step === 8) {
-      // pick a target from opponentCards (first one)
       const targetCard = opponentCards[0];
+
       if (targetCard) {
-        setOpponentCards((current) => current.filter((card) => card.id !== targetCard.id));
+        setOpponentCards((current) =>
+          current.filter((card) => card.id !== targetCard.id)
+        );
         setBurnPile((current) => [...current, targetCard]);
       }
+
       setRevealedCards((current) => appendUnique(current, SCRIPTED.sword));
       setStep(9);
       return;
     }
 
     if (step === 9) {
-      // reveal hook as part of step 10
       setRevealedCards((current) => appendUnique(current, SCRIPTED.hook));
       setStep(10);
       return;
@@ -392,26 +399,34 @@ export default function DeadMansDrawTutorial() {
       setStep(11);
       return;
     }
-  }; 
 
-  const handleCollect = () => {
-    if (step !== 7) return;
-    setPlayerBank(revealedCards);
-    setRevealedCards([SCRIPTED.cannon]);
-    setStep(8);
-  }; 
+    if (step === 11) {
+      setStep(12);
+    }
+  };
 
-  const handleDaggerTarget = (targetPlayerIndex: number, suit: DeadMansDrawSuit) => {
+  const handleDaggerTarget = (
+    targetPlayerIndex: number,
+    suit: DeadMansDrawSuit
+  ) => {
     if (step !== 5 || targetPlayerIndex !== 1 || suit !== "key") return;
+
     setRevealedCards((current) => appendUnique(current, SCRIPTED.chest));
     setStep(6);
   };
 
-  const handlePistolTarget = (targetPlayerIndex: number, suit: DeadMansDrawSuit) => {
+  const handlePistolTarget = (
+    targetPlayerIndex: number,
+    suit: DeadMansDrawSuit
+  ) => {
     if (step !== 8 || targetPlayerIndex !== 1) return;
+
     const targetCard = opponentCards.find((card) => card.suit === suit);
     if (!targetCard) return;
-    setOpponentCards((current) => current.filter((card) => card.id !== targetCard.id));
+
+    setOpponentCards((current) =>
+      current.filter((card) => card.id !== targetCard.id)
+    );
     setBurnPile((current) => [...current, targetCard]);
     setRevealedCards((current) => appendUnique(current, SCRIPTED.sword));
     setStep(9);
@@ -422,10 +437,14 @@ export default function DeadMansDrawTutorial() {
     return lang === "fa" ? "بازیکن ۲" : "Player 2";
   };
 
-  const progress = (step / 11) * 100;
+  const finishTutorial = () => {
+    navigate(returnTo);
+  };
+
+  const progress = (step / 12) * 100;
 
   return (
-      <div className={cn("relative", dir === "rtl" ? "font-persian" : "")}>
+    <div className={cn("relative", dir === "rtl" ? "font-persian" : "")}>
       <DeadMansDrawBoardView
         dir={dir as "rtl" | "ltr"}
         t={t}
@@ -440,7 +459,11 @@ export default function DeadMansDrawTutorial() {
         visibleTreasureArea={revealedCards}
         highlightedTreasureIds={highlightedTreasureIds}
         selectedTreasureHelpId={selectedTreasureHelpId}
-        onToggleTreasureHelp={(cardId) => setSelectedTreasureHelpId((current) => current === cardId ? null : cardId)}
+        onToggleTreasureHelp={(cardId) =>
+          setSelectedTreasureHelpId((current) =>
+            current === cardId ? null : cardId
+          )
+        }
         getPlayerDisplayName={getPlayerDisplayName}
         activePlayerIndex={0}
         pendingEffect={mockPendingEffect}
@@ -456,99 +479,119 @@ export default function DeadMansDrawTutorial() {
         onOpenExit={() => navigate(returnTo)}
       />
 
-      <div className="pointer-events-none fixed inset-0 z-40 bg-black/30" />
+      {step <= 10 && (
+        <div className="pointer-events-none fixed inset-0 z-40 bg-black/30" />
+      )}
+
       <motion.div
         key={step}
         initial={{ opacity: 0, y: 12, scale: 0.98 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         className="fixed inset-x-0 top-4 z-50 mx-auto w-[min(94vw,34rem)] rounded-[28px] border border-amber-300/70 bg-[linear-gradient(180deg,rgba(120,53,15,0.95),rgba(45,18,8,0.96))] p-5 shadow-[0_0_44px_rgba(251,191,36,0.32),0_18px_60px_rgba(2,6,23,0.55)] backdrop-blur"
+        dir={dir}
       >
-
         <div className="mb-4 h-2 overflow-hidden rounded-full bg-white/10">
-          <div className="h-full rounded-full bg-amber-300 transition-all" style={{ width: `${progress}%` }} />
+          <div
+            className="h-full rounded-full bg-amber-300 transition-all duration-300"
+            style={{ width: `${progress}%` }}
+          />
         </div>
-                <div className="mb-3 flex items-start justify-between gap-3">
-          
-          <div>
-            {/* <p className="text-xs uppercase tracking-[0.26em] text-amber-200/75">
-              {lang === "fa" ? `مرحله ${step} از 11` : `Step ${step} of 11`}
-            </p> */}
-            <h2 className="mt-2 font-cinzel text-xl text-amber-100">{copy.title}</h2>
-          </div>
-          
-          {/* <button
-            type="button"
-            onClick={() => navigate(returnTo)}
-            className="pointer-events-auto inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/20 bg-white/10 text-white transition hover:bg-white/20"
+
+        <h2
+          className={cn(
+            "mb-3 mt-2 font-cinzel text-xl text-amber-100",
+            dir === "rtl" ? "text-right" : "text-left"
+          )}
+        >
+          {copy.title}
+        </h2>
+
+        <p
+          className={cn(
+            "text-sm leading-6 text-slate-100/92",
+            dir === "rtl" ? "text-right" : "text-left"
+          )}
+        >
+          {copy.body}
+        </p>
+
+        {copy.action && (
+          <div
+            className={cn(
+              "mt-3 rounded-2xl border border-teal-300/20 bg-teal-400/10 px-4 py-2 text-sm text-teal-50/92",
+              dir === "rtl" ? "text-right" : "text-left"
+            )}
           >
-            <X className="h-4 w-4" />
-          </button> */}
-        </div>
-        <p className="text-sm leading-6 text-slate-100/92">{copy.body}</p>
-        <div className="mt-3 rounded-2xl border border-teal-300/20 bg-teal-400/10 px-4 py-2 text-sm text-teal-50/92">
-          {copy.action}
-        </div>
+            {copy.action}
+          </div>
+        )}
+
         <div className="mt-4 flex flex-wrap gap-2">
-          {/* <Button variant="outline" onClick={restartTutorial} className="pointer-events-auto">
-            <RotateCcw className="h-4 w-4" />
-            {lang === "fa" ? "شروع دوباره" : "Restart"}
-          </Button> */}
-          {[1,2,3,4,5,6,7,8,9,10].includes(step) ? (
+          {step <= 11 && (
             <Button onClick={handleContinue} className="pointer-events-auto">
               {lang === "fa" ? "ادامه" : "Continue"}
             </Button>
-          ) : null}
-          {step === 11 && selectedPower ? (
+          )}
+
+          {step === 12 && (
             <Button onClick={finishTutorial} className="pointer-events-auto">
               {lang === "fa" ? "پایان آموزش" : "Finish Tutorial"}
             </Button>
-          ) : null}
+          )}
         </div>
       </motion.div>
 
-      {step === 5 ? (
-        <div className="fixed inset-x-0 bottom-6 z-50 flex justify-center px-4">
+      {step === 5 && (
+        <div
+          className="fixed inset-x-0 bottom-6 z-50 flex justify-center px-4"
+          dir={dir}
+        >
           <div className="pointer-events-auto w-full max-w-md rounded-[28px] border border-amber-300/40 bg-[linear-gradient(180deg,rgba(10,16,28,0.94),rgba(5,8,18,0.96))] p-4 shadow-[0_24px_50px_rgba(2,6,23,0.55)] backdrop-blur-md">
             <p className="text-center font-cinzel text-sm uppercase tracking-[0.24em] text-amber-100/80">
               {lang === "fa" ? "گزینه‌های نقشه" : "Map Options"}
             </p>
+
             <div className="mt-3 flex justify-center gap-3">
-              {[SCRIPTED.oracle, SCRIPTED.kraken, SCRIPTED.burnKey].map((card) => (
-                <CardChip
-                  key={card.id}
-                  card={card}
-                  compact
-                  highlighted={false}
-                />
-              ))}
+              {[SCRIPTED.oracle, SCRIPTED.kraken, SCRIPTED.burnKey].map(
+                (card) => (
+                  <CardChip
+                    key={card.id}
+                    card={card}
+                    compact
+                    highlighted={false}
+                  />
+                )
+              )}
             </div>
           </div>
         </div>
-      ) : null}
-
-{step === 11 ? (
-  <div className="fixed inset-x-0 bottom-2 z-50 flex justify-center px-2">
-    <div
-      className={cn(
-        "pointer-events-auto w-full max-w-4xl rounded-[24px] border border-fuchsia-300/25",
-        "bg-[linear-gradient(180deg,rgba(10,16,28,0.96),rgba(5,8,18,0.96))]",
-        "p-2.5 shadow-[0_18px_40px_rgba(2,6,23,0.55)] backdrop-blur-md",
-        "origin-bottom scale-[0.8]"
       )}
-    >
-      <PowerChoiceScreen
-        playerName={getPlayerDisplayName(0)}
-        playerIndex={0}
-        options={POWER_ORDER.slice(0, 2)}
-        onSelect={(ring) => setSelectedPower(ring)}
-        locked={false}
-        t={t}
-        // compact
-      />
-    </div>
-  </div>
-) : null}
 
+      {/* Step 11 Power Choice Screen (Right Aligned, No Overlay) */}
+      {step === 11 ? (
+<div className="pointer-events-none fixed inset-0 z-40 bg-black/30" >
+          <div
+            className={cn(
+              "pointer-events-auto w-full max-w-4xl rounded-[24px] border border-fuchsia-300/25",
+              "bg-[linear-gradient(180deg,rgba(10,16,28,0.96),rgba(5,8,18,0.96))]",
+              "p-2.5 shadow-[0_18px_40px_rgba(2,6,23,0.55)] backdrop-blur-md",
+              "origin-bottom scale-[0.6]"
+            )}
+          >
+            <PowerChoiceScreen
+              playerName={getPlayerDisplayName(0)}
+              playerIndex={0}
+              options={POWER_ORDER.slice(0, 2)}
+              onSelect={(ring) => setSelectedPower(ring)}
+              locked={false}
+              t={t}
+              // compact
+            />
+          </div>
+        </div>
+      ) : null}
+      
     </div>
   );
 }
+

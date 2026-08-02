@@ -383,7 +383,7 @@ export function DeadMansDrawBoardView({
                   glowingCollect && "ring-2 ring-amber-300/80 shadow-[0_0_38px_rgba(251,191,36,0.95)] animate-[gem-pulse_1.5s_ease-in-out_infinite]",
                 )}
               >
-                <span className="text-2xl">💰</span>
+                <span className="">💰</span>
                 <span className="">{t("deadMansDrawCollect")}</span>
               </Button>
             </div>
