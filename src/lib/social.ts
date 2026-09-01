@@ -238,6 +238,10 @@ async function fetchRemoteJson<T>(url: string, init?: RequestInit): Promise<T | 
 
   try {
     const headers = new Headers(init?.headers);
+    const token =
+      sessionStorage.getItem("splendor_session_token") ||
+      localStorage.getItem("splendor_session_token");
+    if (token) headers.set("Authorization", `Bearer ${token}`);
     const hasBody = init?.body !== undefined && init?.body !== null;
 
     if (!hasBody) {

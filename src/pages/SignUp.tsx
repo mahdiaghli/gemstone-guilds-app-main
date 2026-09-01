@@ -39,6 +39,11 @@ export default function SignUp() {
       return;
     }
 
+    if (password.length < 8) {
+      setError(t("passwordHint"));
+      return;
+    }
+
     if (password !== confirm) {
       setError(t("passwordsDoNotMatch"));
       return;

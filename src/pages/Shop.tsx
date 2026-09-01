@@ -15,6 +15,7 @@ import {
   SHOP_SECTIONS,
   WEEKLY_REWARDS,
   applyOfferPurchase,
+  canGrantPaidReward,
   claimWeeklyReward,
   formatTomans,
   getCurrentRewardState,
@@ -132,8 +133,10 @@ export default function Shop() {
     sectionId: ShopSection["id"],
     offerId: string
   ) => {
-    applyOfferPurchase(user?.id, sectionId, offerId);
-    setMessage(t("purchaseSuccess"));
+    const result = applyOfferPurchase(user?.id, sectionId, offerId);
+    setMessage(result.ok ? t("purchaseSuccess") : (isFa
+      ? "خرید فقط در فروشگاه برنامه در دسترس است."
+      : "Purchases are only available in the app stores."));
   };
 
   const handleClaimReward = () => {
@@ -225,6 +228,7 @@ export default function Shop() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: index * 0.04 }}
         onClick={() => handleOfferPurchase(sectionId, offer.id)}
+        disabled={offer.price > 0 && !canGrantPaidReward(window.GemstoneNativeBilling)}
         className={[
           "group relative flex flex-col items-center justify-between",
           // نسبت نزدیک به مربعی (کمی پهن‌تر برای زیبایی)

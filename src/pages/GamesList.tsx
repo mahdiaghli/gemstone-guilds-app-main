@@ -53,6 +53,11 @@ export default function GamesList() {
   const { lang } = useLanguage();
 
   const openGameCard = (gameId: string) => {
+    const game = GAME_CATALOG.find((entry) => entry.id === gameId);
+    if (game && !game.playable) {
+      window.alert(lang === "fa" ? "این بازی به‌زودی اضافه می‌شود." : "This game is coming soon.");
+      return;
+    }
     const destination = `/menu/${gameId}`;
 
     try {

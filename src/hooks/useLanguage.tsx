@@ -110,7 +110,7 @@ const translations = {
     fa: "این کد من در بازی اسپلندور آنلاین است. برای اضافه کردن من به دوستان، این کد را در بخش دوستان وارد کن.",
     en: "This is my Splendor Online code. Use it in the Friends section to add me.",
   },
-    deadMansDrawActionSnakeForcedCount: { fa: "کراکن رو شد: باید2 {{count}} کارت دیگر هم رو کنی.", en: "Snake revealed: {{count}} more cards must be played." },
+    deadMansDrawActionSnakeForcedCount: { fa: "کراکن رو شد: باید {{count}} کارت دیگر هم رو کنی.", en: "Snake revealed: draw {{count}} more card(s) before you can collect." },
 
   playWithAI: { fa: "بازی با ربات", en: "Play vs AI" },
   playWithAIDesc: { fa: "بازی هوشمند با AI", en: "Challenge the computer" },

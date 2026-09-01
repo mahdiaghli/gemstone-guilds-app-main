@@ -46,7 +46,7 @@ describe("advanceTurn final round", () => {
     );
   });
 
-  it("gives each player at most one noble", () => {
+  it("gives at most one noble per turn", () => {
     let state = initializeGame(2);
     state.currentPlayerIndex = 0;
     state.nobles = [
@@ -72,11 +72,6 @@ describe("advanceTurn final round", () => {
       { id: 16, level: 1, gemBonus: "ruby", points: 0, cost: {} },
     ];
 
-    state = advanceTurn(state);
-    expect(state.players[0].nobles).toHaveLength(1);
-    expect(state.nobles).toHaveLength(1);
-
-    state.currentPlayerIndex = 0;
     state = advanceTurn(state);
     expect(state.players[0].nobles).toHaveLength(1);
     expect(state.nobles).toHaveLength(1);

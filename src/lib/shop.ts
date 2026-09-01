@@ -204,6 +204,12 @@ export function grantPremiumPlan(
   });
 }
 
+export function canGrantPaidReward(
+  nativeBilling: { purchaseSubscription?: unknown; purchaseProduct?: unknown } | undefined,
+) {
+  return Boolean(nativeBilling?.purchaseSubscription || nativeBilling?.purchaseProduct);
+}
+
 export async function purchasePremiumPlan(
   userId: string | undefined,
   planId: PremiumPlanId,
@@ -215,20 +221,22 @@ export async function purchasePremiumPlan(
   }
 
   const nativeBilling = window.GemstoneNativeBilling;
-  if (nativeBilling?.purchaseSubscription) {
-    const result = await nativeBilling.purchaseSubscription({
-      provider,
-      planId,
-      productId: getProviderProductId(plan, provider),
-      userId,
-    });
+  if (!canGrantPaidReward(nativeBilling) || !nativeBilling?.purchaseSubscription) {
+    return { ok: false as const, message: "Store billing is unavailable in this build." };
+  }
 
-    if (!result?.success) {
-      return {
-        ok: false as const,
-        message: result?.message || "Purchase was cancelled.",
-      };
-    }
+  const result = await nativeBilling.purchaseSubscription({
+    provider,
+    planId,
+    productId: getProviderProductId(plan, provider),
+    userId,
+  });
+
+  if (!result?.success) {
+    return {
+      ok: false as const,
+      message: result?.message || "Purchase was cancelled.",
+    };
   }
 
   grantPremiumPlan(userId, planId, provider);
@@ -261,11 +269,15 @@ export function applyOfferPurchase(
 ) {
   const section = SHOP_SECTIONS.find((entry) => entry.id === sectionId);
   const offer = section?.offers.find((entry) => entry.id === offerId);
-  if (!offer) return;
+  if (!offer) return { ok: false as const };
+
+  if (offer.price > 0 && !canGrantPaidReward(window.GemstoneNativeBilling)) {
+    return { ok: false as const };
+  }
 
   if (offer.rewardType === "coins") {
     awardCoins(userId, offer.amount);
-    return;
+    return { ok: true as const };
   }
 
   if (offer.rewardType === "gems") {
@@ -273,15 +285,16 @@ export function applyOfferPurchase(
       ...current,
       gems: current.gems + offer.amount,
     }));
-    return;
+    return { ok: true as const };
   }
 
   if (offer.rewardType === "avatar") {
     addAvatar(userId, avatarOfferMap[offer.id as keyof typeof avatarOfferMap] || merchantImage);
-    return;
+    return { ok: true as const };
   }
 
   addSticker(userId);
+  return { ok: true as const };
 }
 
 export function getCurrentRewardState(userId: string | undefined) {

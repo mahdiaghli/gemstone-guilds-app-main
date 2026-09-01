@@ -59,9 +59,12 @@ export default function OnlineGame() {
   // Count room players to determine actual player count
   const actualPlayerCount = Object.keys(roomPlayers).length || playerCount;
   const { state: localGameState } = useGame(actualPlayerCount);
-  const initialOnlineState = selectedGame.id === 'dead-mans-draw'
-    ? initializeDeadMansDrawGame(actualPlayerCount, true)
-    : localGameState;
+  const initialOnlineState = useMemo(
+    () => (selectedGame.id === 'dead-mans-draw'
+      ? initializeDeadMansDrawGame(actualPlayerCount, true)
+      : localGameState),
+    [actualPlayerCount, localGameState, selectedGame.id],
+  );
 
   const opponentIds = useMemo(
     () => Object.values(roomPlayers)
@@ -341,8 +344,8 @@ export default function OnlineGame() {
     return playersArray.map((p: any) => p.name);
   }, [roomPlayers, playerIndexMap, socket]);
 
-  const playerIndex = playerIndexMap && socket
-    ? (playerIndexMap[socket.id] ?? Object.values(roomPlayers).findIndex((p: any) => p.id === playerId))
+  const playerIndex = playerIndexMap
+    ? (playerIndexMap[playerId] ?? (socket ? playerIndexMap[socket.id] : undefined) ?? Object.values(roomPlayers).findIndex((p: any) => p.id === playerId))
     : Object.values(roomPlayers).findIndex((p: any) => p.id === playerId);
 
   if (loading) {

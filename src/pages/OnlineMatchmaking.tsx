@@ -54,6 +54,7 @@ export default function OnlineMatchmaking() {
     return parsed > 0 ? parsed : undefined;
   })();
   const autoStartRef = useRef(false); // Prevent duplicate starts
+  const transferredRef = useRef(false);
   const playerNameRef = useRef(playerName);
   const playerCountRef = useRef(playerCount);
   const searchingRef = useRef(searching);
@@ -182,6 +183,7 @@ export default function OnlineMatchmaking() {
         }));
 
         // Navigate to game
+        transferredRef.current = true;
         navigate(`/online-game/${roomId}?player=${playerId}&game=${selectedGame.id}`);
       });
 
@@ -195,7 +197,7 @@ export default function OnlineMatchmaking() {
       });
 
       return () => {
-        if (socket) {
+        if (socket && !transferredRef.current) {
           logToPanel('log', `🧹 [CLEANUP] Disconnecting socket`, {
             socketId: socket.id,
           });

@@ -163,6 +163,7 @@ export function useOnlineGame(
       });
 
       return () => {
+        joinedRef.current = false;
         socket.disconnect();
       };
     } catch (err) {

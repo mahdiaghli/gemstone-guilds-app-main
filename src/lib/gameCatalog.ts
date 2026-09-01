@@ -13,6 +13,7 @@ export type GameConfig = {
   badge: string;
   accentFrom: string;
   accentTo: string;
+  playable: boolean;
 };
 
 export const DEFAULT_GAME_ID: GameId = "splendor";
@@ -25,6 +26,7 @@ export const GAME_CATALOG: GameConfig[] = [
     badge: "Jewels",
     accentFrom: "#f5d47a",
     accentTo: "#2dd4bf",
+    playable: true,
   },
   {
     id: "dead-mans-draw",
@@ -33,6 +35,7 @@ export const GAME_CATALOG: GameConfig[] = [
     badge: "Pirates",
     accentFrom: "#fb7185",
     accentTo: "#f59e0b",
+    playable: true,
   },
   {
     id: "totem",
@@ -41,6 +44,7 @@ export const GAME_CATALOG: GameConfig[] = [
     badge: "Reaction",
     accentFrom: "#22c55e",
     accentTo: "#eab308",
+    playable: true,
   },
   {
     id: "beasty-bar",
@@ -49,6 +53,7 @@ export const GAME_CATALOG: GameConfig[] = [
     badge: "Party",
     accentFrom: "#f97316",
     accentTo: "#22c55e",
+    playable: true,
   },
   {
     id: "coup",
@@ -57,6 +62,7 @@ export const GAME_CATALOG: GameConfig[] = [
     badge: "Bluff",
     accentFrom: "#c084fc",
     accentTo: "#ef4444",
+    playable: false,
   },
   {
     id: "ticket-to-ride",
@@ -65,6 +71,7 @@ export const GAME_CATALOG: GameConfig[] = [
     badge: "Routes",
     accentFrom: "#60a5fa",
     accentTo: "#f97316",
+    playable: false,
   },
 ];
 

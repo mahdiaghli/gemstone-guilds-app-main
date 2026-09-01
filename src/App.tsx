@@ -3,12 +3,13 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MotionConfig } from "framer-motion";
-import { BrowserRouter, Routes, Route, useLocation, useNavigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useLocation, useNavigate, Navigate } from "react-router-dom";
 import { useEffect } from "react";
 import { LanguageProvider } from "@/hooks/useLanguage";
 import { useBackgroundMusic } from "@/hooks/useBackgroundMusic";
 import RequireAuth from "@/components/auth/RequireAuth";
 import { useAuth } from "@/hooks/useAuth";
+import { App as CapApp } from "@capacitor/app";
 import { isNativeApp } from "@/lib/nativeApp";
 import GamesList from "./pages/GamesList";
 import Index from "./pages/Index";
@@ -46,9 +47,7 @@ function AppBackHandler() {
   useEffect(() => {
     if (!isNativeApp()) return;
 
-    const handleBack = (event?: Event) => {
-      event?.preventDefault?.();
-
+    const handleBack = () => {
       const path = location.pathname;
       if (path.startsWith("/game") || path.startsWith("/online-game")) {
         window.dispatchEvent(new CustomEvent("gemstone-app-back-request"));
@@ -65,9 +64,9 @@ function AppBackHandler() {
       }
     };
 
-    document.addEventListener("backbutton", handleBack);
+    const subPromise = CapApp.addListener("backButton", handleBack);
     return () => {
-      document.removeEventListener("backbutton", handleBack);
+      subPromise.then((handle) => handle.remove());
     };
   }, [location.pathname, navigate]);
 
@@ -77,7 +76,7 @@ function AppBackHandler() {
 function RedirectIfAuthed({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useAuth();
   if (isLoading) return null;
-  if (user) return <Landing />;
+  if (user) return <Navigate to="/menu" replace />;
   return <>{children}</>;
 }
 
@@ -213,7 +212,14 @@ const App = () => (
                 </RequireAuth>
               }
             />
-            <Route path="/game" element={<Game />} />
+            <Route
+              path="/game"
+              element={
+                <RequireAuth>
+                  <Game />
+                </RequireAuth>
+              }
+            />
             <Route path="/splendor-tutorial" element={<SplendorStepByStepTutorial />} />
             <Route path="/tutorial-deadmansdraw" element={<DeadMansDrawTutorial />} />
             <Route path="/tutorial" element={<Tutorial />} />

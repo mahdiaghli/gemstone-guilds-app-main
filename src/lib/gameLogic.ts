@@ -93,6 +93,7 @@ export function performTakeTokens(state: GameState, gems: GemType[]): GameState 
   const newPool = { ...state.tokenPool };
   const newPlayers = state.players.map(p => ({ ...p }));
   const player = { ...newPlayers[state.currentPlayerIndex], tokens: { ...newPlayers[state.currentPlayerIndex].tokens } };
+  const availableColors = GEM_TYPES.filter((g) => newPool[g] > 0);
 
   if (gems.length === 2 && gems[0] === gems[1]) {
     if (newPool[gems[0]] < 4) return state;
@@ -101,6 +102,8 @@ export function performTakeTokens(state: GameState, gems: GemType[]): GameState 
   } else {
     const unique = new Set(gems);
     if (unique.size !== gems.length) return state;
+    const expectedCount = Math.min(3, availableColors.length);
+    if (gems.length !== expectedCount) return state;
     for (const g of gems) {
       if (newPool[g] <= 0) return state;
       newPool[g]--;
@@ -214,10 +217,6 @@ function checkNobles(state: GameState): GameState {
   const newPlayers = state.players.map(p => ({ ...p }));
   const player = { ...newPlayers[state.currentPlayerIndex] };
   player.nobles = [...player.nobles];
-  if (player.nobles.length >= 1) {
-    newPlayers[state.currentPlayerIndex] = player;
-    return { ...state, players: newPlayers };
-  }
   const bonuses = getPlayerBonuses(player);
   const newNobles = [...state.nobles];
 

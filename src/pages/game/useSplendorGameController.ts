@@ -612,6 +612,7 @@ export default function useSplendorGameController(props: GameProps = {}) {
   });
 
   useEffect(() => {
+    if (gameMode === "online") return;
     setTurnSecondsLeft(turnDurationSeconds);
     const interval = window.setInterval(() => {
       // Pause timer during interactive tutorial
@@ -621,7 +622,15 @@ export default function useSplendorGameController(props: GameProps = {}) {
       setTurnSecondsLeft((prev) => Math.max(0, prev - 1));
     }, 1000);
     return () => window.clearInterval(interval);
-  }, [state.currentPlayerIndex, turnDurationSeconds, interactiveTutorialEnabled, manualTutorialOpen]);
+  }, [state.currentPlayerIndex, turnDurationSeconds, interactiveTutorialEnabled, manualTutorialOpen, gameMode]);
+
+  const lastSeenTurnRef = useRef(state.currentPlayerIndex);
+  useEffect(() => {
+    if (lastSeenTurnRef.current === state.currentPlayerIndex) return;
+    lastSeenTurnRef.current = state.currentPlayerIndex;
+    setActionSubmitting(false);
+    setPhase("idle");
+  }, [state.currentPlayerIndex]);
 
   // Phase sync: when all gems deselected, go back to idle
   useEffect(() => {
@@ -676,6 +685,7 @@ export default function useSplendorGameController(props: GameProps = {}) {
     if (state.gameOver) return;
     if (turnSecondsLeft > 0) return;
     if (phase === "mustReturnTokens") return;
+    if (isAIPlayer(state.currentPlayerIndex)) return;
 
     setSelectedGems([]);
     setSelectedCard(null);

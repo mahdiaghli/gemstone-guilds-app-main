@@ -35,7 +35,9 @@ export function translateActionLabel(action: string, t: Translate) {
   const madamMarkedMatch = action.match(/^Madam Margot marked Player (\d+)\.$/);
   if (madamMarkedMatch) return t("deadMansDrawActionMarkedOpponent", { player: madamMarkedMatch[1] });
 
-  const snakeMatch = action.match(/^Snake revealed: (\d+) more cards must be played\.$/);
+  const snakeMatch = action.match(
+    /^Snake revealed: draw (\d+) more card\(s\) before you can collect\.$/,
+  );
   if (snakeMatch) return t("deadMansDrawActionSnakeForcedCount", { count: snakeMatch[1] });
 
   if (suitLabel) {

@@ -126,6 +126,7 @@ export default function OnlineLobby() {
         playerId,
         playerName,
         isHost: false,
+        playerCount,
         turnTime,
         targetScore,
         gameId: selectedGame.id,

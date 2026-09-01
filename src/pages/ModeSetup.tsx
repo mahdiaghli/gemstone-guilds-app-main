@@ -6,6 +6,7 @@ import { useLanguage } from "@/hooks/useLanguage";
 import { useAuth } from "@/hooks/useAuth";
 import { getGameEntryFee, payGameEntryFee } from "@/lib/progression";
 import { hasActivePremium } from "@/lib/shop";
+import { requirePremium } from "@/lib/featureFlags";
 import { AIDifficulty } from "@/lib/aiPlayer";
 import { Button } from "@/components/ui/button";
 import PageTopBar from "@/components/game/PageTopBar";
@@ -45,7 +46,7 @@ export default function ModeSetup() {
     () => (searchParams.get("mode") || "local") as GameMode,
     [searchParams],
   );
-  const premiumRequired = (mode === "local" || mode === "online") && !hasActivePremium(user?.id);
+  const premiumRequired = requirePremium() && (mode === "local" || mode === "online") && !hasActivePremium(user?.id);
 
   const selectedGame = useMemo(
     () => getGameById(searchParams.get("game")),

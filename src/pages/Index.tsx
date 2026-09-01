@@ -8,6 +8,7 @@ import PageTopBar from "@/components/game/PageTopBar";
 import AppBottomNav from "@/components/game/AppBottomNav";
 import { useAuth } from "@/hooks/useAuth";
 import { hasActivePremium } from "@/lib/shop";
+import { requirePremium } from "@/lib/featureFlags";
 import robotIcon from "@/assets/play with robots.webp";
 import localIcon from "@/assets/two player.webp";
 import onlineIcon from "@/assets/internet.webp";
@@ -42,7 +43,7 @@ export default function Index() {
     const requiresPremium =
       targetPath.includes("mode=local") || targetPath.includes("mode=online");
 
-    if (requiresPremium && !hasActivePremium(user?.id)) {
+    if (requiresPremium && requirePremium() && !hasActivePremium(user?.id)) {
       navigate("/shop?section=premium&reason=premium-required");
       return;
     }

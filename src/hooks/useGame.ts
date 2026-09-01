@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { GameState, GemType, TokenType } from '@/lib/gameData';
 import {
   initializeGame,
@@ -17,6 +17,14 @@ export function useGame(playerCount: number, initialState?: GameState) {
   const [state, setState] = useState<GameState>(() =>
     initialState ? cloneGameState(initialState) : initializeGame(playerCount),
   );
+  const previousPlayerCountRef = useRef(playerCount);
+
+  useEffect(() => {
+    if (initialState) return;
+    if (previousPlayerCountRef.current === playerCount) return;
+    previousPlayerCountRef.current = playerCount;
+    setState(initializeGame(playerCount));
+  }, [playerCount, initialState]);
 
   const takeTokens = useCallback((gems: GemType[]) => {
     setState(s => performTakeTokens(s, gems));
@@ -51,6 +59,11 @@ export function useGame(playerCount: number, initialState?: GameState) {
 
     setState(initializeGame(playerCount));
   }, [initialState, playerCount]);
+
+  useEffect(() => {
+    if (initialState) return;
+    setState(initializeGame(playerCount));
+  }, [playerCount, initialState]);
 
   return { state, setState, takeTokens, purchaseCard, reserveCard, returnToken, endTurn, resetGame };
 }
