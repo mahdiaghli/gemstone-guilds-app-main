@@ -107,7 +107,7 @@ export default function useSplendorGameController(props: GameProps = {}) {
       }
     } catch {}
 
-    return 45;
+    return 15;
   })();
   const targetScore = (() => {
     const paramValue = Number(searchParams.get("targetScore"));
@@ -209,9 +209,8 @@ export default function useSplendorGameController(props: GameProps = {}) {
           displayName = t("deadMansDrawPlayerName", { number: index + 1 });
         }
       }
-      // Truncate names longer than 10 letters
-      if (displayName.length > 10) {
-        displayName = displayName.slice(0, 10);
+      if (displayName.length > 15) {
+        displayName = displayName.slice(0, 15);
       }
       return displayName;
     }, [gameMode, props.playerNamesList, t, user?.username]);
@@ -244,6 +243,21 @@ export default function useSplendorGameController(props: GameProps = {}) {
   const previousPlayerIndexRef = useRef(0);
   const playerActionTakenRef = useRef(false);
   const [showRobotTurnPopup, setShowRobotTurnPopup] = useState(false);
+
+  useEffect(() => {
+    const handleAppBackRequest = () => {
+      if (state.gameOver) {
+        navigate(menuPath);
+        return;
+      }
+      setShowExitConfirm(true);
+    };
+
+    window.addEventListener("gemstone-app-back-request", handleAppBackRequest);
+    return () => {
+      window.removeEventListener("gemstone-app-back-request", handleAppBackRequest);
+    };
+  }, [menuPath, navigate, state.gameOver]);
 
   const currentPlayer = state.players[state.currentPlayerIndex];
   const localPlayerIndex = gameMode === "online" ? (props.playerIndex ?? 0) : 0;

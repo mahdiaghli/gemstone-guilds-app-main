@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import { useLanguage } from "@/hooks/useLanguage";
 import { useAuth } from "@/hooks/useAuth";
 import { getGameEntryFee, payGameEntryFee } from "@/lib/progression";
+import { hasActivePremium } from "@/lib/shop";
 import { AIDifficulty } from "@/lib/aiPlayer";
 import { Button } from "@/components/ui/button";
 import PageTopBar from "@/components/game/PageTopBar";
@@ -38,12 +39,13 @@ export default function ModeSetup() {
   const [aiPlayers, setAiPlayers] = useState<2 | 3 | 4>(2);
 
   // زمان نوبت (۱۵ / ۳۰ / ۴۵ / ۶۰ ثانیه)
-  const [turnTime, setTurnTime] = useState<15 | 30 | 45 | 60>(45);
+  const [turnTime, setTurnTime] = useState<15 | 30 | 45 | 60>(15);
 
   const mode = useMemo(
     () => (searchParams.get("mode") || "local") as GameMode,
     [searchParams],
   );
+  const premiumRequired = (mode === "local" || mode === "online") && !hasActivePremium(user?.id);
 
   const selectedGame = useMemo(
     () => getGameById(searchParams.get("game")),
@@ -62,6 +64,12 @@ export default function ModeSetup() {
       navigate(`/menu/${selectedGame.id}`);
     }
   }, [mode, navigate, selectedGame.id]);
+
+  useEffect(() => {
+    if (premiumRequired) {
+      navigate("/shop?section=premium&reason=premium-required", { replace: true });
+    }
+  }, [navigate, premiumRequired]);
 
   const difficultyOptions: {
     id: AIDifficulty;
@@ -100,7 +108,7 @@ export default function ModeSetup() {
     if (selectedOnlineMode === "manual") {
       navigate(
         `/online-lobby?players=${selectedPlayers}${
-          isDeadMansDraw ? "" : "&turnTime=45"
+          isDeadMansDraw ? "" : "&turnTime=15"
         }&game=${selectedGame.id}`,
       );
       return;
@@ -110,7 +118,7 @@ export default function ModeSetup() {
     if (isDeadMansDraw) {
       sessionStorage.removeItem("matchmaking-turnTime");
     } else {
-      sessionStorage.setItem("matchmaking-turnTime", "45");
+      sessionStorage.setItem("matchmaking-turnTime", "15");
     }
     sessionStorage.setItem("matchmaking-game", selectedGame.id);
 
@@ -370,7 +378,7 @@ export default function ModeSetup() {
 
             {!isDeadMansDraw && (
               <div className="mt-4 rounded-xl border border-primary/20 bg-card/50 px-4 py-3 text-sm text-muted-foreground">
-                {t("turnTimeLimit") ?? "Turn Time Limit"}: 45s
+                {t("turnTimeLimit") ?? "Turn Time Limit"}: 15s
               </div>
             )}
           </div>

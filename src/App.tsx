@@ -2,11 +2,14 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { MotionConfig } from "framer-motion";
+import { BrowserRouter, Routes, Route, useLocation, useNavigate } from "react-router-dom";
+import { useEffect } from "react";
 import { LanguageProvider } from "@/hooks/useLanguage";
 import { useBackgroundMusic } from "@/hooks/useBackgroundMusic";
 import RequireAuth from "@/components/auth/RequireAuth";
 import { useAuth } from "@/hooks/useAuth";
+import { isNativeApp } from "@/lib/nativeApp";
 import GamesList from "./pages/GamesList";
 import Index from "./pages/Index";
 import ModeSetup from "./pages/ModeSetup";
@@ -36,6 +39,41 @@ function GlobalMusicBoot() {
   return null;
 }
 
+function AppBackHandler() {
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  useEffect(() => {
+    if (!isNativeApp()) return;
+
+    const handleBack = (event?: Event) => {
+      event?.preventDefault?.();
+
+      const path = location.pathname;
+      if (path.startsWith("/game") || path.startsWith("/online-game")) {
+        window.dispatchEvent(new CustomEvent("gemstone-app-back-request"));
+        return;
+      }
+
+      if (window.history.length > 1 && path !== "/" && path !== "/menu") {
+        navigate(-1);
+        return;
+      }
+
+      if (path !== "/menu") {
+        navigate("/menu");
+      }
+    };
+
+    document.addEventListener("backbutton", handleBack);
+    return () => {
+      document.removeEventListener("backbutton", handleBack);
+    };
+  }, [location.pathname, navigate]);
+
+  return null;
+}
+
 function RedirectIfAuthed({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useAuth();
   if (isLoading) return null;
@@ -47,11 +85,13 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <LanguageProvider>
       <TooltipProvider>
-        <GlobalMusicBoot />
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <Routes>
+        <MotionConfig reducedMotion={isNativeApp() ? "always" : "user"}>
+          <GlobalMusicBoot />
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <AppBackHandler />
+            <Routes>
             <Route path="/" element={<Landing />} />
             <Route
               path="/login"
@@ -203,8 +243,9 @@ const App = () => (
             />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
+            </Routes>
+          </BrowserRouter>
+        </MotionConfig>
       </TooltipProvider>
     </LanguageProvider>
   </QueryClientProvider>

@@ -34,6 +34,11 @@ export default function SignUp() {
   const handleSignUp = async () => {
     setError(null);
 
+    if (username.trim().length > 15) {
+      setError(t("usernameTooLong"));
+      return;
+    }
+
     if (password !== confirm) {
       setError(t("passwordsDoNotMatch"));
       return;
@@ -241,6 +246,7 @@ function Field({ label, type, icon, value, onChange, dir }: FieldProps) {
           dir={dir}
           value={value}
           onChange={(e) => onChange(e.target.value)}
+          maxLength={type === "text" ? 15 : undefined}
           placeholder={label}
           className={`flex-1 bg-transparent border-none px-2 text-sm text-[#fdf2c5] outline-none placeholder:text-[#f5e0aa]/70 ${dir === "rtl" ? "text-right" : "text-left"}`}
         />

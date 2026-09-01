@@ -46,8 +46,8 @@ export default function OnlineMatchmaking() {
   const [error, setError] = useState<string | null>(null);
   const [turnTime] = useState(() => {
     const savedTurnTime = sessionStorage.getItem('matchmaking-turnTime');
-    const parsed = savedTurnTime ? parseInt(savedTurnTime, 10) : 45;
-    return parsed === 15 || parsed === 30 || parsed === 45 || parsed === 60 ? parsed : 45;
+    const parsed = savedTurnTime ? parseInt(savedTurnTime, 10) : 15;
+    return parsed === 15 || parsed === 30 || parsed === 45 || parsed === 60 ? parsed : 15;
   });
   const targetScore = (() => {
     const parsed = Number(sessionStorage.getItem("matchmaking-targetScore"));

@@ -25,6 +25,49 @@ export interface ShopSection {
   offers: ShopOffer[];
 }
 
+export type StoreProvider = "cafe-bazaar" | "myket" | "app-store";
+export type PremiumPlanId = "premium-monthly" | "premium-quarterly" | "premium-yearly";
+
+export interface PremiumPlan {
+  id: PremiumPlanId;
+  durationDays: number;
+  priceTomans: number;
+  bonusGems: number;
+  cafeBazaarProductId: string;
+  myketProductId: string;
+  appStoreProductId: string;
+}
+
+export const PREMIUM_PLANS: PremiumPlan[] = [
+  {
+    id: "premium-monthly",
+    durationDays: 30,
+    priceTomans: 99,
+    bonusGems: 20,
+    cafeBazaarProductId: "rokhaki_premium_1m",
+    myketProductId: "rokhaki_premium_1m",
+    appStoreProductId: "com.expert.boardgames.rokhaki.premium.1m",
+  },
+  {
+    id: "premium-quarterly",
+    durationDays: 90,
+    priceTomans: 199,
+    bonusGems: 20,
+    cafeBazaarProductId: "rokhaki_premium_3m",
+    myketProductId: "rokhaki_premium_3m",
+    appStoreProductId: "com.expert.boardgames.rokhaki.premium.3m",
+  },
+  {
+    id: "premium-yearly",
+    durationDays: 365,
+    priceTomans: 599,
+    bonusGems: 20,
+    cafeBazaarProductId: "rokhaki_premium_12m",
+    myketProductId: "rokhaki_premium_12m",
+    appStoreProductId: "com.expert.boardgames.rokhaki.premium.12m",
+  },
+];
+
 export const SHOP_SECTIONS: ShopSection[] = [
   {
     id: "coins",
@@ -101,6 +144,99 @@ const avatarOfferMap = {
 
 export function formatTomans(amount: number) {
   return `${amount.toLocaleString("fa-IR")} تومان`;
+}
+
+function getPremiumPlan(planId: PremiumPlanId) {
+  return PREMIUM_PLANS.find((plan) => plan.id === planId);
+}
+
+function getProviderProductId(plan: PremiumPlan, provider: StoreProvider) {
+  if (provider === "cafe-bazaar") return plan.cafeBazaarProductId;
+  if (provider === "myket") return plan.myketProductId;
+  return plan.appStoreProductId;
+}
+
+export function getPremiumStatus(userId?: string) {
+  const extras = readPlayerExtras(userId);
+  const expiresAt = extras.premiumExpiresAt ? new Date(extras.premiumExpiresAt) : null;
+  const now = Date.now();
+  const active = Boolean(expiresAt && expiresAt.getTime() > now);
+  const remainingDays = expiresAt
+    ? Math.max(0, Math.ceil((expiresAt.getTime() - now) / (1000 * 60 * 60 * 24)))
+    : 0;
+
+  return {
+    active,
+    expiresAt,
+    remainingDays,
+    planId: extras.premiumPlanId as PremiumPlanId | null,
+    provider: extras.premiumProvider,
+  };
+}
+
+export function hasActivePremium(userId?: string) {
+  return getPremiumStatus(userId).active;
+}
+
+export function grantPremiumPlan(
+  userId: string | undefined,
+  planId: PremiumPlanId,
+  provider: StoreProvider,
+) {
+  const plan = getPremiumPlan(planId);
+  if (!plan) return null;
+
+  return updatePlayerExtras(userId, (current) => {
+    const now = Date.now();
+    const currentExpiry = current.premiumExpiresAt
+      ? new Date(current.premiumExpiresAt).getTime()
+      : 0;
+    const startAt = Math.max(now, currentExpiry);
+    const nextExpiry = new Date(startAt + plan.durationDays * 24 * 60 * 60 * 1000);
+
+    return {
+      ...current,
+      gems: current.gems + plan.bonusGems,
+      premiumExpiresAt: nextExpiry.toISOString(),
+      premiumPlanId: plan.id,
+      premiumProvider: provider,
+    };
+  });
+}
+
+export async function purchasePremiumPlan(
+  userId: string | undefined,
+  planId: PremiumPlanId,
+  provider: StoreProvider,
+) {
+  const plan = getPremiumPlan(planId);
+  if (!plan) {
+    return { ok: false as const, message: "Invalid premium plan." };
+  }
+
+  const nativeBilling = window.GemstoneNativeBilling;
+  if (nativeBilling?.purchaseSubscription) {
+    const result = await nativeBilling.purchaseSubscription({
+      provider,
+      planId,
+      productId: getProviderProductId(plan, provider),
+      userId,
+    });
+
+    if (!result?.success) {
+      return {
+        ok: false as const,
+        message: result?.message || "Purchase was cancelled.",
+      };
+    }
+  }
+
+  grantPremiumPlan(userId, planId, provider);
+
+  return {
+    ok: true as const,
+    message: "Premium subscription activated.",
+  };
 }
 
 function addAvatar(userId?: string, avatarPath = merchantImage) {

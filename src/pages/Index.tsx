@@ -6,6 +6,8 @@ import { cn } from "@/lib/utils";
 import { useLanguage } from "@/hooks/useLanguage";
 import PageTopBar from "@/components/game/PageTopBar";
 import AppBottomNav from "@/components/game/AppBottomNav";
+import { useAuth } from "@/hooks/useAuth";
+import { hasActivePremium } from "@/lib/shop";
 import robotIcon from "@/assets/play with robots.webp";
 import localIcon from "@/assets/two player.webp";
 import onlineIcon from "@/assets/internet.webp";
@@ -25,8 +27,10 @@ export default function Index() {
   const navigate = useNavigate();
   const { gameId } = useParams();
   const { t, dir } = useLanguage();
+  const { user } = useAuth();
   const game = getGameById(gameId);
   const pageBackground = getPageBackground(game.id, "index");
+  const gameTitleFa = game.id === "dead-mans-draw" ? "روخاکی" : game.name;
 
   useEffect(() => {
     if (gameId && !findGameById(gameId)) {
@@ -35,6 +39,14 @@ export default function Index() {
   }, [gameId, navigate]);
 
   const openSplendorDestination = (targetPath: string) => {
+    const requiresPremium =
+      targetPath.includes("mode=local") || targetPath.includes("mode=online");
+
+    if (requiresPremium && !hasActivePremium(user?.id)) {
+      navigate("/shop?section=premium&reason=premium-required");
+      return;
+    }
+
     if (game.id !== "splendor") {
       navigate(targetPath);
       return;
@@ -119,7 +131,7 @@ export default function Index() {
         </div>
 
         <h1 className="font-cinzel text-4xl md:text-6xl text-primary tracking-[0.18em] mb-2">
-          {game.name}
+          {dir === "rtl" ? gameTitleFa : game.name}
         </h1>
         <div className="w-24 h-px bg-gradient-to-r from-transparent via-primary to-transparent mx-auto mb-3" />
         {/* <p className="text-muted-foreground text-sm md:text-base font-body tracking-wider mb-2"> */}

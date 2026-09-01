@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import lobbyMusic from "@/assets/Mohsen Lorestani _ Bacha Nana128 (UpMusic).mp3";
 import inGameMusic from "@/assets/Mohammad Alizadeh - Kheily Khosh halam.mp3";
+import { isNativeApp } from "@/lib/nativeApp";
 
 const MUSIC_ENABLED_KEY = "splendor-music-enabled";
 const MUSIC_VOLUME_KEY = "splendor-music-volume";
@@ -14,11 +15,14 @@ const TRACKS: Record<BackgroundTrack, string> = {
 
 let globalAudio: HTMLAudioElement | null = null;
 let activeTrack: BackgroundTrack = "lobby";
+let audioUnlocked = false;
 
 function ensureAudio(track: BackgroundTrack) {
   if (!globalAudio) {
     globalAudio = new Audio(TRACKS[track]);
     globalAudio.loop = true;
+    globalAudio.preload = "auto";
+    globalAudio.playsInline = true;
   }
 
   if (activeTrack !== track) {
@@ -33,6 +37,27 @@ function ensureAudio(track: BackgroundTrack) {
   }
 
   return globalAudio;
+}
+
+async function tryUnlockAudio(track: BackgroundTrack) {
+  const audio = ensureAudio(track);
+
+  if (audioUnlocked) {
+    return audio;
+  }
+
+  try {
+    audio.muted = true;
+    await audio.play();
+    audio.pause();
+    audio.currentTime = 0;
+    audio.muted = false;
+    audioUnlocked = true;
+  } catch {
+    audio.muted = false;
+  }
+
+  return audio;
 }
 
 function isMusicEnabled() {
@@ -55,12 +80,28 @@ export function useBackgroundMusic() {
   const [track, setTrack] = useState<BackgroundTrack>(activeTrack);
 
   useEffect(() => {
-    const audio = ensureAudio(track);
-    audio.volume = volume;
+    let active = true;
 
-    if (isPlaying) {
-      audio.play().catch(() => {});
-    }
+    const syncPlayback = async () => {
+      const audio = ensureAudio(track);
+      audio.volume = volume;
+
+      if (!isPlaying) return;
+
+      if (isNativeApp()) {
+        await tryUnlockAudio(track);
+      }
+
+      if (active) {
+        audio.play().catch(() => {});
+      }
+    };
+
+    syncPlayback();
+
+    return () => {
+      active = false;
+    };
   }, [track, volume, isPlaying]);
 
   useEffect(() => {
@@ -72,6 +113,33 @@ export function useBackgroundMusic() {
     } else {
       audio.pause();
     }
+  }, [isPlaying, track]);
+
+  useEffect(() => {
+    const unlock = () => {
+      if (!isPlaying) return;
+      tryUnlockAudio(track).then((audio) => {
+        audio.play().catch(() => {});
+      });
+    };
+
+    const resumeOnVisible = () => {
+      if (document.visibilityState === "visible" && isPlaying) {
+        ensureAudio(track).play().catch(() => {});
+      }
+    };
+
+    window.addEventListener("pointerdown", unlock, { passive: true });
+    window.addEventListener("touchend", unlock, { passive: true });
+    window.addEventListener("keydown", unlock);
+    document.addEventListener("visibilitychange", resumeOnVisible);
+
+    return () => {
+      window.removeEventListener("pointerdown", unlock);
+      window.removeEventListener("touchend", unlock);
+      window.removeEventListener("keydown", unlock);
+      document.removeEventListener("visibilitychange", resumeOnVisible);
+    };
   }, [isPlaying, track]);
 
   const toggleMusic = () => {

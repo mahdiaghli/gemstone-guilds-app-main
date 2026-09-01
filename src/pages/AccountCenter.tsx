@@ -496,6 +496,7 @@ export default function AccountCenter() {
                 <input
                   value={username}
                   onChange={(event) => setUsername(event.target.value)}
+                  maxLength={15}
                   className={`w-full rounded-lg border border-primary/20 bg-card px-4 py-2 ${
                     dir === "rtl" ? "text-right" : ""
                   }`}
@@ -516,6 +517,11 @@ export default function AccountCenter() {
               <Button
                 className="w-full"
                 onClick={async () => {
+                  if (username.trim().length > 15) {
+                    setEditMessage(t("usernameTooLong"));
+                    return;
+                  }
+
                   const ok = await updateProfile({
                     username: username.trim(),
                     email: email.trim(),

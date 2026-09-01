@@ -56,7 +56,7 @@ export default function Friends() {
   const [inviteGameId, setInviteGameId] = useState("splendor");
   const [invitePlayerCount, setInvitePlayerCount] = useState(2);
   const [inviteHumanPlayers, setInviteHumanPlayers] = useState(2);
-  const [inviteTurnTime, setInviteTurnTime] = useState<15 | 30 | 45 | 60>(45);
+  const [inviteTurnTime, setInviteTurnTime] = useState<15 | 30 | 45 | 60>(15);
 
   const requests = useMemo(() => (user ? getFriendRequests(user.id) : []), [user, refreshKey]);
   const groupRequests = useMemo(() => (user ? getGroupRequestsForCreator(user.id) : []), [user, refreshKey]);
@@ -296,7 +296,7 @@ export default function Friends() {
                       setInviteGameId("splendor");
                       setInvitePlayerCount(2);
                       setInviteHumanPlayers(2);
-                      setInviteTurnTime(45);
+                      setInviteTurnTime(15);
                     }}
                   >
                     <Gamepad2 className="h-4 w-4" />

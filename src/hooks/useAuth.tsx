@@ -18,6 +18,7 @@ interface AuthContextType {
 }
 
 const USER_STORAGE_KEY = "splendor_user";
+const MAX_USERNAME_LENGTH = 15;
 // فعلاً مقدار پیش‌فرض undefined برای جلوگیری از استفاده خارج از Provider
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -109,6 +110,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
   ): Promise<boolean> => {
     setIsLoading(true);
     try {
+      if (!isUsernameValid(username)) {
+        return false;
+      }
+
       const localUsersRaw = localStorage.getItem("splendor_users");
       const users = localUsersRaw ? JSON.parse(localUsersRaw) : [];
 
@@ -164,6 +169,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
     if (!user) return false;
 
     try {
+      if (!isUsernameValid(updates.username)) {
+        return false;
+      }
+
       const localUsersRaw = localStorage.getItem("splendor_users");
       const users = localUsersRaw ? JSON.parse(localUsersRaw) : [];
 
@@ -221,3 +230,5 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
+  const isUsernameValid = (username: string) =>
+    username.trim().length > 0 && username.trim().length <= MAX_USERNAME_LENGTH;

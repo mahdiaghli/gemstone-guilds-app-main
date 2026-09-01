@@ -93,7 +93,7 @@ export default function Events() {
 
     if (eventId === "marathon") {
       sessionStorage.setItem("matchmaking-players", "2");
-      sessionStorage.setItem("matchmaking-turnTime", "45");
+      sessionStorage.setItem("matchmaking-turnTime", "15");
       sessionStorage.setItem("matchmaking-targetScore", "9");
       sessionStorage.setItem("matchmaking-game", "splendor");
       navigate("/online-matchmaking?game=splendor&event=marathon");

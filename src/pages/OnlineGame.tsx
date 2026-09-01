@@ -35,7 +35,7 @@ export default function OnlineGame() {
   const [playerName, setPlayerName] = useState('');
   const [isHost, setIsHost] = useState(false);
   const [playerCount, setPlayerCount] = useState(2);
-  const [turnTime, setTurnTime] = useState(45);
+  const [turnTime, setTurnTime] = useState(15);
   const [gameStarted, setGameStarted] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [postGameNoticeDialog, setPostGameNoticeDialog] = useState<PostGameNoticeDialog | null>(null);
@@ -220,6 +220,26 @@ export default function OnlineGame() {
     leaveRoom();
     navigate(menuPath);
   };
+
+  useEffect(() => {
+    const handleAppBackRequest = () => {
+      if (gameStarted && !gameState?.gameOver) {
+        const confirmed = window.confirm(
+          lang === 'fa'
+            ? 'آیا مطمئن هستید که می‌خواهید از بازی خارج شوید؟'
+            : 'Are you sure you want to leave the game?',
+        );
+        if (!confirmed) return;
+      }
+
+      handleLeaveRoom();
+    };
+
+    window.addEventListener('gemstone-app-back-request', handleAppBackRequest);
+    return () => {
+      window.removeEventListener('gemstone-app-back-request', handleAppBackRequest);
+    };
+  }, [gameStarted, gameState?.gameOver, handleLeaveRoom, lang]);
 
   const handleSendFriendRequests = useCallback(() => {
     if (!user?.id || opponentIds.length === 0 || friendRequestLocked) return;

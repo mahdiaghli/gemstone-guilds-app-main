@@ -11,6 +11,9 @@ export interface PlayerExtras {
   selectedCardBack: CardBackId;
   dailyRewardClaimedOn: string | null;
   dailyRewardIndex: number;
+  premiumExpiresAt: string | null;
+  premiumPlanId: string | null;
+  premiumProvider: "cafe-bazaar" | "myket" | null;
 }
 
 const DEFAULT_EXTRAS: PlayerExtras = {
@@ -22,6 +25,9 @@ const DEFAULT_EXTRAS: PlayerExtras = {
   selectedCardBack: "classic",
   dailyRewardClaimedOn: null,
   dailyRewardIndex: 0,
+  premiumExpiresAt: null,
+  premiumPlanId: null,
+  premiumProvider: null,
 };
 
 function getKey(userId?: string) {

@@ -140,7 +140,7 @@ function normalizeGameInvite(invite: Partial<GameInvite> & Pick<GameInvite, "id"
     gameId: typeof invite.gameId === "string" && invite.gameId ? invite.gameId : "splendor",
     playerCount,
     humanPlayers: normalizeHumanPlayers(Number(invite.humanPlayers) || playerCount, playerCount),
-    turnTime: normalizeTurnTime(Number(invite.turnTime) || 45),
+    turnTime: normalizeTurnTime(Number(invite.turnTime) || 15),
     roomId: typeof invite.roomId === "string" && invite.roomId ? invite.roomId : `FR-${invite.id.slice(-6).toUpperCase()}`,
   };
 }
@@ -458,7 +458,7 @@ function normalizeHumanPlayers(humanPlayers: number, playerCount: number) {
 }
 
 function normalizeTurnTime(turnTime: number): 15 | 30 | 45 | 60 {
-  return turnTime === 15 || turnTime === 30 || turnTime === 45 || turnTime === 60 ? turnTime : 45;
+  return turnTime === 15 || turnTime === 30 || turnTime === 45 || turnTime === 60 ? turnTime : 15;
 }
 
 export function sendGameInvite(input: SendGameInviteInput) {

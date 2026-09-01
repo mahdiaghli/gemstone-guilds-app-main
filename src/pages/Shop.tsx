@@ -11,14 +11,20 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button"; 
 import { shellBackgrounds } from "@/lib/pageBackgrounds";
 import {
+  PREMIUM_PLANS,
   SHOP_SECTIONS,
   WEEKLY_REWARDS,
   applyOfferPurchase,
   claimWeeklyReward,
   formatTomans,
   getCurrentRewardState,
+  getPremiumStatus,
+  purchasePremiumPlan,
+  type PremiumPlanId,
   type ShopSection,
+  type StoreProvider,
 } from "@/lib/shop";
+import { getNativePlatform, isAndroidApp, isIosApp } from "@/lib/nativeApp";
 import bannerImage from "@/assets/banner.webp";
 import coinImage from "@/assets/coin.webp";
 import coinStackImage from "@/assets/5coins.webp";
@@ -87,18 +93,40 @@ export default function Shop() {
   const { t, dir } = useLanguage();
   const [searchParams] = useSearchParams();
   const [message, setMessage] = useState<string | null>(null);
+  const [selectedPlan, setSelectedPlan] = useState<PremiumPlanId | null>(null);
+  const [isProcessingPurchase, setIsProcessingPurchase] = useState(false);
+  const isFa = dir === "rtl";
+  const nativePlatform = getNativePlatform();
+  const availableProviders: StoreProvider[] = isIosApp()
+    ? ["app-store"]
+    : isAndroidApp()
+      ? ["cafe-bazaar", "myket"]
+      : ["app-store", "cafe-bazaar", "myket"];
   const rewardState = useMemo(
     () => getCurrentRewardState(user?.id),
+    [user?.id, message]
+  );
+  const premiumStatus = useMemo(
+    () => getPremiumStatus(user?.id),
     [user?.id, message]
   );
   const sectionRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   useEffect(() => {
     const sectionKey = searchParams.get("section");
-    if (!sectionKey) return;
+    if (!sectionKey || sectionKey === "premium") return;
     const target = sectionRefs.current[sectionParamMap[sectionKey]];
     target?.scrollIntoView({ behavior: "smooth", block: "start" });
   }, [searchParams]);
+
+  useEffect(() => {
+    if (searchParams.get("reason") !== "premium-required") return;
+    setMessage(
+      isFa
+        ? "برای بازی محلی یا آنلاین باید یکی از اشتراک‌های پرمیوم را بخرید."
+        : "A premium subscription is required before local or online play.",
+    );
+  }, [isFa, searchParams]);
 
   const handleOfferPurchase = (
     sectionId: ShopSection["id"],
@@ -118,6 +146,49 @@ export default function Shop() {
         : undefined;
     const reward = claimWeeklyReward(user?.id, avatarChoice);
     setMessage(reward ? t("dailyRewardSuccess") : t("dailyRewardClaimed"));
+  };
+
+  const handlePremiumPurchase = async (provider: StoreProvider) => {
+    if (!selectedPlan || isProcessingPurchase) return;
+
+    setIsProcessingPurchase(true);
+    const result = await purchasePremiumPlan(user?.id, selectedPlan, provider);
+    setIsProcessingPurchase(false);
+    setSelectedPlan(null);
+
+    setMessage(
+      result.ok
+        ? isFa
+          ? "اشتراک پرمیوم فعال شد. ۲۰ الماس اضافه هم به حساب شما اضافه شد."
+          : "Premium activated. 20 bonus diamonds were added to your account."
+        : isFa
+          ? "خرید کامل نشد. دوباره تلاش کنید."
+          : "The purchase did not complete. Please try again.",
+    );
+  };
+
+  const getProviderLabel = (provider: StoreProvider) => {
+    if (provider === "app-store") return "App Store";
+    if (provider === "cafe-bazaar") return "Cafe Bazaar";
+    return "Myket";
+  };
+
+  const getPremiumPlanText = (planId: PremiumPlanId) => {
+    if (planId === "premium-monthly") {
+      return isFa
+        ? { title: "پرمیوم یک‌ماهه", subtitle: "۹۹ تومان", duration: "۳۰ روز" }
+        : { title: "1-Month Premium", subtitle: "99 tomans", duration: "30 days" };
+    }
+
+    if (planId === "premium-quarterly") {
+      return isFa
+        ? { title: "پرمیوم سه‌ماهه", subtitle: "۱۹۹ تومان", duration: "۹۰ روز" }
+        : { title: "3-Month Premium", subtitle: "199 tomans", duration: "90 days" };
+    }
+
+    return isFa
+      ? { title: "پرمیوم یک‌ساله", subtitle: "۵۹۹ تومان", duration: "۳۶۵ روز" }
+      : { title: "1-Year Premium", subtitle: "599 tomans", duration: "365 days" };
   };
 
   const avatarNameKeys = [
@@ -301,6 +372,71 @@ const renderRewardCard = (
   return (
     <AppPageShell currentPath="/shop" showHeader={false} backgroundImage={shellBackgrounds.shop}>
       <div className="space-y-6 pt-2" dir={dir}>
+        <div className="rounded-[32px] bg-[radial-gradient(circle_at_top_right,rgba(107,216,255,0.18),transparent_34%),linear-gradient(145deg,rgba(14,26,52,0.96),rgba(12,20,40,0.92))] p-5 shadow-2xl">
+          <div className="relative mb-5 overflow-hidden rounded-3xl">
+            <img
+              src={bannerImage}
+              alt={isFa ? "اشتراک پرمیوم" : "Premium Subscription"}
+              className="h-28 w-full object-cover"
+            />
+            <div className="absolute inset-0 bg-slate-950/60" />
+            <div className="absolute inset-0 flex flex-col items-center justify-center px-5 text-center text-primary">
+              <h2 className="font-cinzel text-xl">
+                {isFa ? "اشتراک پرمیوم" : "Premium Subscription"}
+              </h2>
+              <p className="mt-2 text-xs text-slate-100/85">
+                {isFa
+                  ? "برای شروع بازی محلی یا آنلاین باید اول اشتراک فعال داشته باشید. با هر خرید، ۲۰ الماس اضافه هم می‌گیرید."
+                  : "Local and online play require an active subscription. Every purchase also grants 20 bonus diamonds."}
+              </p>
+              <p className="mt-1 text-[11px] text-slate-200/70">
+                {isFa
+                  ? nativePlatform === "ios"
+                    ? "در آیفون پرداخت از طریق App Store انجام می‌شود."
+                    : nativePlatform === "android"
+                      ? "در اندروید پرداخت از طریق بازار یا مایکت انجام می‌شود."
+                      : "برای تست وب، هر سه درگاه به‌صورت شبیه‌سازی‌شده در دسترس هستند."
+                  : nativePlatform === "ios"
+                    ? "On iPhone, purchases go through the App Store."
+                    : nativePlatform === "android"
+                      ? "On Android, purchases go through Cafe Bazaar or Myket."
+                      : "In web testing, all providers remain available as simulated options."}
+              </p>
+            </div>
+          </div>
+
+          <div className="mb-4 rounded-3xl border border-primary/20 bg-background/30 px-4 py-3 text-sm text-slate-100/90">
+            {premiumStatus.active
+              ? isFa
+                ? `اشتراک فعال است. ${premiumStatus.remainingDays} روز دیگر باقی مانده است.`
+                : `Premium is active. ${premiumStatus.remainingDays} day(s) remaining.`
+              : isFa
+                ? "هنوز اشتراک فعالی ندارید."
+                : "No active premium subscription yet."}
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            {PREMIUM_PLANS.map((plan) => {
+              const copy = getPremiumPlanText(plan.id);
+              return (
+                <button
+                  key={plan.id}
+                  type="button"
+                  onClick={() => setSelectedPlan(plan.id)}
+                  className="rounded-[28px] border border-primary/25 bg-[linear-gradient(160deg,rgba(255,255,255,0.08),rgba(255,255,255,0.02))] p-4 text-center shadow-lg transition-all hover:-translate-y-1 hover:border-primary/50"
+                >
+                  <div className="mb-2 text-lg font-bold text-primary">{copy.title}</div>
+                  <div className="mb-1 text-sm text-slate-100">{copy.subtitle}</div>
+                  <div className="text-xs text-slate-300">{copy.duration}</div>
+                  <div className="mt-4 rounded-2xl border border-emerald-400/20 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-200">
+                    {isFa ? "۲۰ الماس جایزه" : "20 bonus diamonds"}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
         {SHOP_SECTIONS.map((section) => (
           <div
             key={section.id}
@@ -367,6 +503,33 @@ const renderRewardCard = (
           </DialogHeader>
           <p className={dir === "rtl" ? "text-right" : ""}>{message}</p>
           <Button onClick={() => setMessage(null)}>{t("continueLabel")}</Button>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={Boolean(selectedPlan)} onOpenChange={(open) => !open && setSelectedPlan(null)}>
+        <DialogContent className="max-w-sm rounded-[28px]" dir={dir}>
+          <DialogHeader className={dir === "rtl" ? "text-right" : ""}>
+            <DialogTitle>{isFa ? "انتخاب مارکت" : "Choose a store"}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <p className={dir === "rtl" ? "text-right text-sm" : "text-sm"}>
+              {isFa
+                ? "پرداخت داخل برنامه را از فروشگاه مناسب دستگاه شروع کنید."
+                : "Start the in-app purchase with the store for this device."}
+            </p>
+            {availableProviders.map((provider, index) => (
+              <Button
+                key={provider}
+                disabled={isProcessingPurchase}
+                variant={index === 0 ? "default" : "secondary"}
+                onClick={() => handlePremiumPurchase(provider)}
+              >
+                {isProcessingPurchase
+                  ? (isFa ? "در حال اتصال..." : "Connecting...")
+                  : getProviderLabel(provider)}
+              </Button>
+            ))}
+          </div>
         </DialogContent>
       </Dialog>
     </AppPageShell>

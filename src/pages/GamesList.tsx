@@ -41,7 +41,7 @@ const FEATURED_POSTERS: Partial<
 // عناوین فارسی بازی‌ها
 const GAME_TITLES_FA: Record<string, string> = {
   splendor: "اسپلندور",
-  "dead-mans-draw": "زیرخاکی",
+  "dead-mans-draw": "روخاکی",
   totem: "جنگل اسپید",
   "beasty-bar": "بیستی بار",
   coup: "کوپ",

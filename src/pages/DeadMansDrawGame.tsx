@@ -431,6 +431,21 @@ export default function DeadMansDrawGame(props: DeadMansDrawGameProps = {}) {
     navigate(menuPath);
   }, [gameMode, menuPath, navigate, props]);
 
+  useEffect(() => {
+    const handleAppBackRequest = () => {
+      if (currentState.gameOver) {
+        handleMenu();
+        return;
+      }
+      setShowExitConfirm(true);
+    };
+
+    window.addEventListener("gemstone-app-back-request", handleAppBackRequest);
+    return () => {
+      window.removeEventListener("gemstone-app-back-request", handleAppBackRequest);
+    };
+  }, [currentState.gameOver, handleMenu]);
+
   const resetLocalGame = useCallback(() => {
     setBonusPreview(null);
     setBustPreview(null);
