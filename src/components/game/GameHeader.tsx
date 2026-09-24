@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button";
 import Chat from "@/components/game/Chat";
 import VoiceChatControl from "@/components/game/VoiceChatControl";
 import { cn } from "@/lib/utils";
+import type { Socket } from "socket.io-client";
+import type { VoiceRoomPlayer } from "@/hooks/useVoiceChat";
 
 type GameHeaderProps = {
   gameMode: "local" | "ai" | "online";
@@ -14,28 +16,29 @@ type GameHeaderProps = {
   stateCurrentPlayerIndex: number;
   humanPlayerCount: number;
   turnSecondsLeft: number;
+  turnDurationSeconds: number;
   getPlayerDisplayName: (index: number) => string;
   isCurrentPlayerMe: () => boolean;
   isAIPlayer: (index: number) => boolean;
   onShowQuickRules: () => void;
   onExit: () => void;
-  socket: any;
+  socket: Socket | null;
   roomId: string;
   playerId: string;
   playerName: string;
-  roomPlayers: Record<string, any>;
+  roomPlayers: Record<string, VoiceRoomPlayer>;
   highlightTimer?: boolean;
 };
 
 export default function GameHeader({
   gameMode,
   phase,
-  lang,
   t,
   gameTitle,
   stateCurrentPlayerIndex,
   humanPlayerCount,
   turnSecondsLeft,
+  turnDurationSeconds,
   getPlayerDisplayName,
   isCurrentPlayerMe,
   isAIPlayer,
@@ -49,24 +52,28 @@ export default function GameHeader({
   highlightTimer,
 }: GameHeaderProps) {
   const currentPlayerName = getPlayerDisplayName(stateCurrentPlayerIndex);
-  const truncatedPlayerName = currentPlayerName.length > 10 
-    ? currentPlayerName.substring(0, 10) 
-    : currentPlayerName;
-  
+  const truncatedPlayerName =
+    currentPlayerName.length > 10
+      ? currentPlayerName.substring(0, 10)
+      : currentPlayerName;
+  const timerSize = 52;
+  const timerRadius = 21;
+  const timerCircumference = 2 * Math.PI * timerRadius;
+  const timerProgress = Math.max(
+    0,
+    Math.min(1, turnSecondsLeft / Math.max(1, turnDurationSeconds)),
+  );
+  const timerIsCritical = turnSecondsLeft <= 5;
+
   return (
-    <div className="mb-3 flex items-center justify-between gap-4">
-      <div className="flex min-w-0 items-center gap-3">
-        <div className="min-w-0">
-          <p className="truncate font-cinzel text-xs uppercase text-primary/75">
+    <div className="mb-3 flex items-center justify-between gap-2">
+      <div className="flex min-w-0 items-center gap-2 sm:gap-3">
+        {gameTitle ? (
+          <p className="max-w-28 truncate font-cinzel text-xs uppercase text-primary/75">
             {gameTitle}
           </p>
-          {/* <h1 className="font-cinzel text-lg tracking-widest text-primary md:text-xl">
-          {lang === "fa"
-            ? `نوبت ${getPlayerDisplayName(stateCurrentPlayerIndex)}`
-            : `It's ${getPlayerDisplayName(stateCurrentPlayerIndex)}'s turn`}
-          </h1> */}
-        </div>
-        <div className="h-4 w-px bg-border" />
+        ) : null}
+
         <span className="font-body text-sm text-muted-foreground">
           {phase === "aiThinking" ? (
             <motion.span
@@ -76,17 +83,15 @@ export default function GameHeader({
               {`${t("botTurn")} ${stateCurrentPlayerIndex - humanPlayerCount + 1}`}
             </motion.span>
           ) : gameMode === "online" ? (
-            <>
-              <span
-                className={
-                  isCurrentPlayerMe() ? "font-bold text-green-500" : "text-amber-500"
-                }
-              >
-                {isCurrentPlayerMe() ? t("yourTurn") : t("waiting")}
-              </span>
-              {" | "}
-              {truncatedPlayerName}
-            </>
+            <span
+              className={
+                isCurrentPlayerMe()
+                  ? "font-bold text-green-500"
+                  : "text-amber-500"
+              }
+            >
+              {isCurrentPlayerMe() ? t("yourTurn") : t("waiting")}
+            </span>
           ) : (
             <>
               {truncatedPlayerName}
@@ -94,10 +99,58 @@ export default function GameHeader({
             </>
           )}
         </span>
-        <span className={cn("text-xs text-muted-foreground rounded-md px-2 py-1", highlightTimer && "ring-2 ring-amber-400/80 bg-amber-500/10")}>
-          {truncatedPlayerName} - {t("turnTimeLeft")}: {turnSecondsLeft} {t("secondsShort")}
-        </span>
+
+        <div
+          role="timer"
+          aria-label={`${t("turnTimeLeft")}: ${turnSecondsLeft} ${t("secondsShort")}`}
+          className={cn(
+            "relative grid h-[52px] w-[52px] shrink-0 place-items-center rounded-full bg-slate-950/65 shadow-lg",
+            highlightTimer && "ring-2 ring-amber-400/80",
+          )}
+        >
+          <svg
+            width={timerSize}
+            height={timerSize}
+            viewBox={`0 0 ${timerSize} ${timerSize}`}
+            className="absolute inset-0 -rotate-90"
+            aria-hidden="true"
+          >
+            <circle
+              cx={timerSize / 2}
+              cy={timerSize / 2}
+              r={timerRadius}
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="5"
+              className="text-white/15"
+            />
+            <circle
+              cx={timerSize / 2}
+              cy={timerSize / 2}
+              r={timerRadius}
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="5"
+              strokeLinecap="round"
+              strokeDasharray={timerCircumference}
+              strokeDashoffset={timerCircumference * (1 - timerProgress)}
+              className={cn(
+                "transition-[stroke-dashoffset,color] duration-300",
+                timerIsCritical ? "text-red-500" : "text-emerald-500",
+              )}
+            />
+          </svg>
+          <span
+            className={cn(
+              "relative text-base font-bold tabular-nums",
+              timerIsCritical ? "text-red-300" : "text-emerald-200",
+            )}
+          >
+            {turnSecondsLeft}
+          </span>
+        </div>
       </div>
+
       <div className="flex flex-col items-end gap-2">
         <div className="flex items-center gap-2">
           {gameMode === "online" && (
@@ -106,10 +159,15 @@ export default function GameHeader({
               roomId={roomId}
               playerId={playerId}
               roomPlayers={roomPlayers}
-              disabled={!socket}
+              disabled={!socket?.connected}
             />
           )}
-          <Button variant="outline" size="sm" onClick={onShowQuickRules} title={t("tutorial")}>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onShowQuickRules}
+            title={t("tutorial")}
+          >
             📖
           </Button>
           <Button variant="ghost" size="sm" onClick={onExit}>

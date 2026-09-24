@@ -84,8 +84,7 @@ export interface GameInvite {
   roomId: string;
 }
 
-const REMOTE_RETRY_COOLDOWN_MS = 30_000;
-let remoteDisabledUntil = 0;
+const REMOTE_REQUEST_TIMEOUT_MS = 5_000;
 
 interface SocialStore {
   friends: Record<string, string[]>;
@@ -232,10 +231,8 @@ function removeUserFromGroups(store: SocialStore, userId: string) {
 }
 
 async function fetchRemoteJson<T>(url: string, init?: RequestInit): Promise<T | null> {
-  if (Date.now() < remoteDisabledUntil) {
-    return null;
-  }
-
+  const controller = new AbortController();
+  const timeout = window.setTimeout(() => controller.abort(), REMOTE_REQUEST_TIMEOUT_MS);
   try {
     const headers = new Headers(init?.headers);
     const token =
@@ -254,13 +251,15 @@ async function fetchRemoteJson<T>(url: string, init?: RequestInit): Promise<T | 
       mode: "cors",
       ...init,
       headers,
+      signal: controller.signal,
     });
 
     if (!response.ok) return null;
     return (await response.json()) as T;
   } catch {
-    remoteDisabledUntil = Date.now() + REMOTE_RETRY_COOLDOWN_MS;
     return null;
+  } finally {
+    window.clearTimeout(timeout);
   }
 }
 
@@ -565,6 +564,8 @@ export async function createGroupRemote(group: Omit<GroupEntry, "id" | "code" | 
     store.groups = data.groups.map((entry) => normalizeGroup(entry as any));
     persistStore(store);
   }
+  // Keep group creation usable during a short server restart; the local store
+  // is synchronized on the next successful /social request.
   return data?.group ? normalizeGroup(data.group as any) : createGroup(group);
 }
 

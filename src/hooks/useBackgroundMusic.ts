@@ -16,9 +16,14 @@ let globalAudio: HTMLAudioElement | null = null;
 let activeTrack: BackgroundTrack = "lobby";
 let audioUnlocked = false;
 
-function storedVolume() {
-  const value = Number(localStorage.getItem(MUSIC_VOLUME_KEY));
+export function parseStoredMusicVolume(stored: string | null) {
+  if (stored === null) return 0.5;
+  const value = Number(stored);
   return Number.isFinite(value) && value >= 0 && value <= 1 ? value : 0.5;
+}
+
+function storedVolume() {
+  return parseStoredMusicVolume(localStorage.getItem(MUSIC_VOLUME_KEY));
 }
 
 function isMusicEnabled() {

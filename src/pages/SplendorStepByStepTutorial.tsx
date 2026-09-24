@@ -481,18 +481,23 @@ export default function SplendorStepByStepTutorial() {
     return;
   };
 
-  const finishTutorial = () => {
+  const markTutorialSeen = () => {
     try {
       localStorage.setItem("splendor-tutorial-completed", "true");
       localStorage.removeItem("splendor-needs-tutorial");
     } catch (error) {
       console.error("Failed to save Splendor tutorial progress", error);
     }
+  };
+
+  const finishTutorial = () => {
+    markTutorialSeen();
 
     navigate(searchParams.get("returnTo") || defaultReturnPath);
   };
 
   const leaveTutorial = () => {
+    markTutorialSeen();
     navigate(searchParams.get("returnTo") || defaultReturnPath);
   };
 

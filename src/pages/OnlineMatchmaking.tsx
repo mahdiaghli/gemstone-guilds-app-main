@@ -12,7 +12,19 @@ import { refundPendingEntryFee } from '@/lib/onlineEntryFee';
 import { getPageBackground } from '@/lib/pageBackgrounds';
 
 // Log helper function
-const logToPanel = (level: 'log' | 'error' | 'warn', message: string, data?: any) => {
+type SocketConnectionError = Error & {
+  type?: string;
+  description?: { isTrusted?: boolean };
+  code?: string;
+};
+
+type MatchedPlayer = {
+  id: string;
+  name: string;
+  socketId?: string;
+};
+
+const logToPanel = (level: 'log' | 'error' | 'warn', message: string, data?: unknown) => {
   const timestamp = new Date().toLocaleTimeString();
   const fullMsg = data ? `${message} ${JSON.stringify(data)}` : message;
   console.log(`[${timestamp}] [${level.toUpperCase()}] ${fullMsg}`);
@@ -36,10 +48,7 @@ export default function OnlineMatchmaking() {
   const socketRef = useRef<Socket | null>(null);
   const { user } = useAuth();
   const playerName = user?.username || '';
-  const [playerCount, setPlayerCount] = useState(() => {
-    const savedCount = sessionStorage.getItem('matchmaking-players');
-    return savedCount ? parseInt(savedCount) : 2;
-  });
+  const playerCount = 2;
   const [searching, setSearching] = useState(false);
   const [waitingCount, setWaitingCount] = useState(0);
   const [playerId] = useState(() => generateUUID());
@@ -89,11 +98,10 @@ export default function OnlineMatchmaking() {
         reconnection: true,
         reconnectionDelay: 500,
         reconnectionDelayMax: 3000,
-        reconnectionAttempts: 8,
-        transports: ['websocket'],
-        upgrade: false,
-        rememberUpgrade: true,
-        timeout: 4000,
+        reconnectionAttempts: 5,
+        transports: ['polling', 'websocket'],
+        upgrade: true,
+        timeout: 8000,
       });
 
       socketRef.current = socket;
@@ -112,7 +120,7 @@ export default function OnlineMatchmaking() {
         }
       });
 
-      socket.on('connect_error', (err: any) => {
+      socket.on('connect_error', (err: SocketConnectionError) => {
         const errorType = err?.type || 'Unknown';
         const errorMsg = err?.message || err?.toString() || 'Unknown error';
         console.error(`❌ [CONNECTION ERROR]`, err);
@@ -123,9 +131,13 @@ export default function OnlineMatchmaking() {
           code: err?.code,
           cause: 'Server unreachable - Check if server is running and IP is correct',
         });
-        const reason = errorType === 'TransportError' 
-          ? 'Cannot reach server. Check if server is running and IP address is correct.' 
-          : `Connection failed: ${errorMsg}`;
+        autoStartRef.current = false;
+        setSearching(false);
+        const reason = dir === 'rtl'
+          ? 'اتصال به سرور بازی برقرار نشد. دوباره تلاش کنید.'
+          : errorType === 'TransportError'
+            ? 'Cannot reach the game server. Please try again.'
+            : `Connection failed: ${errorMsg}`;
         setError(reason);
       });
 
@@ -143,7 +155,7 @@ export default function OnlineMatchmaking() {
         setError(null);
       });
 
-      socket.on('reconnect_error', (error: any) => {
+      socket.on('reconnect_error', (error: Error) => {
         console.error(`⚠️  [RECONNECT-ERROR]`, error);
         logToPanel('error', `⚠️  [RECONNECT-ERROR] Failed to reconnect`, {
           error: error?.message || error?.toString(),
@@ -161,13 +173,13 @@ export default function OnlineMatchmaking() {
         setSearching(true);
       });
 
-      socket.on('match-found', (data) => {
+      socket.on('match-found', (data: { roomId: string; players: MatchedPlayer[] }) => {
         const { roomId, players } = data;
         console.log(`🎉 [MATCH FOUND] Room: ${roomId}, Players: ${players.length}`);
         logToPanel('log', `🎉 [MATCH FOUND] Transferring to game room!`, {
           roomId,
           players: players.length,
-          playerNames: players.map((p: any) => p.name).join(', '),
+          playerNames: players.map((player) => player.name).join(', '),
         });
         
         // Store match info
@@ -193,7 +205,9 @@ export default function OnlineMatchmaking() {
           reason,
           timestamp: new Date().toLocaleTimeString(),
         });
-        setError('Disconnected from matchmaking server.');
+        autoStartRef.current = false;
+        setSearching(false);
+        setError(dir === 'rtl' ? 'اتصال به سرور بازی قطع شد.' : 'Disconnected from matchmaking server.');
       });
 
       return () => {
@@ -335,17 +349,6 @@ export default function OnlineMatchmaking() {
                 <div className="text-2xl font-cinzel text-primary">{playerName}</div>
                 <p className="text-xs text-muted-foreground mt-2">{t("matchmakingStarts")}</p>
               </div>
-            </motion.div>
-
-            {/* Player Count Display */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.2 }}
-              className="bg-card/50 border border-primary/20 rounded-xl p-4 text-center"
-            >
-              <p className="text-sm text-muted-foreground mb-2">{t("playersSelected")}</p>
-              <div className="text-4xl font-cinzel text-primary">{playerCount}</div>
             </motion.div>
 
             {/* Error Message */}

@@ -31,7 +31,6 @@ import { getUserCode } from "@/lib/social";
 import { getLevelFromXp, getLevelProgress, readProgress } from "@/lib/progression";
 
 import avatarArt from "@/assets/avatar.webp";
-import fireArt from "@/assets/fire.webp";
 
 // اگر type برای t سخت‌گیر است، این helper کمک می‌کند fallback داشته باشیم
 function useSafeT() {
@@ -77,8 +76,6 @@ export default function AccountCenter() {
       : [extras.selectedAvatar || avatarArt]
   ).map(normalizeAvatar);
 
-  const stickerGallery =
-    extras.stickers.length > 0 ? extras.stickers : ["default-fire"];
 
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [showEditProfile, setShowEditProfile] = useState(false);
@@ -325,30 +322,6 @@ export default function AccountCenter() {
             </div>
           </div>
 
-          {/* کارت استیکرها */}
-          <div className="rounded-3xl border border-slate-600/60 bg-[linear-gradient(145deg,rgba(15,23,42,0.96),rgba(2,6,23,0.98))] p-5 shadow-[0_18px_45px_rgba(0,0,0,0.75)]">
-            <h3
-              className={`font-semibold text-amber-200 ${
-                dir === "rtl" ? "text-right" : ""
-              }`}
-            >
-              {t("stickersLabel")}
-            </h3>
-            <div className="mt-4 grid grid-cols-3 gap-3">
-              {stickerGallery.map((sticker, index) => (
-                <div
-                  key={`${sticker}-${index}`}
-                  className="flex items-center justify-center rounded-2xl border border-slate-500/60 bg-black/50 p-3 shadow-[0_0_16px_rgba(15,23,42,0.9)]"
-                >
-                  <img
-                    src={fireArt}
-                    alt={t("stickersLabel")}
-                    className="h-16 w-16 object-contain"
-                  />
-                </div>
-              ))}
-            </div>
-          </div>
         </div>
 
         {/* دکمه خروج */}

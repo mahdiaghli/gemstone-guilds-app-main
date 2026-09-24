@@ -56,7 +56,7 @@ export default function AboutUs() {
           </div>
 
           <div className="mt-6 space-y-2 rounded-2xl border border-amber-300/20 bg-black/25 p-4 text-sm text-slate-200">
-            <p className="font-semibold text-amber-200">تماس با من</p>
+            <p className="font-semibold text-amber-200">تماس با ما</p>
             <a href="tel:09911161231" className="block hover:text-amber-200">09911161231</a>
             <a href="mailto:mahdi.aghli12345@gmail.com" className="block hover:text-amber-200">mahdi.aghli12345@gmail.com</a>
             <p>Mashhad, Iran</p>

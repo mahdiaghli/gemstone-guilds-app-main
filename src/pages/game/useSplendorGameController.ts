@@ -232,6 +232,9 @@ export default function useSplendorGameController(props: GameProps = {}) {
   const [showQuickRules, setShowQuickRules] = useState(false);
   const [showExitConfirm, setShowExitConfirm] = useState(false);
   const [turnSecondsLeft, setTurnSecondsLeft] = useState(turnDurationSeconds);
+  const [onlineTurnEndsAt, setOnlineTurnEndsAt] = useState<number | null>(
+    props.turnTimerEndsAt ?? null,
+  );
   const [showRematchRequest, setShowRematchRequest] = useState(false);
   const [waitingForRematch, setWaitingForRematch] = useState(false);
   const [dailyPuzzleStep, setDailyPuzzleStep] = useState(0);
@@ -595,8 +598,7 @@ export default function useSplendorGameController(props: GameProps = {}) {
     onTurnTimerUpdated: (data: any) => {
       const endsAt = Number(data?.endsAt);
       if (!Number.isFinite(endsAt)) return;
-      const remaining = Math.max(0, Math.ceil((endsAt - Date.now()) / 1000));
-      setTurnSecondsLeft(Math.min(turnDurationSeconds, remaining));
+      setOnlineTurnEndsAt(endsAt);
     },
     onRematchRequested: () => {
       setShowRematchRequest(true);
@@ -610,6 +612,28 @@ export default function useSplendorGameController(props: GameProps = {}) {
       }
     },
   });
+
+  useEffect(() => {
+    if (gameMode !== "online") return;
+    const endsAt = Number(props.turnTimerEndsAt);
+    if (Number.isFinite(endsAt)) setOnlineTurnEndsAt(endsAt);
+  }, [gameMode, props.turnTimerEndsAt]);
+
+  useEffect(() => {
+    if (gameMode !== "online" || !onlineTurnEndsAt) return;
+
+    const updateRemainingTime = () => {
+      const remaining = Math.max(
+        0,
+        Math.ceil((onlineTurnEndsAt - Date.now()) / 1000),
+      );
+      setTurnSecondsLeft(Math.min(turnDurationSeconds, remaining));
+    };
+
+    updateRemainingTime();
+    const interval = window.setInterval(updateRemainingTime, 250);
+    return () => window.clearInterval(interval);
+  }, [gameMode, onlineTurnEndsAt, turnDurationSeconds]);
 
   useEffect(() => {
     if (gameMode === "online") return;
@@ -1828,11 +1852,12 @@ export default function useSplendorGameController(props: GameProps = {}) {
     phase,
     lang,
     t,
-    gameTitle: challengeId === "turn-limit" ? `${Math.max(0, 25 - turnLimitTurnsUsed)} turns left` : selectedGame.name,
+    gameTitle: challengeId === "turn-limit" ? `${Math.max(0, 25 - turnLimitTurnsUsed)} turns left` : "",
     state,
     currentPlayer,
     humanPlayerCount,
     turnSecondsLeft,
+    turnDurationSeconds,
     getPlayerDisplayName,
     isCurrentPlayerMe,
     isAIPlayer,

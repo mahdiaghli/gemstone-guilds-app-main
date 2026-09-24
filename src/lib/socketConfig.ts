@@ -18,7 +18,10 @@ function isLocalNetworkHost(hostname: string) {
 
 function getBrowserServerUrl() {
   if (typeof window === "undefined" || isNativeApp()) return "";
-  return `${window.location.protocol}//${window.location.hostname}:3001`;
+  if (isLocalNetworkHost(window.location.hostname)) {
+    return `${window.location.protocol}//${window.location.hostname}:3001`;
+  }
+  return window.location.origin;
 }
 
 function shouldFollowBrowserHost(configuredUrl: string) {

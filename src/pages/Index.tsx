@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { X } from "lucide-react";
+import { toast } from "sonner";
 
 import { cn } from "@/lib/utils";
 import { useLanguage } from "@/hooks/useLanguage";
@@ -15,6 +16,7 @@ import onlineIcon from "@/assets/internet.webp";
 import tutorialIcon from "@/assets/manual.webp";
 import { findGameById, getGameById } from "@/lib/gameCatalog";
 import { getPageBackground } from "@/lib/pageBackgrounds";
+import { prepareOnlineMatchmaking } from "@/lib/onlineMatchmakingStart";
 
 const GEM_DECORATIONS = [
   { emoji: "\ud83d\udc8e", x: "15%", y: "20%", delay: 0 },
@@ -65,6 +67,25 @@ export default function Index() {
     navigate(targetPath);
   };
 
+  const startOnlinePlay = () => {
+    if (requirePremium() && !hasActivePremium(user?.id)) {
+      navigate("/shop?section=premium&reason=premium-required");
+      return;
+    }
+
+    const result = prepareOnlineMatchmaking(user?.id, game.id);
+    if (!result.ok) {
+      toast.error(
+        dir === "rtl"
+          ? `برای بازی آنلاین به ${result.required} سکه نیاز دارید.`
+          : `You need ${result.required} coins to play online.`,
+      );
+      return;
+    }
+
+    navigate(result.path);
+  };
+
   const menuItems = [
     {
       id: "ai" as const,
@@ -85,7 +106,7 @@ export default function Index() {
       icon: onlineIcon,
       title: t("onlinePlay"),
       subtitle: t("onlinePlayDesc"),
-      action: () => openSplendorDestination(`/mode-setup?mode=online&game=${game.id}`),
+      action: startOnlinePlay,
     },
     {
       id: "tutorial" as const,

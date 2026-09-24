@@ -10,15 +10,20 @@ import {
   toPublicUser,
   MAX_BODY_BYTES,
 } from "./server/security.js";
-import { advanceSplendorTurn, timeoutDeadMansDraw } from "./server/splendorTurn.js";
+import {
+  advanceSplendorTurn,
+  timeoutDeadMansDraw,
+} from "./server/splendorTurn.js";
 import { syncUsersWithDatabase, saveUserToDatabase } from "./server/database.js";
 
 const sessions = new Map();
 const disconnectTimers = new Map();
+let databaseUsersSnapshot = null;
+let userMutationRevision = 0;
 const RECONNECT_MS = 60_000;
 const AUTH_SECRET = process.env.AUTH_SECRET || "dev-only-change-this-auth-secret";
 
-const DATA_DIR = path.resolve("./server-data");
+const DATA_DIR = path.resolve(process.env.SPLENDOR_DATA_DIR || "./server-data");
 const STATE_FILE = path.join(DATA_DIR, "shared-state.json");
 
 function ensureStateFile() {
@@ -266,9 +271,16 @@ const httpServer = createServer(async (req, res) => {
     return;
   }
 
+  if (req.method === "GET" && req.url === "/health") {
+    sendJson(res, 200, { ok: true, service: "splendor-server" });
+    return;
+  }
+
   const url = new URL(req.url || "/", "http://localhost:3001");
   const state = normalizeSocialState(readSharedState());
-  state.users = await syncUsersWithDatabase(state.users || []);
+  if (Array.isArray(databaseUsersSnapshot)) {
+    state.users = databaseUsersSnapshot;
+  }
   state.groups = Array.isArray(state.groups) ? state.groups.map(normalizeGroup) : [];
   const mutatingSocial =
     req.method === "POST" &&
@@ -302,7 +314,9 @@ const httpServer = createServer(async (req, res) => {
       passwordHash: hash,
     };
     state.users.push(user);
-    await saveUserToDatabase(user);
+    userMutationRevision += 1;
+    databaseUsersSnapshot = state.users;
+    void saveUserToDatabase(user);
     writeSharedState(state);
     const token = createSessionToken(user.id);
     sendJson(res, 200, { ok: true, token, user: toPublicUser(user) });
@@ -370,7 +384,9 @@ const httpServer = createServer(async (req, res) => {
       };
       delete state.users[existingIndex].password;
     }
-    await saveUserToDatabase(state.users[existingIndex]);
+    userMutationRevision += 1;
+    databaseUsersSnapshot = state.users;
+    void saveUserToDatabase(state.users[existingIndex]);
     writeSharedState(state);
     sendJson(res, 200, {
       ok: true,
@@ -761,7 +777,18 @@ const io = new Server(httpServer, {
         /^https:\/\/.*\.trycloudflare\.com$/, // CloudFlare Tunnel
       ];
 
-      if (!origin || allowedPatterns.some((pattern) => pattern.test(origin))) {
+      const configuredOrigins = String(process.env.CLIENT_ORIGINS || "")
+        .split(",")
+        .map((entry) => entry.trim())
+        .filter(Boolean);
+      const configuredOriginAllowed = configuredOrigins.includes(origin);
+
+      if (
+        !origin ||
+        configuredOrigins.length === 0 ||
+        configuredOriginAllowed ||
+        allowedPatterns.some((pattern) => pattern.test(origin))
+      ) {
         callback(null, true);
       } else {
         callback(new Error("برای دسترسی اجازه نیست | Not allowed by CORS"));
@@ -808,7 +835,6 @@ function getOrCreateRoom(roomId) {
         endsAt: null,
         currentIndex: 0,
         durationMs: 45000,
-        missedByIndex: new Map(), // index -> missed turns due to timeout
         playersInGame: [], // ordered list used for index mapping
       },
       rematch: null,
@@ -830,7 +856,6 @@ function buildRoomPlayerIndexMap(room) {
 
 function resetMissedCounts(room) {
   if (!room?.turn) return;
-  room.turn.missedByIndex = new Map();
 }
 
 function removePlayerFromGame(roomId, playerIndex) {
@@ -1027,6 +1052,12 @@ function startTurnTimer(roomId) {
   const room = rooms.get(roomId);
   if (!room || room.status !== "playing" || !room.gameState) return;
 
+  if (room.gameState.gameOver) {
+    room.status = "finished";
+    clearTurnTimer(room);
+    return;
+  }
+
   clearTurnTimer(room);
   const durationMs = normalizeTurnTimeSeconds(Math.round((room.turn?.durationMs || 45000) / 1000)) * 1000;
   room.turn.durationMs = durationMs;
@@ -1036,6 +1067,7 @@ function startTurnTimer(roomId) {
   io.to(roomId).emit("turn-timer-updated", {
     endsAt: room.turn.endsAt,
     currentPlayerIndex: room.turn.currentIndex,
+    durationMs,
   });
 
   room.turn.timer = setTimeout(() => {
@@ -1306,7 +1338,7 @@ io.on("connection", (socket) => {
     if (!room) return;
 
     const already = room.players.get(playerId);
-    if (already && room.status === "playing") {
+    if (already) {
       clearDisconnectTimer(roomId, playerId);
       already.socketId = socket.id;
       already.connected = true;
@@ -1316,12 +1348,19 @@ io.on("connection", (socket) => {
         players: getRoomPlayersArray(roomId),
         roomStatus: room.status,
       });
-      if (room.gameState) {
+      if (room.status === "playing" && room.gameState) {
         socket.emit("game-state-updated", room.gameState);
         socket.emit("player-index-map-updated", {
           playerIndexMap: buildPlayerIndexMap(room.turn.playersInGame || getRoomPlayersArray(roomId)),
           gameState: room.gameState,
         });
+        if (Number.isFinite(room.turn?.endsAt)) {
+          socket.emit("turn-timer-updated", {
+            endsAt: room.turn.endsAt,
+            currentPlayerIndex: room.gameState.currentPlayerIndex || 0,
+            durationMs: room.turn.durationMs,
+          });
+        }
       }
       return;
     }
@@ -1400,7 +1439,6 @@ io.on("connection", (socket) => {
         a.socketId.localeCompare(b.socketId),
       );
       room.turn.playersInGame = playersArray;
-      room.turn.missedByIndex = new Map();
       room.turn.durationMs = normalizeTurnTimeSeconds(turnTime) * 1000;
       room.rematch = null;
 
@@ -1444,7 +1482,6 @@ io.on("connection", (socket) => {
         typeof gameState?.currentPlayerIndex === "number" &&
         gameState.currentPlayerIndex !== prevIndex
       ) {
-        room.turn.missedByIndex.set(prevIndex, 0);
       }
 
       if (
@@ -1475,7 +1512,6 @@ io.on("connection", (socket) => {
         typeof gameState?.currentPlayerIndex === "number" &&
         gameState.currentPlayerIndex !== prevIndex
       ) {
-        room.turn.missedByIndex.set(prevIndex, 0);
       }
 
       if (
@@ -1542,6 +1578,7 @@ io.on("connection", (socket) => {
     if (room && socket.rooms.has(roomId)) {
       io.to(roomId).emit("player-microphone-toggled", {
         playerId,
+        socketId: socket.id,
         enabled,
       });
       const status = enabled ? "ON 🎤" : "OFF 🔇";
@@ -1676,7 +1713,6 @@ io.on("connection", (socket) => {
         a.socketId.localeCompare(b.socketId),
       );
       room.turn.playersInGame = playersArray;
-      room.turn.missedByIndex = new Map();
 
       const playerIndexMap = buildPlayerIndexMap(playersArray);
 
@@ -1727,6 +1763,15 @@ io.on("connection", (socket) => {
 });
 
 const PORT = process.env.PORT || 3001;
+const databaseSyncRevision = userMutationRevision;
+void syncUsersWithDatabase(readSharedState().users || []).then((users) => {
+  if (databaseSyncRevision !== userMutationRevision || !Array.isArray(users)) return;
+  databaseUsersSnapshot = users;
+  const state = normalizeSocialState(readSharedState());
+  state.users = users;
+  writeSharedState(state);
+});
+
 httpServer.listen(PORT, () => {
   console.log(
     `\n🎮 [SERVER] Splendor Server running on http://localhost:${PORT}`,

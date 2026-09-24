@@ -27,6 +27,7 @@ export type SplendorGameSceneProps = {
   currentPlayer: GameState["players"][number];
   humanPlayerCount: number;
   turnSecondsLeft: number;
+  turnDurationSeconds: number;
   getPlayerDisplayName: (index: number) => string;
   isCurrentPlayerMe: () => boolean;
   isAIPlayer: (index: number) => boolean;

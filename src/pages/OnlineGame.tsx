@@ -60,6 +60,7 @@ export default function OnlineGame() {
     loading,
     error,
     playerIndexMap,
+    turnTimerEndsAt,
     socket,
     joinRoom,
     leaveRoom,
@@ -531,6 +532,7 @@ export default function OnlineGame() {
       playerNamesList={playerNamesList}
       socket={socket}
       serverGameState={gameState}
+      turnTimerEndsAt={turnTimerEndsAt}
       onGameStateChange={lastSyncedGameStateRef}
       onGameEnd={leaveRoom}
       gameOverActions={gameOverActions}

@@ -99,6 +99,7 @@ export default function Groups() {
   const [editGroupOpen, setEditGroupOpen] = useState(false);
   const [settingsDraft, setSettingsDraft] = useState<GroupSettingsDraft>(DEFAULT_SETTINGS_DRAFT);
   const [rankViewMode, setRankViewMode] = useState<RankViewMode>("groups");
+  const [isCreatingGroup, setIsCreatingGroup] = useState(false);
 
   const view = useMemo<GroupsView>(() => {
     if (location.pathname === "/groups") return "chat";
@@ -187,7 +188,11 @@ export default function Groups() {
   };
 
   const handleCreateGroup = async () => {
-    if (!user || !groupName.trim()) return;
+    if (!user || isCreatingGroup) return;
+    if (!groupName.trim()) {
+      setFeedbackMessage(t("groupNameRequired"));
+      return;
+    }
     const extras = readPlayerExtras(user.id);
     if (extras.gems < 100) {
       setFeedbackMessage(t("notEnoughGems"));
@@ -199,30 +204,35 @@ export default function Groups() {
       return;
     }
 
-    const created = await createGroupRemote({
-      creatorId: user.id,
-      name: groupName.trim(),
-      description: description.trim(),
-      flag,
-      minScore: Number(minScore) || 0,
-      visibility,
-    });
+    setIsCreatingGroup(true);
+    try {
+      const created = await createGroupRemote({
+        creatorId: user.id,
+        name: groupName.trim(),
+        description: description.trim(),
+        flag,
+        minScore: Number(minScore) || 0,
+        visibility,
+      });
 
-    if (!created) {
-      setFeedbackMessage(t("groupSyncError"));
-      return;
+      if (!created) {
+        setFeedbackMessage(t("groupSyncError"));
+        return;
+      }
+
+      updatePlayerExtras(user.id, (prev) => ({ ...prev, gems: prev.gems - 100 }));
+      setGroupName("");
+      setDescription("");
+      setMinScore("0");
+      setVisibility("public");
+      setFlag(FLAG_OPTIONS[0].id);
+      setFeedbackMessage(t("groupCreatedSuccess"));
+      navigate("/groups");
+      await refreshGroups();
+      setGroupInfoId(created.id);
+    } finally {
+      setIsCreatingGroup(false);
     }
-
-    updatePlayerExtras(user.id, (prev) => ({ ...prev, gems: prev.gems - 100 }));
-    setGroupName("");
-    setDescription("");
-    setMinScore("0");
-    setVisibility("public");
-    setFlag(FLAG_OPTIONS[0].id);
-    setFeedbackMessage(t("groupCreatedSuccess"));
-    navigate("/groups");
-    await refreshGroups();
-    setGroupInfoId(created.id);
   };
 
   const requestJoin = async (group: GroupEntry) => {
@@ -337,6 +347,7 @@ export default function Groups() {
             setFlag={setFlag}
             flagOptions={FLAG_OPTIONS}
             onCreateGroup={handleCreateGroup}
+            isCreatingGroup={isCreatingGroup}
           />
         )}
 

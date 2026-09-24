@@ -45,19 +45,16 @@ import merchantTwoImage from "@/assets/merchant2.webp";
 import merchantGirlTwoImage from "@/assets/merchant girl2.webp";
 import merchantThreeImage from "@/assets/merchant3.webp";
 import merchantGirlThreeImage from "@/assets/merchant girl3.webp";
-import fireImage from "@/assets/fire.webp";
 
 const sectionParamMap: Record<string, ShopSection["id"]> = {
   coins: "coins",
   diamonds: "diamonds",
-  stickers: "stickers",
   avatars: "avatars",
 };
 
 const rewardImageMap = {
   coins: coinImage,
   gems: diamondImage,
-  sticker: fireImage,
   avatar: merchantImage,
 };
 
@@ -78,7 +75,6 @@ const offerImageMap: Record<ShopSection["id"], string[]> = {
     diamondComboImage,
     diamondDoubleChestImage,
   ],
-  stickers: [fireImage, fireImage, fireImage, fireImage, fireImage, fireImage],
   avatars: [
     merchantImage,
     merchantGirlImage,

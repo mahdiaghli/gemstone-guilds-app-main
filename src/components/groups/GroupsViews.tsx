@@ -190,6 +190,7 @@ export function GroupsCreateView({
   setFlag,
   flagOptions,
   onCreateGroup,
+  isCreatingGroup,
 }: {
   dir: string;
   t: (key: string) => string;
@@ -205,6 +206,7 @@ export function GroupsCreateView({
   setFlag: (value: string) => void;
   flagOptions: FlagOption[];
   onCreateGroup: () => void;
+  isCreatingGroup: boolean;
 }) {
   return (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="rounded-[32px] border border-primary/20 bg-card/70 p-5 shadow-xl backdrop-blur">
@@ -255,7 +257,14 @@ export function GroupsCreateView({
       <div className={`mt-4 rounded-2xl border border-primary/15 bg-background/35 px-4 py-3 text-sm text-muted-foreground ${dir === "rtl" ? "text-right" : ""}`}>
         {t("singleGroupNotice")}
       </div>
-      <Button className="mt-5 w-full" onClick={onCreateGroup}>{t("createGroupCost")}</Button>
+      <Button
+        className="mt-5 min-h-11 w-full"
+        onClick={onCreateGroup}
+        disabled={isCreatingGroup}
+        aria-busy={isCreatingGroup}
+      >
+        {isCreatingGroup ? t("creatingGroup") : t("createGroupCost")}
+      </Button>
     </motion.div>
   );
 }

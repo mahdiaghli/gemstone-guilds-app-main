@@ -40,6 +40,7 @@ export function useOnlineGame(
   const [playerIndexMap, setPlayerIndexMap] = useState<Record<string, number>>(
     {},
   );
+  const [turnTimerEndsAt, setTurnTimerEndsAt] = useState<number | null>(null);
   const socketRef = useRef<Socket | null>(null);
   const joinedRef = useRef(false);
   const fallbackPlayerIdRef = useRef<string>("");
@@ -59,12 +60,11 @@ export function useOnlineGame(
         reconnection: true,
         reconnectionDelay: 500,
         reconnectionDelayMax: 3000,
-        reconnectionAttempts: 8,
-        transports: ["websocket"],
-        upgrade: false,
-        rememberUpgrade: true,
+        reconnectionAttempts: 5,
+        transports: ["polling", "websocket"],
+        upgrade: true,
         randomizationFactor: 0.2,
-        timeout: 4000,
+        timeout: 8000,
       });
 
       socketRef.current = socket;
@@ -84,7 +84,7 @@ export function useOnlineGame(
         }
       });
 
-      socket.on("connect_error", (err: any) => {
+      socket.on("connect_error", (err: Error) => {
         console.error(err);
         setError("Failed to connect to server. Check if server is running.");
       });
@@ -136,6 +136,11 @@ export function useOnlineGame(
           lastGameStateRef.current = newStateStr;
           setGameState(data);
         }
+      });
+
+      socket.on("turn-timer-updated", (data) => {
+        const endsAt = Number(data?.endsAt);
+        if (Number.isFinite(endsAt)) setTurnTimerEndsAt(endsAt);
       });
 
       socket.on("player-removed", (data) => {
@@ -274,6 +279,7 @@ export function useOnlineGame(
     loading,
     error,
     playerIndexMap,
+    turnTimerEndsAt,
     socket: socketRef.current,
     syncGameState,
     broadcastCardPurchase,

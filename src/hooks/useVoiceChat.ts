@@ -1,18 +1,37 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Socket } from "socket.io-client";
 
+const configuredTurnUrl = import.meta.env.VITE_TURN_URL?.trim();
 const RTC_CONFIG: RTCConfiguration = {
-  iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
+  iceServers: [
+    { urls: "stun:stun.l.google.com:19302" },
+    ...(configuredTurnUrl
+      ? [{
+          urls: configuredTurnUrl,
+          username: import.meta.env.VITE_TURN_USERNAME || undefined,
+          credential: import.meta.env.VITE_TURN_CREDENTIAL || undefined,
+        }]
+      : []),
+  ],
 };
+
+export type VoiceRoomPlayer = { socketId?: string };
+type SafariWindow = Window & { webkitAudioContext?: typeof AudioContext };
+type VoiceOfferMessage = { from?: string; offer?: RTCSessionDescriptionInit };
+type VoiceAnswerMessage = { from?: string; answer?: RTCSessionDescriptionInit };
+type VoiceIceMessage = { from?: string; candidate?: RTCIceCandidateInit };
+type VoiceEndMessage = { from?: string };
+type MicrophoneToggleMessage = { socketId?: string; enabled?: boolean };
 
 export function useVoiceChat(
   socket: Socket | null,
   roomId: string,
   playerId: string,
-  roomPlayers: Record<string, any>,
+  roomPlayers: Record<string, VoiceRoomPlayer>,
 ) {
   const [microphoneEnabled, setMicrophoneEnabled] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
+  const [microphoneError, setMicrophoneError] = useState<string | null>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
@@ -60,8 +79,10 @@ export function useVoiceChat(
   const startSpeakingDetection = useCallback(
     (stream: MediaStream) => {
       stopSpeakingDetection();
-      const audioContext = new (window.AudioContext ||
-        (window as any).webkitAudioContext)();
+      const AudioContextConstructor =
+        window.AudioContext || (window as SafariWindow).webkitAudioContext;
+      if (!AudioContextConstructor) return;
+      const audioContext = new AudioContextConstructor();
       audioContext.resume().catch(() => undefined);
       audioContextRef.current = audioContext;
       const source = audioContext.createMediaStreamSource(stream);
@@ -145,6 +166,7 @@ export function useVoiceChat(
       if (!socket || !mediaStreamRef.current) return;
       const existing = peerConnectionsRef.current.get(peerSocketId);
       const pc = existing || createPeerConnection(peerSocketId);
+      if (pc.signalingState !== "stable") return;
       const offer = await pc.createOffer();
       await pc.setLocalDescription(offer);
       socket.emit("voice-offer", {
@@ -159,8 +181,14 @@ export function useVoiceChat(
   const enableMicrophone = useCallback(async () => {
     try {
       if (!socket) return;
+      setMicrophoneError(null);
+      if (!window.isSecureContext && window.location.hostname !== "localhost") {
+        setMicrophoneError("secure-context-required");
+        return;
+      }
       if (!navigator.mediaDevices?.getUserMedia) {
         setMicrophoneEnabled(false);
+        setMicrophoneError("microphone-unavailable");
         return;
       }
       const stream = await navigator.mediaDevices.getUserMedia({
@@ -186,8 +214,8 @@ export function useVoiceChat(
 
       if (socket?.id) {
         const peers = Object.values(roomPlayers || {})
-          .map((p: any) => p.socketId)
-          .filter((id: string) => id && id !== socket.id);
+          .map((player) => player.socketId)
+          .filter((id): id is string => Boolean(id) && id !== socket.id);
 
         peers.forEach((peerId: string) => {
           if (socket.id < peerId) {
@@ -198,6 +226,11 @@ export function useVoiceChat(
     } catch (err) {
       console.error("Failed to access microphone:", err);
       setMicrophoneEnabled(false);
+      setMicrophoneError(
+        err instanceof DOMException && err.name === "NotAllowedError"
+          ? "microphone-permission-denied"
+          : "microphone-start-failed",
+      );
     }
   }, [socket, roomId, playerId, roomPlayers, startSpeakingDetection, ensureOffer]);
 
@@ -212,6 +245,7 @@ export function useVoiceChat(
 
     setMicrophoneEnabled(false);
     setIsSpeaking(false);
+    setMicrophoneError(null);
 
     if (socket) {
       socket.emit("microphone-toggled", {
@@ -232,14 +266,9 @@ export function useVoiceChat(
   }, [microphoneEnabled, enableMicrophone, disableMicrophone]);
 
   useEffect(() => {
-    if (!socket || microphoneEnabled) return;
-    enableMicrophone();
-  }, [socket, microphoneEnabled, enableMicrophone]);
-
-  useEffect(() => {
     if (!socket) return;
 
-    const onOffer = async (data: any) => {
+    const onOffer = async (data: VoiceOfferMessage) => {
       if (!microphoneEnabled || !mediaStreamRef.current) return;
       const from = data?.from;
       const offer = data?.offer;
@@ -264,7 +293,7 @@ export function useVoiceChat(
       }
     };
 
-    const onAnswer = async (data: any) => {
+    const onAnswer = async (data: VoiceAnswerMessage) => {
       const from = data?.from;
       const answer = data?.answer;
       if (!from || !answer) return;
@@ -273,7 +302,7 @@ export function useVoiceChat(
       await pc.setRemoteDescription(new RTCSessionDescription(answer)).catch(() => undefined);
     };
 
-    const onIce = (data: any) => {
+    const onIce = (data: VoiceIceMessage) => {
       const from = data?.from;
       const candidate = data?.candidate;
       if (!from || !candidate) return;
@@ -287,10 +316,30 @@ export function useVoiceChat(
       pendingIceRef.current.set(from, list);
     };
 
-    const onEnd = (data: any) => {
+    const onEnd = (data: VoiceEndMessage) => {
       const from = data?.from;
       if (from) {
         cleanupPeer(from);
+      }
+    };
+
+    const onMicrophoneToggled = (data: MicrophoneToggleMessage) => {
+      const peerSocketId = data?.socketId;
+      if (!peerSocketId || peerSocketId === socket.id) return;
+
+      if (!data?.enabled) {
+        cleanupPeer(peerSocketId);
+        return;
+      }
+
+      if (
+        microphoneEnabled &&
+        mediaStreamRef.current &&
+        socket.id &&
+        socket.id < peerSocketId
+      ) {
+        cleanupPeer(peerSocketId);
+        window.setTimeout(() => ensureOffer(peerSocketId), 0);
       }
     };
 
@@ -303,6 +352,7 @@ export function useVoiceChat(
     socket.on("voice-answer", onAnswer);
     socket.on("voice-ice", onIce);
     socket.on("voice-end", onEnd);
+    socket.on("player-microphone-toggled", onMicrophoneToggled);
     socket.on("disconnect", onDisconnect);
 
     return () => {
@@ -310,15 +360,16 @@ export function useVoiceChat(
       socket.off("voice-answer", onAnswer);
       socket.off("voice-ice", onIce);
       socket.off("voice-end", onEnd);
+      socket.off("player-microphone-toggled", onMicrophoneToggled);
       socket.off("disconnect", onDisconnect);
     };
-  }, [socket, roomId, microphoneEnabled, createPeerConnection, cleanupPeer, cleanupAllPeers]);
+  }, [socket, roomId, microphoneEnabled, createPeerConnection, cleanupPeer, cleanupAllPeers, ensureOffer]);
 
   useEffect(() => {
     if (!microphoneEnabled || !socket?.id) return;
     const peers = Object.values(roomPlayers || {})
-      .map((p: any) => p.socketId)
-      .filter((id: string) => id && id !== socket.id);
+      .map((player) => player.socketId)
+      .filter((id): id is string => Boolean(id) && id !== socket.id);
 
     peers.forEach((peerId: string) => {
       if (!peerConnectionsRef.current.has(peerId) && socket.id < peerId) {
@@ -349,5 +400,6 @@ export function useVoiceChat(
     microphoneEnabled,
     toggleMicrophone,
     isSpeaking,
+    microphoneError,
   };
 }

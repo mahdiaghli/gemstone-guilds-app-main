@@ -20,7 +20,7 @@ export interface ShopOffer {
 }
 
 export interface ShopSection {
-  id: "coins" | "diamonds" | "stickers" | "avatars";
+  id: "coins" | "diamonds" | "avatars";
   bannerTitleKey: TranslationKey;
   bannerDescKey: TranslationKey;
   offers: ShopOffer[];
@@ -94,19 +94,6 @@ export const SHOP_SECTIONS: ShopSection[] = [
       { id: "diamonds-3", titleKey: "diamondsOffer4", amount: 120, amountKey: "gemsLabel", price: 249000, discount: 20, rewardType: "gems" },
       { id: "diamonds-4", titleKey: "diamondsOffer5", amount: 260, amountKey: "gemsLabel", price: 449000, discount: 25, rewardType: "gems" },
       { id: "diamonds-5", titleKey: "diamondsOffer6", amount: 600, amountKey: "gemsLabel", price: 799000, discount: 35, rewardType: "gems" },
-    ],
-  },
-  {
-    id: "stickers",
-    bannerTitleKey: "stickersBannerTitle",
-    bannerDescKey: "stickersBannerDesc",
-    offers: [
-      { id: "stickers-ad", titleKey: "stickersOffer1", amount: 1, amountKey: "stickersLabel", price: 0, discount: 100, rewardType: "sticker" },
-      { id: "stickers-1", titleKey: "stickersOffer2", amount: 1, amountKey: "stickersLabel", price: 19000, discount: 10, rewardType: "sticker" },
-      { id: "stickers-2", titleKey: "stickersOffer3", amount: 1, amountKey: "stickersLabel", price: 29000, discount: 12, rewardType: "sticker" },
-      { id: "stickers-3", titleKey: "stickersOffer4", amount: 1, amountKey: "stickersLabel", price: 39000, discount: 15, rewardType: "sticker" },
-      { id: "stickers-4", titleKey: "stickersOffer5", amount: 1, amountKey: "stickersLabel", price: 49000, discount: 20, rewardType: "sticker" },
-      { id: "stickers-5", titleKey: "stickersOffer6", amount: 1, amountKey: "stickersLabel", price: 69000, discount: 25, rewardType: "sticker" },
     ],
   },
   {
