@@ -1,8 +1,17 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ChevronRight } from "lucide-react";
 
 import AppPageShell from "@/components/game/AppPageShell";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useLanguage } from "@/hooks/useLanguage";
 import { GAME_CATALOG } from "@/lib/gameCatalog";
 import { shellBackgrounds } from "@/lib/pageBackgrounds";
@@ -38,24 +47,25 @@ const FEATURED_POSTERS: Partial<
   },
 };
 
-// عناوین فارسی بازی‌ها
+// عنوان‌های فارسی بازی‌ها
 const GAME_TITLES_FA: Record<string, string> = {
   splendor: "اسپلندور",
   "dead-mans-draw": "روخاکی",
   totem: "جنگل اسپید",
   "beasty-bar": "بیستی بار",
-  coup: "کوپ",
+  coup: "کودتا",
   "ticket-to-ride": "تیکت تو راید",
 };
 
 export default function GamesList() {
   const navigate = useNavigate();
   const { lang } = useLanguage();
+  const [notice, setNotice] = useState<string | null>(null);
 
   const openGameCard = (gameId: string) => {
     const game = GAME_CATALOG.find((entry) => entry.id === gameId);
     if (game && !game.playable) {
-      window.alert(lang === "fa" ? "این بازی به‌زودی اضافه می‌شود." : "This game is coming soon.");
+      setNotice(lang === "fa" ? "این بازی به‌زودی اضافه می‌شود." : "This game is coming soon.");
       return;
     }
     const destination = `/menu/${gameId}`;
@@ -127,7 +137,7 @@ export default function GamesList() {
               dir={cardDir}
             >
               <div
-                className="absolute inset-0 bg-cover bg-center opacity-80 transition-opacity group-hover:opacity-35"
+                className={`absolute inset-0 bg-cover bg-center opacity-80 transition-opacity group-hover:opacity-35 ${!game.playable ? "blur-[3px] opacity-45" : ""}`}
                 style={{
                   backgroundImage: `url(${
                     posters?.wide || GAME_IMAGES[game.id] || deadMansDrawImage
@@ -141,6 +151,11 @@ export default function GamesList() {
                 }}
               />
               <div className="absolute inset-x-5 top-0 h-px bg-gradient-to-r from-transparent via-white/60 to-transparent" />
+              {!game.playable && (
+                <div className="absolute inset-0 z-10 flex items-center justify-center bg-slate-950/45 px-4 text-center text-sm font-semibold text-amber-200 backdrop-blur-[1px]">
+                  {isFa ? "این بازی به‌زودی اضافه خواهد شد" : "Coming soon"}
+                </div>
+              )}
 
               <div className="relative flex min-h-[168px] flex-col gap-4 p-4 sm:min-h-[184px] sm:p-5">
                 {/* عنوان بازی */}
@@ -186,6 +201,17 @@ export default function GamesList() {
           );
         })}
       </div>
+      <AlertDialog open={Boolean(notice)} onOpenChange={(open) => !open && setNotice(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{notice}</AlertDialogTitle>
+            <AlertDialogDescription className="sr-only">{notice}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction onClick={() => setNotice(null)}>OK</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </AppPageShell>
   );
 }

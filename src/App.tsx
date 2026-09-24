@@ -4,34 +4,36 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MotionConfig } from "framer-motion";
 import { BrowserRouter, Routes, Route, useLocation, useNavigate, Navigate } from "react-router-dom";
-import { useEffect } from "react";
+import { lazy, Suspense, useEffect } from "react";
 import { LanguageProvider } from "@/hooks/useLanguage";
 import { useBackgroundMusic } from "@/hooks/useBackgroundMusic";
 import RequireAuth from "@/components/auth/RequireAuth";
 import { useAuth } from "@/hooks/useAuth";
 import { App as CapApp } from "@capacitor/app";
 import { isNativeApp } from "@/lib/nativeApp";
-import GamesList from "./pages/GamesList";
-import Index from "./pages/Index";
-import ModeSetup from "./pages/ModeSetup";
-import Game from "./pages/Game";
-import SplendorStepByStepTutorial from "./pages/SplendorStepByStepTutorial";
-import DeadMansDrawTutorial from "./pages/DeadMansDrawTutorial";
-import Tutorial from "./pages/Tutorial";
-import OnlineLobby from "./pages/OnlineLobby";
-import OnlineMatchmaking from "./pages/OnlineMatchmaking";
-import OnlineGame from "./pages/OnlineGame";
-import AccountCenter from "./pages/AccountCenter";
-import Shop from "./pages/Shop";
-import Friends from "./pages/Friends";
-import Groups from "./pages/Groups";
-import Events from "./pages/Events";
-import SoloChallenge from "./pages/SoloChallenge";
-import AboutUs from "./pages/AboutUs";
+import AppLoadingScreen from "@/components/AppLoadingScreen";
 import Login from "@/pages/Login";
 import SignUp from "@/pages/SignUp";
 import NotFound from "./pages/NotFound";
 import Landing from "./pages/Landing";
+
+const GamesList = lazy(() => import("./pages/GamesList"));
+const Index = lazy(() => import("./pages/Index"));
+const ModeSetup = lazy(() => import("./pages/ModeSetup"));
+const Game = lazy(() => import("./pages/Game"));
+const SplendorStepByStepTutorial = lazy(() => import("./pages/SplendorStepByStepTutorial"));
+const DeadMansDrawTutorial = lazy(() => import("./pages/DeadMansDrawTutorial"));
+const Tutorial = lazy(() => import("./pages/Tutorial"));
+const OnlineLobby = lazy(() => import("./pages/OnlineLobby"));
+const OnlineMatchmaking = lazy(() => import("./pages/OnlineMatchmaking"));
+const OnlineGame = lazy(() => import("./pages/OnlineGame"));
+const AccountCenter = lazy(() => import("./pages/AccountCenter"));
+const Shop = lazy(() => import("./pages/Shop"));
+const Friends = lazy(() => import("./pages/Friends"));
+const Groups = lazy(() => import("./pages/Groups"));
+const Events = lazy(() => import("./pages/Events"));
+const SoloChallenge = lazy(() => import("./pages/SoloChallenge"));
+const AboutUs = lazy(() => import("./pages/AboutUs"));
 
 const queryClient = new QueryClient();
 
@@ -75,7 +77,7 @@ function AppBackHandler() {
 
 function RedirectIfAuthed({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useAuth();
-  if (isLoading) return null;
+  if (isLoading) return <AppLoadingScreen />;
   if (user) return <Navigate to="/menu" replace />;
   return <>{children}</>;
 }
@@ -90,6 +92,7 @@ const App = () => (
           <Sonner />
           <BrowserRouter>
             <AppBackHandler />
+            <Suspense fallback={<AppLoadingScreen />}>
             <Routes>
             <Route path="/" element={<Landing />} />
             <Route
@@ -250,6 +253,7 @@ const App = () => (
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
             </Routes>
+            </Suspense>
           </BrowserRouter>
         </MotionConfig>
       </TooltipProvider>

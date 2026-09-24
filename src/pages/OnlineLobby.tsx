@@ -2,6 +2,15 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { useLanguage } from '@/hooks/useLanguage';
 import { useAuth } from '@/hooks/useAuth';
 import PageTopBar from '@/components/game/PageTopBar';
@@ -30,6 +39,7 @@ export default function OnlineLobby() {
   const [roomCode, setRoomCode] = useState("");
   const [generatedRoom, setGeneratedRoom] = useState("");
   const [copied, setCopied] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
 
   // تعداد بازیکنان از کوئری‌پارام
   const playerCount = (() => {
@@ -79,7 +89,7 @@ export default function OnlineLobby() {
 
   const handleCreateRoom = () => {
     if (!playerName.trim()) {
-      alert(t("loginFirst"));
+      setNotice(t("loginFirst"));
       return;
     }
     if (!generatedRoom) {
@@ -108,11 +118,11 @@ export default function OnlineLobby() {
 
   const handleJoinRoom = () => {
     if (!playerName.trim()) {
-      alert(t("loginFirst"));
+      setNotice(t("loginFirst"));
       return;
     }
     if (!roomCode.trim()) {
-      alert(t("enterRoomCodeAlert"));
+      setNotice(t("enterRoomCodeAlert"));
       return;
     }
 
@@ -304,6 +314,17 @@ export default function OnlineLobby() {
           {isRtl ? `${t("menu")} ←` : `← ${t("menu")}`}
         </Button>
       </motion.div>
+      <AlertDialog open={Boolean(notice)} onOpenChange={(open) => !open && setNotice(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{notice}</AlertDialogTitle>
+            <AlertDialogDescription className="sr-only">{notice}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction onClick={() => setNotice(null)}>OK</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

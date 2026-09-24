@@ -143,7 +143,7 @@ export default function Index() {
         {/* </p> */}
 
         <div className="space-y-3 mb-6">
-          {menuItems.map((item) => (
+          {menuItems.filter((item) => !(game.id === "beasty-bar" && item.id === "online")).map((item) => (
             <button
               key={item.id}
               onClick={item.action}

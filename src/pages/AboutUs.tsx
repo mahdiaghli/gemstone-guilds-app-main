@@ -1,4 +1,4 @@
-import AppPageShell from "@/components/game/AppPageShell";
+﻿import AppPageShell from "@/components/game/AppPageShell";
 import { useLanguage } from "@/hooks/useLanguage";
 import { useNavigate } from "react-router-dom";
 import { X } from "lucide-react";
@@ -12,14 +12,14 @@ export default function AboutUs() {
   return (
     <AppPageShell currentPath="/menu" showHeader={false}>
       <div className="flex min-h-full items-center justify-center px-4 pb-6 pt-4">
-        {/* کارت اصلی About */}
+        {/* Ú©Ø§Ø±Øª Ø§ØµÙ„ÛŒ About */}
         <div
           dir={dir}
           className="relative w-full max-w-lg overflow-hidden rounded-[32px] border border-amber-400/25 
                      bg-slate-950/85 px-6 py-6 shadow-[0_0_45px_rgba(15,23,42,0.95)] 
                      backdrop-blur-xl sm:px-8 sm:py-7"
         >
-          {/* دکمه بستن + عنوان */}
+          {/* Ø¯Ú©Ù…Ù‡ Ø¨Ø³ØªÙ† + Ø¹Ù†ÙˆØ§Ù† */}
           <div className="mb-5 flex items-center justify-between gap-3">
             <button
               onClick={() => navigate("/menu")}
@@ -38,11 +38,11 @@ export default function AboutUs() {
               <div className="mx-auto mt-2 h-px w-16 rounded-full bg-amber-400/70 shadow-[0_0_14px_rgba(251,191,36,0.7)]" />
             </div>
 
-            {/* برای بالانس فلکس */}
+            {/* Ø¨Ø±Ø§ÛŒ Ø¨Ø§Ù„Ø§Ù†Ø³ ÙÙ„Ú©Ø³ */}
             <div className="w-10 shrink-0" />
           </div>
 
-          {/* متن اصلی */}
+          {/* Ù…ØªÙ† Ø§ØµÙ„ÛŒ */}
           <div
             className={[
               "mt-3 space-y-4 text-[15px] sm:text-base leading-relaxed",
@@ -55,21 +55,29 @@ export default function AboutUs() {
             <p>{t("aboutUsBody3")}</p>
           </div>
 
-          {/* نوار نسخه / فوتر کوچک */}
-          <div
-            className={[
-              "mt-6 flex items-center justify-between text-xs text-slate-400/80",
-              isRTL ? "flex-row-reverse" : "flex-row",
-            ].join(" ")}
-          >
+          <div className="mt-6 space-y-2 rounded-2xl border border-amber-300/20 bg-black/25 p-4 text-sm text-slate-200">
+            <p className="font-semibold text-amber-200">تماس با من</p>
+            <a href="tel:09911161231" className="block hover:text-amber-200">09911161231</a>
+            <a href="mailto:mahdi.aghli12345@gmail.com" className="block hover:text-amber-200">mahdi.aghli12345@gmail.com</a>
+            <p>Mashhad, Iran</p>
+            <a href="https://linkedin.com/in/mahdiaghli" target="_blank" rel="noreferrer" className="block hover:text-amber-200">LinkedIn: linkedin.com/in/mahdiaghli</a>
+            <a href="https://github.com/mahdiaghli" target="_blank" rel="noreferrer" className="block hover:text-amber-200">GitHub: github.com/mahdiaghli</a>
+            <a href="https://t.me/mahdiAghli" target="_blank" rel="noreferrer" className="block hover:text-amber-200">Telegram: @mahdiAghli</a>
+          </div>
+
+          <div className={[
+            "mt-6 flex items-center justify-between text-xs text-slate-400/80",
+            isRTL ? "flex-row-reverse" : "flex-row",
+          ].join(" ")}>
             <span>Gemstone Guilds</span>
             <span>Version 1.0.0</span>
           </div>
 
-          {/* هاله طلایی ملایم پایین کارت – فقط تزئینی */}
+          {/* Ù‡Ø§Ù„Ù‡ Ø·Ù„Ø§ÛŒÛŒ Ù…Ù„Ø§ÛŒÙ… Ù¾Ø§ÛŒÛŒÙ† Ú©Ø§Ø±Øª â€“ ÙÙ‚Ø· ØªØ²Ø¦ÛŒÙ†ÛŒ */}
           <div className="pointer-events-none absolute inset-x-16 -bottom-10 h-16 rounded-full bg-amber-400/20 blur-3xl" />
         </div>
       </div>
     </AppPageShell>
   );
 }
+

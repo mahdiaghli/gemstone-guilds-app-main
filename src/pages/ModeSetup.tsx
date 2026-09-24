@@ -86,6 +86,7 @@ export default function ModeSetup() {
     selectedPlayers: number,
     selectedOnlineMode: "manual" | "matchmaking",
   ) => {
+    if (selectedGame.id === "beasty-bar") return;
     const feeMode =
       selectedOnlineMode === "matchmaking" ? "onlineMatchmaking" : "onlineManual";
     const feeResult = payGameEntryFee(user?.id, feeMode);

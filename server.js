@@ -1,5 +1,5 @@
 import { createServer } from "http";
-import { randomBytes } from "crypto";
+import { createHmac, randomBytes, timingSafeEqual } from "crypto";
 import fs from "fs";
 import path from "path";
 import { Server } from "socket.io";
@@ -11,10 +11,12 @@ import {
   MAX_BODY_BYTES,
 } from "./server/security.js";
 import { advanceSplendorTurn, timeoutDeadMansDraw } from "./server/splendorTurn.js";
+import { syncUsersWithDatabase, saveUserToDatabase } from "./server/database.js";
 
 const sessions = new Map();
 const disconnectTimers = new Map();
 const RECONNECT_MS = 60_000;
+const AUTH_SECRET = process.env.AUTH_SECRET || "dev-only-change-this-auth-secret";
 
 const DATA_DIR = path.resolve("./server-data");
 const STATE_FILE = path.join(DATA_DIR, "shared-state.json");
@@ -62,8 +64,13 @@ function readSharedState() {
   }
 }
 
+function signSessionPayload(payload) {
+  return createHmac("sha256", AUTH_SECRET).update(payload).digest("base64url");
+}
+
 function createSessionToken(userId) {
-  const token = randomBytes(32).toString("hex");
+  const payload = `${userId}.${randomBytes(16).toString("base64url")}`;
+  const token = `${payload}.${signSessionPayload(payload)}`;
   sessions.set(token, { userId, createdAt: Date.now() });
   return token;
 }
@@ -74,10 +81,24 @@ function tokenFromReq(req) {
 }
 
 function userFromRequest(req, state) {
-  const session = sessions.get(tokenFromReq(req));
+  const token = tokenFromReq(req);
+  let session = sessions.get(token);
+  if (!session && token) {
+    const parts = token.split(".");
+    if (parts.length === 3) {
+      const payload = `${parts[0]}.${parts[1]}`;
+      const actual = Buffer.from(parts[2]);
+      const expected = Buffer.from(signSessionPayload(payload));
+      if (actual.length === expected.length && timingSafeEqual(actual, expected)) {
+        session = { userId: parts[0], createdAt: Date.now() };
+        sessions.set(token, session);
+      }
+    }
+  }
   if (!session) return null;
   return (state.users || []).find((user) => user.id === session.userId) || null;
 }
+
 
 function sendJson(res, status, body) {
   res.writeHead(status, { "Content-Type": "application/json" });
@@ -247,6 +268,7 @@ const httpServer = createServer(async (req, res) => {
 
   const url = new URL(req.url || "/", "http://localhost:3001");
   const state = normalizeSocialState(readSharedState());
+  state.users = await syncUsersWithDatabase(state.users || []);
   state.groups = Array.isArray(state.groups) ? state.groups.map(normalizeGroup) : [];
   const mutatingSocial =
     req.method === "POST" &&
@@ -262,11 +284,11 @@ const httpServer = createServer(async (req, res) => {
     const username = String(payload?.username || "").trim();
     const email = String(payload?.email || "").trim();
     const password = String(payload?.password || "");
-    if (!username || username.length > 15 || password.length < 8) {
+    if (!username || username.length > 15 || !password) {
       sendJson(res, 400, { error: "Invalid registration payload" });
       return;
     }
-    if (state.users.some((user) => user.username === username)) {
+    if (state.users.some((user) => user.username.toLocaleLowerCase("en-US") === username.toLocaleLowerCase("en-US"))) {
       sendJson(res, 409, { error: "Username already exists" });
       return;
     }
@@ -280,6 +302,7 @@ const httpServer = createServer(async (req, res) => {
       passwordHash: hash,
     };
     state.users.push(user);
+    await saveUserToDatabase(user);
     writeSharedState(state);
     const token = createSessionToken(user.id);
     sendJson(res, 200, { ok: true, token, user: toPublicUser(user) });
@@ -290,7 +313,7 @@ const httpServer = createServer(async (req, res) => {
     const payload = (await parseBody(req).catch(() => null)) || {};
     const username = String(payload?.username || "").trim();
     const password = String(payload?.password || "");
-    const user = state.users.find((entry) => entry.username === username);
+    const user = state.users.find((entry) => entry.username.toLocaleLowerCase("en-US") === username.toLocaleLowerCase("en-US"));
     if (!user || !verifyPassword(password, user.salt, user.passwordHash)) {
       sendJson(res, 401, { error: "Invalid username or password" });
       return;
@@ -333,7 +356,7 @@ const httpServer = createServer(async (req, res) => {
       sendJson(res, 400, { error: "Invalid user payload" });
       return;
     }
-    if (state.users.some((user) => user.id !== actor.id && user.username === username)) {
+    if (state.users.some((user) => user.id !== actor.id && user.username.toLocaleLowerCase("en-US") === username.toLocaleLowerCase("en-US"))) {
       sendJson(res, 409, { error: "Username already exists" });
       return;
     }
@@ -347,6 +370,7 @@ const httpServer = createServer(async (req, res) => {
       };
       delete state.users[existingIndex].password;
     }
+    await saveUserToDatabase(state.users[existingIndex]);
     writeSharedState(state);
     sendJson(res, 200, {
       ok: true,
@@ -793,7 +817,7 @@ function getOrCreateRoom(roomId) {
   return rooms.get(roomId);
 }
 
-function buildPlayerIndexMap(room) {
+function buildRoomPlayerIndexMap(room) {
   const map = {};
   if (!room?.turn?.playersInGame?.length) return map;
   room.turn.playersInGame.forEach((player, idx) => {
@@ -866,7 +890,7 @@ function removePlayerFromGame(roomId, playerIndex) {
   return {
     removedPlayerMeta,
     gameState: room.gameState,
-    playerIndexMap: buildPlayerIndexMap(room),
+    playerIndexMap: buildRoomPlayerIndexMap(room),
     roomStatus: room.status,
   };
 }
@@ -959,7 +983,7 @@ function removeDeadMansDrawPlayerFromGame(roomId, playerIndex) {
   return {
     removedPlayerMeta,
     gameState: room.gameState,
-    playerIndexMap: buildPlayerIndexMap(room),
+    playerIndexMap: buildRoomPlayerIndexMap(room),
     roomStatus: room.status,
   };
 }
@@ -1167,7 +1191,7 @@ function tryMatchPlayers(playerCount) {
     };
   }
 
-  console.log(`   ➡️  No match possible. Queue too small.\n`);
+  console.log(`   ➡️  No match possible. Queue too small.\\n`);
   return null;
 }
 

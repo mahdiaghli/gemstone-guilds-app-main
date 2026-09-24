@@ -161,7 +161,7 @@ export function GroupsChatSection({
         )}
       </div>
 
-      <div className="flex gap-2">
+      <div className="flex flex-wrap gap-2">
         <Input
           dir={dir}
           value={chatText}
@@ -347,7 +347,7 @@ export function GroupsFindView({
             className="overflow-hidden rounded-[32px] border border-primary/20 bg-[radial-gradient(circle_at_top_right,rgba(251,191,36,0.18),transparent_34%),linear-gradient(135deg,rgba(15,23,42,0.88),rgba(30,41,59,0.72))] p-4 shadow-[0_24px_70px_rgba(2,6,23,0.42)] backdrop-blur"
           >
             <div className={`flex flex-col gap-4 ${dir === "rtl" ? "text-right" : ""}`}>
-              <div className={`flex items-start justify-between gap-3 ${dir === "rtl" ? "flex-row-reverse" : ""}`}>
+              <div className={`flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between ${dir === "rtl" ? "sm:flex-row-reverse" : ""}`}>
                 <div className={`flex items-center gap-3 ${dir === "rtl" ? "flex-row-reverse" : ""}`}>
                   <div className="flex h-16 w-16 items-center justify-center rounded-3xl border border-primary/25 bg-primary/10 shadow-[0_0_24px_rgba(251,191,36,0.16)]">{renderFlag(group.flag, group.name)}</div>
                   <div>
@@ -564,10 +564,10 @@ export function GroupInfoCard({
   const isCreator = currentUserId === infoGroup.creatorId;
 
   return (
-    <div className="overflow-hidden rounded-[32px] border border-primary/20 bg-[radial-gradient(circle_at_top_right,rgba(251,191,36,0.20),transparent_34%),linear-gradient(135deg,rgba(15,23,42,0.94),rgba(30,41,59,0.82))] p-5 shadow-2xl backdrop-blur">
-      <div className={`flex items-start justify-between gap-3 ${dir === "rtl" ? "flex-row-reverse" : ""}`}>
+    <div className="overflow-hidden rounded-[28px] border border-primary/20 bg-[radial-gradient(circle_at_top_right,rgba(251,191,36,0.20),transparent_34%),linear-gradient(135deg,rgba(15,23,42,0.94),rgba(30,41,59,0.82))] p-3 shadow-2xl backdrop-blur sm:rounded-[32px] sm:p-5">
+      <div className={`flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between ${dir === "rtl" ? "sm:flex-row-reverse" : ""}`}>
         <div className={dir === "rtl" ? "text-right" : ""}>
-          <h3 className={`flex items-center gap-3 text-2xl text-primary ${dir === "rtl" ? "flex-row-reverse font-persian" : "font-cinzel"}`}>
+          <h3 className={`flex items-center gap-2 text-xl text-primary sm:gap-3 sm:text-2xl ${dir === "rtl" ? "flex-row-reverse font-persian" : "font-cinzel"}`}>
             <span className="flex h-14 w-14 items-center justify-center rounded-2xl border border-primary/25 bg-primary/10">{renderFlag(infoGroup.flag, infoGroup.name)}</span>
             <span>{infoGroup.name}</span>
           </h3>
@@ -578,7 +578,7 @@ export function GroupInfoCard({
             <span className="rounded-full border border-white/10 bg-background/35 px-3 py-1">{t("scoresLabel")}: {getGroupScore(infoGroup)}</span>
           </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           {isCreator && (
             <Button variant="outline" onClick={onEditGroup}>
               <Pencil className="h-4 w-4" />
@@ -588,13 +588,13 @@ export function GroupInfoCard({
           <Button variant="ghost" onClick={onClose}>{t("closeLabel")}</Button>
         </div>
       </div>
-      <div className="mt-4 grid gap-3">
+      <div className="mt-4 max-h-56 space-y-2 overflow-y-auto overscroll-contain rounded-2xl border border-primary/10 bg-background/20 p-2 pr-1 sm:max-h-72">
         {getGroupMembersInfo(infoGroup.id).map((member) => (
           <button
             key={member.id}
             type="button"
             onClick={() => onOpenPlayerInfo(member.id)}
-            className={`flex w-full items-center justify-between rounded-2xl border border-primary/15 bg-background/35 px-4 py-3 ${dir === "rtl" ? "flex-row-reverse text-right" : "text-left"}`}
+            className={`flex min-h-12 w-full items-center justify-between rounded-xl border border-primary/15 bg-background/35 px-3 py-2.5 ${dir === "rtl" ? "flex-row-reverse text-right" : "text-left"}`}
           >
             <span className={`flex items-center gap-3 ${dir === "rtl" ? "flex-row-reverse" : ""}`}>
               <Avatar className="h-11 w-11 border border-primary/20">

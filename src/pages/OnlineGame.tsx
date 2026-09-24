@@ -6,6 +6,16 @@ import { useGame } from '@/hooks/useGame';
 import { useLanguage } from '@/hooks/useLanguage';
 import { GameState } from '@/lib/gameData';
 import { Button } from '@/components/ui/button';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import Game from './Game';
 import DeadMansDrawGame from './DeadMansDrawGame';
 import JungleSpeedGame from './JungleSpeedGame';
@@ -41,6 +51,7 @@ export default function OnlineGame() {
   const [postGameNoticeDialog, setPostGameNoticeDialog] = useState<PostGameNoticeDialog | null>(null);
   const [playAgainVotes, setPlayAgainVotes] = useState<string[]>([]);
   const [friendRequestLocked, setFriendRequestLocked] = useState(false);
+  const [leaveOpen, setLeaveOpen] = useState(false);
 
   const {
     gameState,
@@ -227,12 +238,8 @@ export default function OnlineGame() {
   useEffect(() => {
     const handleAppBackRequest = () => {
       if (gameStarted && !gameState?.gameOver) {
-        const confirmed = window.confirm(
-          lang === 'fa'
-            ? 'آیا مطمئن هستید که می‌خواهید از بازی خارج شوید؟'
-            : 'Are you sure you want to leave the game?',
-        );
-        if (!confirmed) return;
+        setLeaveOpen(true);
+        return;
       }
 
       handleLeaveRoom();
@@ -451,8 +458,28 @@ export default function OnlineGame() {
     );
   }
 
+  const leaveDialog = (
+    <AlertDialog open={leaveOpen} onOpenChange={setLeaveOpen}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>
+            {lang === 'fa'
+              ? 'آیا مطمئن هستید که می‌خواهید از بازی خارج شوید؟'
+              : 'Are you sure you want to leave the game?'}
+          </AlertDialogTitle>
+          <AlertDialogDescription className="sr-only">leave</AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>{t('menu')}</AlertDialogCancel>
+          <AlertDialogAction onClick={handleLeaveRoom}>{t('leaveGameAction')}</AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
+
   if (selectedGame.id === "dead-mans-draw") {
     return (
+      <>
       <DeadMansDrawGame
         mode="online"
         roomId={roomId}
@@ -466,11 +493,14 @@ export default function OnlineGame() {
         onGameStateChange={lastSyncedGameStateRef as any}
         onGameEnd={leaveRoom}
       />
+      {leaveDialog}
+      </>
     );
   }
 
   if (selectedGame.id === "totem") {
     return (
+      <>
       <JungleSpeedGame
         mode="online"
         roomId={roomId}
@@ -484,10 +514,13 @@ export default function OnlineGame() {
         onGameStateChange={lastSyncedGameStateRef as any}
         onGameEnd={leaveRoom}
       />
+      {leaveDialog}
+      </>
     );
   }
 
   return (
+    <>
       <Game
       mode="online"
       roomId={roomId}
@@ -503,5 +536,7 @@ export default function OnlineGame() {
       gameOverActions={gameOverActions}
       postGameNoticeDialog={postGameNoticeDialog}
     />
+    {leaveDialog}
+    </>
   );
 }

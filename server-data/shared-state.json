@@ -4,105 +4,153 @@
       "id": "1775495697901",
       "username": "laptop3",
       "email": "mahdiss.aghli12345@gmail.com",
-      "password": "123456",
       "createdAt": "2026-04-06T17:14:57.901Z",
-      "selectedAvatar": "/src/assets/merchant3.png"
+      "selectedAvatar": "/src/assets/merchant3.png",
+      "salt": "361af3837506308ecb9995a303372217",
+      "passwordHash": "dc2ac0b377a5fa108850048d323193df58c23f9d8705ad8747646e532a37bcaabc3938d9e81a8aeacba63b21646eb92ffac3f2ef71f08fc86b9854f953394a00"
     },
     {
       "id": "1775547728683",
       "username": "mahdi phone 2",
       "email": "mahdi.aghli12345@gmail.com",
-      "password": "123",
       "createdAt": "2026-04-07T07:42:08.683Z",
-      "selectedAvatar": "/src/assets/merchant.png"
+      "selectedAvatar": "/src/assets/merchant.png",
+      "salt": "8f4b6e5bf8429c35ad1bcd8bd1de6afd",
+      "passwordHash": "aae4654da11682c20a6a722dcf1518905eb41cdae67a8026c1abd6b73bf31c4e8823894692a21ce9e9a7e4d60788f482fa4f42550dc13f3fb0c7abd4b87c8e45"
     },
     {
       "id": "1775552047292",
       "username": "laptop4",
       "email": "laptop4",
-      "password": "aaa",
       "createdAt": "2026-04-07T08:54:07.292Z",
-      "selectedAvatar": "/src/assets/merchant.png"
+      "selectedAvatar": "/src/assets/merchant.png",
+      "salt": "9ea836de39d12a07dd104f366d922269",
+      "passwordHash": "ddd735b8eedd6f9164607f5b4a89b8b6454a7abb1d00b6d529c29c19ddc4b4e2bb730aa7962b8c1e915ed1b21d85713432f14b99543b9233a81e4c32f52f3148"
     },
     {
       "id": "1775668593564",
       "username": "laptop 5",
       "email": "aaa",
-      "password": "ccc",
-      "createdAt": "2026-04-08T17:16:33.564Z"
+      "createdAt": "2026-04-08T17:16:33.564Z",
+      "salt": "4fc0a24b04d303587978d75e8fade94c",
+      "passwordHash": "f2bb55cfa6486f13981321239464edcd87469fd1915f3019801a13c3c51737605881e0278e5f824f20854022264dd235700c56c9c2f2869f82db1ec0f2617e74"
     },
     {
       "id": "1775672225470",
       "username": "444",
       "email": "",
-      "password": "jN67revEWaMFygP",
-      "createdAt": "2026-04-08T18:17:05.470Z"
+      "createdAt": "2026-04-08T18:17:05.470Z",
+      "salt": "4b1ac68ef56d0e89b9ea2cebede6f871",
+      "passwordHash": "be21a11f9f0aeccce61e8d82406f4d07362570b72e42fa05cc101260a68afe604744711a34625978fb39ee66f3b0ccc279d77f48b40c2345a167774fb0ea6e90"
     },
     {
       "id": "1775740301988",
       "username": "lll",
       "email": "laptop4",
-      "password": "aaa",
-      "createdAt": "2026-04-09T13:11:41.988Z"
+      "createdAt": "2026-04-09T13:11:41.988Z",
+      "salt": "bb9556fba5f45d12ff27ab49f271aa15",
+      "passwordHash": "3a59aa2ddb7cc832e35b0e5f82b4dd4c19d307fd20aa51669aa00cf6a8c703ab459d1defbbd5c376852e0463370be08a3bc5f3b4307ecc983675bda83379e1c3"
     },
     {
       "id": "1776197456036",
       "username": "laptop2",
       "email": "laptop2",
-      "password": "123456",
       "createdAt": "2026-04-14T20:10:56.036Z",
-      "selectedAvatar": "/src/assets/merchant2.png"
+      "selectedAvatar": "/src/assets/merchant2.png",
+      "salt": "10d8d44fb3f43c769e17b8c31cfbb160",
+      "passwordHash": "bba745e21972718db0f1f97f470a9a47a8340c9486bcf8cdd7cac4d5af4c08e55ab362d24cfb4e50b880a6693fa475f9afaa2cfdd9a7f423740ee7c97693d816"
     },
     {
       "id": "1777581436532",
       "username": "aaa",
       "email": "laptop5",
-      "password": "aaa",
       "createdAt": "2026-04-30T20:37:16.532Z",
-      "selectedAvatar": "/src/assets/merchant.webp"
+      "selectedAvatar": "/src/assets/merchant.webp",
+      "salt": "f69af8d040ff5c3341c5b6e10d29be33",
+      "passwordHash": "fead2a772a2256d1c3dcfc2b4974192215e303c78f1ad34bfc1f93d37cec0c15c2f5acdf78829b60500d5d955bfa36f4447bafe20e9c8daf703a0e84edf2de75"
     },
     {
       "id": "1777582142609",
       "username": "xxx",
       "email": "mahdi.aghli12345@gmail.com",
-      "password": "zzz",
-      "createdAt": "2026-04-30T20:49:02.609Z"
+      "createdAt": "2026-04-30T20:49:02.609Z",
+      "salt": "dbf199c53f0e8edaaa112d921d6331ed",
+      "passwordHash": "5b069c4ac174854b57d0b8c132f83b8e5cc5f45d0948588ef680c82809ec3105052c18a3623cd4b7945f02e375cf335e82d16294c8df47cad695de2bead8c98b"
     },
     {
       "id": "1777697893146",
       "username": "Qaa",
       "email": "mahdi.aghli12345@gmail.com",
-      "password": "111",
-      "createdAt": "2026-05-02T04:58:13.146Z"
+      "createdAt": "2026-05-02T04:58:13.146Z",
+      "salt": "fce69f7325b1fec3be07a0a06d806d62",
+      "passwordHash": "5a747f704e899b8be86b2b31d28656b97297d76432fc1fc87826552efc402a7e7c83d29efeba4be1d9d82e9e58bc6be94219bb6ab0248cd0edc548786e76eb2f"
     },
     {
       "id": "1778078454395",
       "username": "Aaaa",
       "email": "mahdi.aghli12345@gmail.com",
-      "password": "qqqq",
       "createdAt": "2026-05-06T14:40:54.395Z",
-      "selectedAvatar": "/src/assets/avatar.png"
+      "selectedAvatar": "/src/assets/avatar.png",
+      "salt": "89024fdd3e26a72ed60c6697ba7d9973",
+      "passwordHash": "a8c62728141b8813dee01e09526a6515dfdc0d748db2a250393aa30f2e97dfc62407964961bdaad3e5ddde792dfb2cd6cb8333fb3523568a65f1ed2bdfbe1b59"
     },
     {
       "id": "1778078669940",
       "username": "mahdi.aghli12345@gmail.com",
       "email": "mahdi.aghli12345@gmail.com",
-      "password": "qqqq",
-      "createdAt": "2026-05-06T14:44:29.940Z"
+      "createdAt": "2026-05-06T14:44:29.940Z",
+      "salt": "6a0d33c30b506cd70c313e4dddb141b6",
+      "passwordHash": "0950cff1cf42a9e313f2d8e3983da8b4eec363679e47e7b8da309f74933d91d3cc8e36dfb19df824fcd21d9e89f028cf9868158651aa5d4d07e53e3362978aea"
     },
     {
       "id": "1778078872286",
       "username": "111",
       "email": "mahdi.aghli12345@gmail.com",
-      "password": "qqqq",
-      "createdAt": "2026-05-06T14:47:52.286Z"
+      "createdAt": "2026-05-06T14:47:52.286Z",
+      "salt": "251dc9627f50349e61e38d02e7ca2756",
+      "passwordHash": "2b54de094e29efbfd40c9218e2ea8681a0f97fa8affdaca6e7dc2337d5ffcb22f66b8b43cd6d4a3142c0e39a314cdc4de36c1fad0e89c91333a3bfe3759f4fb1"
     },
     {
       "id": "1779196629602",
       "username": "اااللل",
       "email": "لل",
-      "password": "لل",
-      "createdAt": "2026-05-19T13:17:09.602Z"
+      "createdAt": "2026-05-19T13:17:09.602Z",
+      "salt": "160d8c957653db1c8193b594fea59d4b",
+      "passwordHash": "ffcb5591775badab5beb68e95c9cc8418951b3cbe8e4f2db3666cbd2b60f1763a58c73dfce64e0698110e1e76ebeb8f3d14bce3081963a039352008c9dc9788b"
+    },
+    {
+      "id": "1790171131224",
+      "username": "nnn",
+      "email": "09911161231",
+      "createdAt": "2026-09-23T13:45:31.224Z",
+      "salt": "e038533207eb84fa210f15512404a152",
+      "passwordHash": "a9a44920c25d804dc9678f017cc61c1d1b2286bb3deb176151a34c5174dd288ce57bed3faced1cd125887dfd556e60896b5faed34e1ce36b080529ca8490db0f",
+      "selectedAvatar": "/src/assets/avatar.webp"
+    },
+    {
+      "id": "1790175221355",
+      "username": "ط",
+      "email": "09911161231",
+      "createdAt": "2026-09-23T14:53:41.355Z",
+      "salt": "1d1c740e6172e0cc99131fabc962a5e0",
+      "passwordHash": "f52c88005a3ec5bb835497a042eb09b009dad983852ef3be2d9c829d3059619e1110befcc317a8785c9817ef13b43744c4ada83b984e7d8839a7b9a438dfe51c"
+    },
+    {
+      "id": "1790178919347",
+      "username": "09911161231",
+      "email": "09911161231",
+      "createdAt": "2026-09-23T15:55:19.347Z",
+      "salt": "ca368a2be2f56c2bb72bd5e794dddd42",
+      "passwordHash": "abbc039e288489bb7ac3885b59ff7fc0664d38fffce173c45e5978a5b726ff5d56576dd238be2836c46f3f3e6b80719606faad9d5dbce7253381bebe749cd7e9",
+      "selectedAvatar": "/src/assets/avatar.webp"
+    },
+    {
+      "id": "1790234376621",
+      "username": "سشیرر",
+      "email": "09911161231",
+      "createdAt": "2026-09-24T07:19:36.621Z",
+      "salt": "d36c4893e10530e1a7dda1aed78caf82",
+      "passwordHash": "5c66d657410133c330057beac47e392f43b6518a4b5fa971db4406e4528aacd5d20f1dfeb2639818dde83c5dee6b3ba320cda4efe711a639adf78a42cfa33ce0"
     }
   ],
   "groups": [
@@ -180,6 +228,20 @@
     ]
   },
   "friendRequests": [
+    {
+      "id": "1790172271120-1790171131224-1777697893146",
+      "fromUserId": "1790171131224",
+      "toUserId": "1777697893146",
+      "createdAt": "2026-09-23T14:04:31.120Z",
+      "status": "pending"
+    },
+    {
+      "id": "1790172237088-1790171131224-1775495697901",
+      "fromUserId": "1790171131224",
+      "toUserId": "1775495697901",
+      "createdAt": "2026-09-23T14:03:57.088Z",
+      "status": "pending"
+    },
     {
       "id": "1780038178468-1777581436532-1775552047292",
       "fromUserId": "1777581436532",

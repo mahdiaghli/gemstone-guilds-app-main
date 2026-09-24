@@ -1,4 +1,4 @@
-export type GameId =
+﻿export type GameId =
   | "splendor"
   | "dead-mans-draw"
   | "totem"
@@ -13,7 +13,7 @@ export type GameConfig = {
   badge: string;
   accentFrom: string;
   accentTo: string;
-  playable: boolean;
+    playable: false,
 };
 
 export const DEFAULT_GAME_ID: GameId = "splendor";
@@ -44,7 +44,7 @@ export const GAME_CATALOG: GameConfig[] = [
     badge: "Reaction",
     accentFrom: "#22c55e",
     accentTo: "#eab308",
-    playable: true,
+    playable: false,
   },
   {
     id: "beasty-bar",
@@ -53,7 +53,7 @@ export const GAME_CATALOG: GameConfig[] = [
     badge: "Party",
     accentFrom: "#f97316",
     accentTo: "#22c55e",
-    playable: true,
+    playable: false,
   },
   {
     id: "coup",

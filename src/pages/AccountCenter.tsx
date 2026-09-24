@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Copy, LogOut, Plus, X } from "lucide-react";
+import { Copy, LogOut, ShoppingCart, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 import AppPageShell from "@/components/game/AppPageShell";
@@ -27,7 +27,6 @@ import { useLanguage } from "@/hooks/useLanguage";
 import { readPlayerExtras, updatePlayerExtras } from "@/lib/playerExtras";
 import { GAME_CATALOG } from "@/lib/gameCatalog";
 import { shellBackgrounds } from "@/lib/pageBackgrounds";
-import { getWinRate, readPlayerAnalytics } from "@/lib/playerAnalytics";
 import { getUserCode } from "@/lib/social";
 import { getLevelFromXp, getLevelProgress, readProgress } from "@/lib/progression";
 
@@ -52,7 +51,6 @@ export default function AccountCenter() {
   const [extras, setExtras] = useState(() => readPlayerExtras(user?.id));
   const userCode = getUserCode(user?.id);
   const progress = readProgress(user?.id);
-  const [analytics, setAnalytics] = useState(() => readPlayerAnalytics(user?.id));
 
   // XP و Level و Rank
   const level = getLevelFromXp(progress.xp);
@@ -91,20 +89,14 @@ export default function AccountCenter() {
   // Sync extras با localStorage
   useEffect(() => {
     const syncExtras = () => setExtras(readPlayerExtras(user?.id));
-    const syncAnalytics = () => setAnalytics(readPlayerAnalytics(user?.id));
     syncExtras();
-    syncAnalytics();
 
     window.addEventListener("splendor-player-extras-updated", syncExtras);
-    window.addEventListener("splendor-analytics-updated", syncAnalytics);
     window.addEventListener("storage", syncExtras);
-    window.addEventListener("storage", syncAnalytics);
 
     return () => {
       window.removeEventListener("splendor-player-extras-updated", syncExtras);
-      window.removeEventListener("splendor-analytics-updated", syncAnalytics);
       window.removeEventListener("storage", syncExtras);
-      window.removeEventListener("storage", syncAnalytics);
     };
   }, [user?.id]);
 
@@ -139,7 +131,7 @@ export default function AccountCenter() {
               onClick={() => navigate("/shop")}
               className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-primary/40 bg-black/40 text-primary shadow-lg shadow-black/70"
             >
-              <Plus className="h-4 w-4" />
+              <ShoppingCart className="h-4 w-4" />
             </button>
           </div>
 
@@ -186,15 +178,6 @@ export default function AccountCenter() {
                 <h2 className="text-xl font-semibold text-slate-50 sm:text-2xl">
                   {user?.username || t("guest")}
                 </h2>
-                <p className="text-xs text-slate-300/80 sm:text-sm">
-                  {user?.email || t("noEmailSaved")}
-                </p>
-                <p className="mt-1 text-xs text-slate-400 sm:text-sm">
-                  {t("memberSince")}:{" "}
-                  {user?.createdAt
-                    ? new Date(user.createdAt).toLocaleDateString()
-                    : "-"}
-                </p>
               </div>
 
               {/* XP Bar */}
@@ -261,28 +244,15 @@ export default function AccountCenter() {
                   {t("userCode")}: {userCode}
                 </span>
               </button>
-
-              {/* دکمه‌های Edit + Back */}
-              <div
-                className={`mt-4 flex flex-wrap justify-center gap-3 sm:justify-start ${
-                  dir === "rtl" ? "sm:flex-row-reverse" : ""
-                }`}
+              <Button
+                type="button"
+                variant="destructive"
+                onClick={() => setShowLogoutConfirm(true)}
+                className="ml-2 mt-3 bg-red-700/90 hover:bg-red-600"
               >
-                <Button
-                  variant="outline"
-                  onClick={() => setShowEditProfile(true)}
-                  className="border-amber-300/60 bg-black/40 text-amber-200 hover:bg-amber-400/10"
-                >
-                  {t("editProfile")}
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => navigate("/menu")}
-                  className="border-slate-500/70 bg-black/40 text-slate-200 hover:bg-slate-500/10"
-                >
-                  {t("backToMenu")}
-                </Button>
-              </div>
+                <LogOut className="h-4 w-4" />
+                {t("logout")}
+              </Button>
 
               {/* Achievements */}
               <div className="mt-4 rounded-2xl border border-slate-500/40 bg-black/50 px-3 py-2">
@@ -308,59 +278,6 @@ export default function AccountCenter() {
           </div>
         </div>
 
-        <div className="rounded-[32px] border border-primary/20 bg-[radial-gradient(circle_at_top_left,rgba(56,189,248,0.12),transparent_36%),linear-gradient(145deg,rgba(2,6,23,0.96),rgba(15,23,42,0.98))] p-5 shadow-[0_25px_80px_rgba(0,0,0,0.7)]">
-          <div className={`flex items-center justify-between gap-3 ${dir === "rtl" ? "flex-row-reverse" : ""}`}>
-            <div>
-              <h2 className="font-cinzel text-2xl text-sky-100">Player Analytics</h2>
-              <p className="mt-1 text-sm text-slate-400">Track win rate, played games, and total activity.</p>
-            </div>
-            <div className="rounded-2xl border border-sky-300/20 bg-sky-400/10 px-4 py-2 text-right">
-              <p className="text-xs uppercase tracking-[0.25em] text-sky-200/70">Overall Win Rate</p>
-              <p className="font-cinzel text-3xl text-sky-100">{getWinRate({ played: analytics.totalGamesPlayed, wins: analytics.totalWins })}%</p>
-            </div>
-          </div>
-
-          <div className="mt-4 grid gap-3 md:grid-cols-3">
-            <div className="rounded-2xl border border-white/10 bg-black/25 p-4">
-              <p className="text-xs uppercase tracking-[0.25em] text-slate-400">Games Played</p>
-              <p className="mt-2 font-cinzel text-3xl text-white">{analytics.totalGamesPlayed}</p>
-            </div>
-            <div className="rounded-2xl border border-white/10 bg-black/25 p-4">
-              <p className="text-xs uppercase tracking-[0.25em] text-slate-400">Wins</p>
-              <p className="mt-2 font-cinzel text-3xl text-emerald-300">{analytics.totalWins}</p>
-            </div>
-            <div className="rounded-2xl border border-white/10 bg-black/25 p-4">
-              <p className="text-xs uppercase tracking-[0.25em] text-slate-400">Total Activity</p>
-              <p className="mt-2 font-cinzel text-3xl text-amber-200">{analytics.totalPlayerActivity}</p>
-            </div>
-          </div>
-
-          <div className="mt-5 grid gap-3 lg:grid-cols-2">
-            {GAME_CATALOG.map((game) => {
-              const gameStats = analytics.byGame[game.id] || { played: 0, wins: 0, losses: 0 };
-              return (
-                <div key={game.id} className="rounded-3xl border border-white/10 bg-black/25 p-4">
-                  <div className="flex items-center justify-between gap-3">
-                    <div>
-                      <h3 className="font-cinzel text-xl text-white">{game.name}</h3>
-                      <p className="text-xs text-slate-400">{game.badge}</p>
-                    </div>
-                    <div className="rounded-full bg-white/5 px-3 py-1 text-sm text-sky-200">
-                      {getWinRate(gameStats)}% win
-                    </div>
-                  </div>
-                  <div className="mt-4 flex flex-wrap gap-2 text-xs text-slate-300">
-                    <span className="rounded-full bg-white/5 px-3 py-1">Played: {gameStats.played}</span>
-                    <span className="rounded-full bg-white/5 px-3 py-1">Wins: {gameStats.wins}</span>
-                    <span className="rounded-full bg-white/5 px-3 py-1">Losses: {gameStats.losses}</span>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* آواتارها و استیکرها */}
         <div className="grid gap-4 lg:grid-cols-2">
           {/* کارت آواتارها */}
           <div className="rounded-3xl border border-slate-600/60 bg-[linear-gradient(145deg,rgba(15,23,42,0.96),rgba(2,6,23,0.98))] p-5 shadow-[0_18px_45px_rgba(0,0,0,0.75)]">
@@ -435,20 +352,22 @@ export default function AccountCenter() {
         </div>
 
         {/* دکمه خروج */}
-        <div
-          className={`flex ${
-            dir === "rtl" ? "justify-start" : "justify-end"
-          }`}
-        >
+
+
+        <div className={`flex flex-wrap justify-center gap-3 rounded-3xl border border-primary/20 bg-black/30 p-4 ${dir === "rtl" ? "sm:flex-row-reverse" : ""}`}>
           <Button
-            variant="destructive"
-            onClick={() => setShowLogoutConfirm(true)}
-            className={`bg-red-700/90 hover:bg-red-600 ${
-              dir === "rtl" ? "flex-row-reverse" : ""
-            }`}
+            variant="outline"
+            onClick={() => setShowEditProfile(true)}
+            className="border-amber-300/60 bg-black/40 text-amber-200 hover:bg-amber-400/10"
           >
-            <LogOut className="h-4 w-4" />
-            {t("logout")}
+            {t("editProfile")}
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => navigate("/menu")}
+            className="border-slate-500/70 bg-black/40 text-slate-200 hover:bg-slate-500/10"
+          >
+            {t("backToMenu")}
           </Button>
         </div>
 

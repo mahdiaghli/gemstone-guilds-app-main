@@ -1,6 +1,6 @@
 import { useMemo, useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { Bot, CheckCircle2, Gift, Puzzle, RotateCcw, Zap } from "lucide-react";
+import { Bot, CheckCircle2, Gift, Gem, Puzzle, RotateCcw, Swords, Zap } from "lucide-react";
 
 import AppPageShell from "@/components/game/AppPageShell";
 import { Button } from "@/components/ui/button";
@@ -43,6 +43,25 @@ export default function SoloChallenge() {
       };
     }
 
+    if (challengeId === "rich") {
+      return {
+        icon: Gem,
+        title: t("eventRichStart"),
+        description: t("eventRichStartDesc"),
+        reward: t("rewardCoins"),
+        start: () => navigate("/game?players=2&mode=local&challenge=rich-start"),
+      };
+    }
+
+    if (challengeId === "knockout") {
+      return {
+        icon: Swords,
+        title: t("eventKnockout"),
+        description: t("eventKnockoutDesc"),
+        reward: t("rewardCardBack"),
+        start: () => navigate("/game?players=2&mode=ai&challenge=knockout"),
+      };
+    }
     if (challengeId === "survival") {
       const currentStage = progress.botSurvivalCompleted
         ? "hard"

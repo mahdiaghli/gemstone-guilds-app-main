@@ -9,17 +9,24 @@ import {
 } from "@/lib/authStorage";
 
 type User = PublicUser;
+type AuthFailureReason =
+  | "invalid_credentials"
+  | "username_exists"
+  | "invalid_input"
+  | "server_unavailable";
+type AuthResult = { ok: true } | { ok: false; reason: AuthFailureReason };
 
 interface AuthContextType {
   user: User | null;
-  login: (username: string, password: string, rememberMe?: boolean) => Promise<boolean>;
-  register: (username: string, email: string, password: string, rememberMe?: boolean) => Promise<boolean>;
+  login: (username: string, password: string, rememberMe?: boolean) => Promise<AuthResult>;
+  register: (username: string, email: string, password: string, rememberMe?: boolean) => Promise<AuthResult>;
   updateProfile: (updates: { username: string; email?: string }) => Promise<boolean>;
   logout: () => void;
   isLoading: boolean;
 }
 
 const MAX_USERNAME_LENGTH = 15;
+const AUTH_REQUEST_TIMEOUT_MS = 4_000;
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function useAuth() {
@@ -40,9 +47,19 @@ async function authRequest(path: string, init?: RequestInit) {
   }
   const token = readSessionToken();
   if (token) headers.set("Authorization", `Bearer ${token}`);
-  const response = await fetch(`${API_SERVER_URL}${path}`, { ...init, headers });
-  const data = await response.json().catch(() => null);
-  return { ok: response.ok, status: response.status, data };
+  const controller = new AbortController();
+  const timeout = window.setTimeout(() => controller.abort(), AUTH_REQUEST_TIMEOUT_MS);
+  try {
+    const response = await fetch(`${API_SERVER_URL}${path}`, {
+      ...init,
+      headers,
+      signal: controller.signal,
+    });
+    const data = await response.json().catch(() => null);
+    return { ok: response.ok, status: response.status, data };
+  } finally {
+    window.clearTimeout(timeout);
+  }
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -87,21 +104,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     username: string,
     password: string,
     rememberMe = false,
-  ): Promise<boolean> => {
+  ): Promise<AuthResult> => {
     setIsLoading(true);
     try {
-      const { ok, data } = await authRequest("/auth/login", {
+      const { ok, status, data } = await authRequest("/auth/login", {
         method: "POST",
         body: JSON.stringify({ username, password }),
       });
-      if (!ok || !data?.token || !data?.user) return false;
+      if (!ok || !data?.token || !data?.user) {
+        return {
+          ok: false,
+          reason: status === 401 ? "invalid_credentials" : "server_unavailable",
+        };
+      }
       const sessionUser = toPublicUser(data.user);
       setUser(sessionUser);
       saveSession(data.token, sessionUser, rememberMe);
-      return true;
+      return { ok: true };
     } catch (error) {
       console.error(error);
-      return false;
+      return { ok: false, reason: "server_unavailable" };
     } finally {
       setIsLoading(false);
     }
@@ -112,25 +134,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     email: string,
     password: string,
     rememberMe = false,
-  ): Promise<boolean> => {
+  ): Promise<AuthResult> => {
     setIsLoading(true);
     try {
-      if (!isUsernameValid(username) || password.length < 8) {
-        return false;
+      if (!isUsernameValid(username) || !password) {
+        return { ok: false, reason: "invalid_input" };
       }
-      const { ok, data } = await authRequest("/auth/register", {
+      const { ok, status, data } = await authRequest("/auth/register", {
         method: "POST",
         body: JSON.stringify({ username: username.trim(), email, password }),
       });
-      if (!ok || !data?.token || !data?.user) return false;
+      if (!ok || !data?.token || !data?.user) {
+        return {
+          ok: false,
+          reason: status === 409 ? "username_exists" : status === 400 ? "invalid_input" : "server_unavailable",
+        };
+      }
       const sessionUser = toPublicUser(data.user);
       setUser(sessionUser);
       saveSession(data.token, sessionUser, rememberMe);
       localStorage.setItem("splendor-needs-tutorial", "true");
-      return true;
+      return { ok: true };
     } catch (error) {
       console.error(error);
-      return false;
+      return { ok: false, reason: "server_unavailable" };
     } finally {
       setIsLoading(false);
     }

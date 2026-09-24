@@ -14,7 +14,7 @@ import {
   PREMIUM_PLANS,
   SHOP_SECTIONS,
   WEEKLY_REWARDS,
-  applyOfferPurchase,
+  purchaseShopOffer,
   canGrantPaidReward,
   claimWeeklyReward,
   formatTomans,
@@ -25,7 +25,7 @@ import {
   type ShopSection,
   type StoreProvider,
 } from "@/lib/shop";
-import { getNativePlatform, isAndroidApp, isIosApp } from "@/lib/nativeApp";
+import { getNativePlatform, isAndroidApp, isIosApp, isNativeApp } from "@/lib/nativeApp";
 import bannerImage from "@/assets/banner.webp";
 import coinImage from "@/assets/coin.webp";
 import coinStackImage from "@/assets/5coins.webp";
@@ -129,11 +129,11 @@ export default function Shop() {
     );
   }, [isFa, searchParams]);
 
-  const handleOfferPurchase = (
+  const handleOfferPurchase = async (
     sectionId: ShopSection["id"],
     offerId: string
   ) => {
-    const result = applyOfferPurchase(user?.id, sectionId, offerId);
+    const result = await purchaseShopOffer(user?.id, sectionId, offerId, availableProviders[0]);
     setMessage(result.ok ? t("purchaseSuccess") : (isFa
       ? "خرید فقط در فروشگاه برنامه در دسترس است."
       : "Purchases are only available in the app stores."));
@@ -228,7 +228,7 @@ export default function Shop() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: index * 0.04 }}
         onClick={() => handleOfferPurchase(sectionId, offer.id)}
-        disabled={offer.price > 0 && !canGrantPaidReward(window.GemstoneNativeBilling)}
+        disabled={offer.price > 0 && isNativeApp() && !canGrantPaidReward(window.GemstoneNativeBilling)}
         className={[
           "group relative flex flex-col items-center justify-between",
           // نسبت نزدیک به مربعی (کمی پهن‌تر برای زیبایی)
@@ -376,71 +376,6 @@ const renderRewardCard = (
   return (
     <AppPageShell currentPath="/shop" showHeader={false} backgroundImage={shellBackgrounds.shop}>
       <div className="space-y-6 pt-2" dir={dir}>
-        <div className="rounded-[32px] bg-[radial-gradient(circle_at_top_right,rgba(107,216,255,0.18),transparent_34%),linear-gradient(145deg,rgba(14,26,52,0.96),rgba(12,20,40,0.92))] p-5 shadow-2xl">
-          <div className="relative mb-5 overflow-hidden rounded-3xl">
-            <img
-              src={bannerImage}
-              alt={isFa ? "اشتراک پرمیوم" : "Premium Subscription"}
-              className="h-28 w-full object-cover"
-            />
-            <div className="absolute inset-0 bg-slate-950/60" />
-            <div className="absolute inset-0 flex flex-col items-center justify-center px-5 text-center text-primary">
-              <h2 className="font-cinzel text-xl">
-                {isFa ? "اشتراک پرمیوم" : "Premium Subscription"}
-              </h2>
-              <p className="mt-2 text-xs text-slate-100/85">
-                {isFa
-                  ? "برای شروع بازی محلی یا آنلاین باید اول اشتراک فعال داشته باشید. با هر خرید، ۲۰ الماس اضافه هم می‌گیرید."
-                  : "Local and online play require an active subscription. Every purchase also grants 20 bonus diamonds."}
-              </p>
-              <p className="mt-1 text-[11px] text-slate-200/70">
-                {isFa
-                  ? nativePlatform === "ios"
-                    ? "در آیفون پرداخت از طریق App Store انجام می‌شود."
-                    : nativePlatform === "android"
-                      ? "در اندروید پرداخت از طریق بازار یا مایکت انجام می‌شود."
-                      : "برای تست وب، هر سه درگاه به‌صورت شبیه‌سازی‌شده در دسترس هستند."
-                  : nativePlatform === "ios"
-                    ? "On iPhone, purchases go through the App Store."
-                    : nativePlatform === "android"
-                      ? "On Android, purchases go through Cafe Bazaar or Myket."
-                      : "In web testing, all providers remain available as simulated options."}
-              </p>
-            </div>
-          </div>
-
-          <div className="mb-4 rounded-3xl border border-primary/20 bg-background/30 px-4 py-3 text-sm text-slate-100/90">
-            {premiumStatus.active
-              ? isFa
-                ? `اشتراک فعال است. ${premiumStatus.remainingDays} روز دیگر باقی مانده است.`
-                : `Premium is active. ${premiumStatus.remainingDays} day(s) remaining.`
-              : isFa
-                ? "هنوز اشتراک فعالی ندارید."
-                : "No active premium subscription yet."}
-          </div>
-
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-            {PREMIUM_PLANS.map((plan) => {
-              const copy = getPremiumPlanText(plan.id);
-              return (
-                <button
-                  key={plan.id}
-                  type="button"
-                  onClick={() => setSelectedPlan(plan.id)}
-                  className="rounded-[28px] border border-primary/25 bg-[linear-gradient(160deg,rgba(255,255,255,0.08),rgba(255,255,255,0.02))] p-4 text-center shadow-lg transition-all hover:-translate-y-1 hover:border-primary/50"
-                >
-                  <div className="mb-2 text-lg font-bold text-primary">{copy.title}</div>
-                  <div className="mb-1 text-sm text-slate-100">{copy.subtitle}</div>
-                  <div className="text-xs text-slate-300">{copy.duration}</div>
-                  <div className="mt-4 rounded-2xl border border-emerald-400/20 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-200">
-                    {isFa ? "۲۰ الماس جایزه" : "20 bonus diamonds"}
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
         {SHOP_SECTIONS.map((section) => (
           <div
             key={section.id}

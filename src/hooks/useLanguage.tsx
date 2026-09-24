@@ -172,10 +172,6 @@ const translations = {
     fa: "به انجمن بازرگانان ملحق شو و شهرتت را بساز.",
     en: "Join the guild of merchants and build your prestige.",
   },
-  passwordHint: {
-    fa: "حداقل ۸ کاراکتر، شامل یک عدد و یک علامت.",
-    en: "At least 8 characters, including a number and a symbol.",
-  },
   passwordsDoNotMatch: {
     fa: "رمزهای عبور یکسان نیستند.",
     en: "Passwords do not match.",
@@ -536,6 +532,7 @@ const translations = {
   logout: { fa: "خروج از حساب", en: "Log Out" },
   accountQuickActions: { fa: "دسترسی سریع به حساب", en: "Quick access to your account" },
   accountCenterTitle: { fa: "پروفایل", en: "Profile" },
+  achievementsLabel: { fa: "دستاوردها", en: "Achievements" },
   accountCenterDesc: { fa: "پروفایل", en: "Profile" },
   noEmailSaved: { fa: "ایمیلی ذخیره نشده است", en: "No email saved" },
   userCode: { fa: "کد کاربر", en: "User Code" },

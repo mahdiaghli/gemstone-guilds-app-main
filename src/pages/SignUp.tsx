@@ -39,19 +39,14 @@ export default function SignUp() {
       return;
     }
 
-    if (password.length < 8) {
-      setError(t("passwordHint"));
-      return;
-    }
-
     if (password !== confirm) {
       setError(t("passwordsDoNotMatch"));
       return;
     }
 
-    const ok = await register(username.trim(), email.trim(), password, rememberMe);
-    if (!ok) {
-      setError(t("usernameExists"));
+    const result = await register(username.trim(), email.trim(), password, rememberMe);
+    if (!result.ok) {
+      setError(t(result.reason === "server_unavailable" ? "serverNotAvailable" : "usernameExists"));
       return;
     }
 

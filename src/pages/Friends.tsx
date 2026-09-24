@@ -102,8 +102,9 @@ export default function Friends() {
 
   return (
     <AppPageShell currentPath="/friends" backgroundImage={shellBackgrounds.friends}>
-      <div className="mb-4 rounded-[32px] border border-primary/20 bg-[radial-gradient(circle_at_top_right,rgba(81,168,255,0.18),transparent_35%),linear-gradient(145deg,rgba(14,21,39,0.95),rgba(23,39,49,0.88))] p-5 shadow-2xl">
-        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+      <div dir={dir} className={dir === "rtl" ? "text-right" : "text-left"}>
+      <div className="mx-auto mb-4 rounded-[24px] border border-primary/20 bg-[radial-gradient(circle_at_top_right,rgba(81,168,255,0.18),transparent_35%),linear-gradient(145deg,rgba(14,21,39,0.95),rgba(23,39,49,0.88))] p-3 shadow-2xl sm:p-5">
+        <div className="flex flex-col gap-3 sm:gap-4 md:flex-row md:items-center md:justify-between">
           <div className={dir === "rtl" ? "text-right" : ""}>
             <p className="text-sm text-muted-foreground">{t("yourUserCode")}</p>
             <button
@@ -116,7 +117,7 @@ export default function Friends() {
               <Copy className="h-4 w-4" />
             </button>
           </div>
-          <div className="flex w-full max-w-md items-center gap-2">
+          <div className="flex w-full max-w-md items-center gap-2 md:max-w-lg">
             <div className="relative flex-1">
               <Search className={`absolute top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground ${dir === "rtl" ? "right-3" : "left-3"}`} />
               <Input
@@ -131,22 +132,23 @@ export default function Friends() {
         </div>
 
         {query.trim() && (
-          <div className="mt-4 space-y-2">
+          <div className="mt-4 max-h-64 space-y-2 overflow-y-auto overscroll-contain pr-1">
             {searchResults.length === 0 && <p className="text-sm text-muted-foreground">{t("noPlayersFound")}</p>}
             {searchResults.map((result) => (
-              <motion.div key={result.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="flex items-center justify-between rounded-2xl border border-primary/20 bg-background/40 px-4 py-3">
-                <div className="flex items-center gap-3">
-                  <Avatar className="h-11 w-11 border border-primary/20">
+              <motion.div key={result.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-primary/20 bg-background/40 px-3 py-2.5 sm:px-4 sm:py-3">
+                <div className="flex min-w-0 items-center gap-2 sm:gap-3">
+                   <Avatar className="h-11 w-11 border border-primary/20">
                     <AvatarImage src={getUserAvatar(result.id)} alt={result.username} />
                     <AvatarFallback>{result.username.slice(0, 1)}</AvatarFallback>
                   </Avatar>
-                  <div>
-                    <p className="font-medium">{result.username}</p>
+                  <div className="min-w-0">
+                     <p className="max-w-[10rem] truncate font-medium sm:max-w-none">{result.username}</p>
                     <p className="text-xs text-muted-foreground">{getUserCode(result.id)}</p>
                   </div>
                 </div>
                 <Button
                   variant="outline"
+                   className="shrink-0 whitespace-nowrap px-2 text-xs sm:px-3 sm:text-sm"
                   onClick={() => {
                     if (!user) return;
                     const status = sendFriendRequest(user.id, result.id);
@@ -187,8 +189,8 @@ export default function Friends() {
                   onClick={() => setSelectedChatUserId(chatUserId)}
                   className="flex w-full items-center justify-between rounded-2xl border border-primary/15 bg-background/30 px-4 py-3 text-left transition hover:bg-background/60"
                 >
-                  <div className="flex items-center gap-3">
-                    <Avatar className="h-11 w-11 border border-primary/20">
+                  <div className="flex min-w-0 items-center gap-2 sm:gap-3">
+                   <Avatar className="h-11 w-11 border border-primary/20">
                       <AvatarImage src={getUserAvatar(chatUserId)} alt={getUserDisplayName(chatUserId)} />
                       <AvatarFallback>{getUserDisplayName(chatUserId).slice(0, 1)}</AvatarFallback>
                     </Avatar>
@@ -206,8 +208,8 @@ export default function Friends() {
               <div className="flex min-h-[340px] flex-col">
                 <div className="mb-4 border-b border-primary/10 pb-3">
                   <div className="flex items-center justify-between gap-3">
-                    <div className="flex items-center gap-3">
-                      <Avatar className="h-12 w-12 border border-primary/20">
+                    <div className="flex min-w-0 items-center gap-2 sm:gap-3">
+                   <Avatar className="h-12 w-12 border border-primary/20">
                         <AvatarImage src={getUserAvatar(selectedChatUserId)} alt={getUserDisplayName(selectedChatUserId)} />
                         <AvatarFallback>{getUserDisplayName(selectedChatUserId).slice(0, 1)}</AvatarFallback>
                       </Avatar>
@@ -284,7 +286,8 @@ export default function Friends() {
                   </div>
                 </div>
                 <div className="grid gap-2">
-                  <Button variant="outline" onClick={() => {
+                  <Button variant="outline"
+                   className="shrink-0 whitespace-nowrap px-2 text-xs sm:px-3 sm:text-sm" onClick={() => {
                     setSelectedChatUserId(friendId);
                     setActiveTab("chats");
                   }}>
@@ -328,6 +331,7 @@ export default function Friends() {
                 <div className="flex gap-2">
                   <Button
                     variant="outline"
+                   className="shrink-0 whitespace-nowrap px-2 text-xs sm:px-3 sm:text-sm"
                     onClick={() => {
                       respondToGameInvite(invite.id, false);
                       refresh();
@@ -373,6 +377,7 @@ export default function Friends() {
                 <div className="flex gap-2">
                   <Button
                     variant="outline"
+                   className="shrink-0 whitespace-nowrap px-2 text-xs sm:px-3 sm:text-sm"
                     onClick={() => {
                       respondToFriendRequest(request.id, false);
                       refresh();
@@ -401,6 +406,7 @@ export default function Friends() {
                 <div className="flex gap-2">
                   <Button
                     variant="outline"
+                   className="shrink-0 whitespace-nowrap px-2 text-xs sm:px-3 sm:text-sm"
                     onClick={() => {
                       respondToGroupRequestRemote(request.groupId, request.requesterId, false).then(refresh);
                     }}
@@ -531,6 +537,7 @@ export default function Friends() {
           </div>
         </DialogContent>
       </Dialog>
+      </div>
     </AppPageShell>
   );
 }

@@ -247,7 +247,7 @@ async function fetchRemoteJson<T>(url: string, init?: RequestInit): Promise<T | 
     if (!hasBody) {
       headers.delete("Content-Type");
     } else if (!headers.has("Content-Type")) {
-      headers.set("Content-Type", "text/plain;charset=UTF-8");
+      headers.set("Content-Type", "application/json");
     }
 
     const response = await fetch(url, {
@@ -542,17 +542,17 @@ export function createGroup(group: Omit<GroupEntry, "id" | "code" | "members" | 
   const store = readStore();
   removeUserFromGroups(store, group.creatorId);
   const id = `group-${Date.now()}`;
-  store.groups.unshift(
-    normalizeGroup({
-      ...group,
-      id,
-      code: generateUniqueGroupCode(store.groups, id),
-      members: [group.creatorId],
-      pendingRequests: [],
-      createdAt: new Date().toISOString(),
-    }),
-  );
+  const created = normalizeGroup({
+    ...group,
+    id,
+    code: generateUniqueGroupCode(store.groups, id),
+    members: [group.creatorId],
+    pendingRequests: [],
+    createdAt: new Date().toISOString(),
+  });
+  store.groups.unshift(created);
   persistStore(store);
+  return created;
 }
 
 export async function createGroupRemote(group: Omit<GroupEntry, "id" | "code" | "members" | "pendingRequests" | "createdAt">) {
@@ -565,7 +565,7 @@ export async function createGroupRemote(group: Omit<GroupEntry, "id" | "code" | 
     store.groups = data.groups.map((entry) => normalizeGroup(entry as any));
     persistStore(store);
   }
-  return data?.group ? normalizeGroup(data.group as any) : null;
+  return data?.group ? normalizeGroup(data.group as any) : createGroup(group);
 }
 
 export function updateGroup(groupId: string, actorId: string, updates: Partial<Pick<GroupEntry, "name" | "description" | "flag" | "minScore" | "visibility">>) {

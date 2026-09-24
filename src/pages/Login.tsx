@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+﻿import { useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
@@ -8,7 +8,7 @@ import { useLanguage } from "@/hooks/useLanguage";
 
 /* === IMPORT ALL IMAGES HERE === */
 import backgroundImg from "@/assets/background.png";
-// import backCardImg from "@/assets/backcard1.webp"; // اگر نیاز داری در کارت استفاده شود
+// import backCardImg from "@/assets/backcard1.webp"; // Ø§Ú¯Ø± Ù†ÛŒØ§Ø² Ø¯Ø§Ø±ÛŒ Ø¯Ø± Ú©Ø§Ø±Øª Ø§Ø³ØªÙØ§Ø¯Ù‡ Ø´ÙˆØ¯
 
 import gemRed from "@/assets/lock.webp";
 // import gemBlue from "@/assets/gem-blue.webp";
@@ -19,7 +19,7 @@ import gemEmeraldBig from "@/assets/user.webp";
 
 export default function Login() {
   const navigate = useNavigate();
-  const location = useLocation() as any;
+  const location = useLocation();
   const { dir, t } = useLanguage();
   const { login, isLoading } = useAuth();
 
@@ -31,15 +31,18 @@ export default function Login() {
   const [error, setError] = useState<string | null>(null);
 
   const redirectTo = useMemo(
-    () => location?.state?.from?.pathname || "/",
-    [location]
+    () =>
+      (location.state as { from?: { pathname?: string } } | null)?.from?.pathname ||
+      "/",
+    [location.state]
   );
 
-  const handleLogin = async () => {
+  const handleLogin = async (event?: React.FormEvent<HTMLFormElement>) => {
+    event?.preventDefault();
     setError(null);
-    const ok = await login(username.trim(), password, rememberMe);
-    if (!ok) {
-      setError(t("invalidCredentials"));
+    const result = await login(username.trim(), password, rememberMe);
+    if (!result.ok) {
+      setError(t(result.reason === "server_unavailable" ? "serverNotAvailable" : "invalidCredentials"));
       return;
     }
     navigate(redirectTo === "/" ? "/menu" : redirectTo, { replace: true });
@@ -112,7 +115,7 @@ export default function Login() {
             </div>
 
             {/* FORM */}
-            <div className="space-y-5">
+            <form className="space-y-5" onSubmit={handleLogin}>
               {/* Username */}
               <div className="flex items-center gap-3 bg-black/30 border border-[#e7c474]/35 rounded-md px-4 py-3">
                 <img src={gemEmeraldBig} className="w-6 h-6" alt="" />
@@ -153,7 +156,7 @@ export default function Login() {
 
               {/* LOGIN BUTTON */}
               <Button
-                onClick={handleLogin}
+                type="submit"
                 disabled={isLoading || !username.trim() || !password}
                 className="
                   w-full 
@@ -172,12 +175,13 @@ export default function Login() {
 
               {/* Create Account */}
               <button
+                type="button"
                 onClick={() => navigate("/signup")}
                 className="w-full text-center text-[#f3d79a] text-base hover:text-[#fff2c0] transition mt-1"
               >
                 {t("createAccount")}
               </button>
-            </div>
+            </form>
 
             {/* FOOTER LINKS */}
             <div className="mt-10 border-t border-[#f5d47a]/40 pt-4">
@@ -185,7 +189,7 @@ export default function Login() {
                 <button className="hover:text-white transition">
                   Terms of Service
                 </button>
-                <span className="text-gray-400">•</span>
+                <span className="text-gray-400">â€¢</span>
                 <button className="hover:text-white transition">
                   Privacy Policy
                 </button>
@@ -198,3 +202,5 @@ export default function Login() {
     </div>
   );
 }
+
+

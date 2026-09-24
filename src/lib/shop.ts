@@ -1,5 +1,6 @@
 import type { TranslationKey } from "@/hooks/useLanguage";
 import { awardCoins } from "@/lib/progression";
+import { isNativeApp } from "@/lib/nativeApp";
 import { readPlayerExtras, updatePlayerExtras } from "@/lib/playerExtras";
 import merchantImage from "@/assets/merchant.webp";
 import merchantGirlImage from "@/assets/merchant girl.webp";
@@ -262,6 +263,29 @@ function addSticker(userId?: string) {
   }));
 }
 
+export async function purchaseShopOffer(
+  userId: string | undefined,
+  sectionId: ShopSection["id"],
+  offerId: string,
+  provider: StoreProvider,
+) {
+  const section = SHOP_SECTIONS.find((entry) => entry.id === sectionId);
+  const offer = section?.offers.find((entry) => entry.id === offerId);
+  if (!offer) return { ok: false as const };
+  if (offer.price > 0 && isNativeApp()) {
+    const billing = window.GemstoneNativeBilling;
+    if (!billing?.purchaseProduct) return { ok: false as const };
+    const result = await billing.purchaseProduct({
+      provider,
+      productId: `com.expert.boardgames.${offer.id}`,
+      offerId,
+      userId,
+    });
+    if (!result?.success) return { ok: false as const };
+  }
+  return applyOfferPurchase(userId, sectionId, offerId);
+}
+
 export function applyOfferPurchase(
   userId: string | undefined,
   sectionId: ShopSection["id"],
@@ -271,7 +295,7 @@ export function applyOfferPurchase(
   const offer = section?.offers.find((entry) => entry.id === offerId);
   if (!offer) return { ok: false as const };
 
-  if (offer.price > 0 && !canGrantPaidReward(window.GemstoneNativeBilling)) {
+  if (offer.price > 0 && isNativeApp() && !canGrantPaidReward(window.GemstoneNativeBilling)) {
     return { ok: false as const };
   }
 
@@ -310,7 +334,7 @@ export function getCurrentRewardState(userId: string | undefined) {
     (startOfToday.getTime() - startOfLastClaim.getTime()) / (1000 * 60 * 60 * 24),
   );
 
-  if (diffDays === 0) return { canClaim: false, rewardIndex: extras.dailyRewardIndex, claimedToday: true };
+  if (diffDays === 0) return { canClaim: false, rewardIndex: (extras.dailyRewardIndex - 1 + WEEKLY_REWARDS.length) % WEEKLY_REWARDS.length, claimedToday: true };
   if (diffDays === 1) return { canClaim: true, rewardIndex: extras.dailyRewardIndex, claimedToday: false };
   return { canClaim: true, rewardIndex: 0, claimedToday: false };
 }
