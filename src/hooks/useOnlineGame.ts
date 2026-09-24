@@ -41,6 +41,7 @@ export function useOnlineGame(
     {},
   );
   const [turnTimerEndsAt, setTurnTimerEndsAt] = useState<number | null>(null);
+  const [lastRemovedPlayerId, setLastRemovedPlayerId] = useState<string | null>(null);
   const socketRef = useRef<Socket | null>(null);
   const joinedRef = useRef(false);
   const fallbackPlayerIdRef = useRef<string>("");
@@ -60,7 +61,7 @@ export function useOnlineGame(
         reconnection: true,
         reconnectionDelay: 500,
         reconnectionDelayMax: 3000,
-        reconnectionAttempts: 5,
+        reconnectionAttempts: 20,
         transports: ["polling", "websocket"],
         upgrade: true,
         randomizationFactor: 0.2,
@@ -72,14 +73,6 @@ export function useOnlineGame(
       socket.on("connect", () => {
         setError(null);
         if (playerName) {
-          socket.emit("join-room", {
-            roomId,
-            playerId: effectivePlayerId,
-            playerName,
-          });
-          joinedRef.current = true;
-        }
-        if (playerName) {
           setLoading(false);
         }
       });
@@ -87,6 +80,7 @@ export function useOnlineGame(
       socket.on("connect_error", (err: Error) => {
         console.error(err);
         setError("Failed to connect to server. Check if server is running.");
+        setLoading(false);
       });
 
       socket.on("players-updated", (data) => {
@@ -140,10 +134,19 @@ export function useOnlineGame(
 
       socket.on("turn-timer-updated", (data) => {
         const endsAt = Number(data?.endsAt);
-        if (Number.isFinite(endsAt)) setTurnTimerEndsAt(endsAt);
+        if (Number.isFinite(endsAt)) {
+          // The timer is authoritative on the server. Correct for device
+          // clock skew so both players see the same remaining seconds.
+          const serverNow = Number(data?.serverNow);
+          const clockOffset = Number.isFinite(serverNow) ? serverNow - Date.now() : 0;
+          setTurnTimerEndsAt(endsAt + clockOffset);
+        }
       });
 
       socket.on("player-removed", (data) => {
+        if (data?.removedPlayerMeta?.id) {
+          setLastRemovedPlayerId(data.removedPlayerMeta.id);
+        }
         if (data?.gameState) {
           lastGameStateRef.current = JSON.stringify(data.gameState);
           setGameState(data.gameState);
@@ -280,6 +283,7 @@ export function useOnlineGame(
     error,
     playerIndexMap,
     turnTimerEndsAt,
+    lastRemovedPlayerId,
     socket: socketRef.current,
     syncGameState,
     broadcastCardPurchase,

@@ -98,7 +98,10 @@ export default function OnlineMatchmaking() {
         reconnection: true,
         reconnectionDelay: 500,
         reconnectionDelayMax: 3000,
-        reconnectionAttempts: 5,
+        // Keep retrying while the local server is starting or the network is
+        // briefly unavailable. A single failed handshake should not strand the
+        // player on the connection error screen.
+        reconnectionAttempts: 20,
         transports: ['polling', 'websocket'],
         upgrade: true,
         timeout: 8000,
@@ -359,6 +362,18 @@ export default function OnlineMatchmaking() {
                 className="bg-destructive/10 border border-destructive/30 rounded-lg p-3 text-sm text-destructive"
               >
                 {error}
+                <Button
+                  type="button"
+                  variant="game"
+                  className="mt-3 w-full"
+                  onClick={() => {
+                    autoStartRef.current = false;
+                    setError(null);
+                    socketRef.current?.connect();
+                  }}
+                >
+                  {dir === "rtl" ? "تلاش دوباره" : "Try again"}
+                </Button>
               </motion.div>
             )}
 

@@ -83,17 +83,8 @@ export default function GamesList() {
         return;
       }
 
-      if (
-        gameId === "dead-mans-draw" &&
-        localStorage.getItem("deadmansdraw-tutorial-completed") !== "true"
-      ) {
-        navigate(
-          `/tutorial-deadmansdraw?first=1&returnTo=${encodeURIComponent(
-            destination,
-          )}`,
-        );
-        return;
-      }
+      // Dead Man's Draw opens its mode-selection screen directly. The in-game
+      // book button provides the compact rules summary when the player needs it.
     } catch {
       // If storage is unavailable, fall back to the game menu.
     }

@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { Copy, Lock, MessageCircle, Pencil, Search, Trophy, UserRound, Users } from "lucide-react";
+import { Lock, MessageCircle, Pencil, Search, Trophy, UserRound, Users } from "lucide-react";
 import { motion } from "framer-motion";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -368,13 +368,6 @@ export function GroupsFindView({
                     <p className="mt-2 line-clamp-3 text-sm leading-6 text-muted-foreground">{group.description || t("noDescription")}</p>
                   </div>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => navigator.clipboard.writeText(group.code)}
-                  className="rounded-full border border-primary/25 bg-background/40 p-2 text-primary transition hover:bg-primary/10"
-                >
-                  <Copy className="h-4 w-4" />
-                </button>
               </div>
 
               <div className={`flex flex-wrap gap-2 text-xs text-muted-foreground ${dir === "rtl" ? "justify-end" : ""}`}>
@@ -580,11 +573,11 @@ export function GroupInfoCard({
             <span className="flex h-14 w-14 items-center justify-center rounded-2xl border border-primary/25 bg-primary/10">{renderFlag(infoGroup.flag, infoGroup.name)}</span>
             <span>{infoGroup.name}</span>
           </h3>
-          <div className={`mt-3 flex flex-wrap gap-2 text-xs text-muted-foreground ${dir === "rtl" ? "justify-end" : ""}`}>
-            <span className="rounded-full border border-white/10 bg-background/35 px-3 py-1">{t("groupCode")}: {infoGroup.code}</span>
-            <span className="rounded-full border border-white/10 bg-background/35 px-3 py-1">{t("groupStatus")}: {getVisibilityLabel(infoGroup.visibility)}</span>
-            <span className="rounded-full border border-white/10 bg-background/35 px-3 py-1">{t("minimumEntryScore")}: {infoGroup.minScore}</span>
-            <span className="rounded-full border border-white/10 bg-background/35 px-3 py-1">{t("scoresLabel")}: {getGroupScore(infoGroup)}</span>
+          <div dir={dir} className={`mt-3 flex w-full flex-wrap gap-2 text-xs text-muted-foreground ${dir === "rtl" ? "justify-start text-right" : "justify-start text-left"}`}>
+            <span dir={dir} className="rounded-full border border-white/10 bg-background/35 px-3 py-1">{t("groupCode")}: <bdi dir="ltr">{infoGroup.code}</bdi></span>
+            <span dir={dir} className="rounded-full border border-white/10 bg-background/35 px-3 py-1">{t("groupStatus")}: {getVisibilityLabel(infoGroup.visibility)}</span>
+            <span dir={dir} className="rounded-full border border-white/10 bg-background/35 px-3 py-1">{t("minimumEntryScore")}: <bdi dir="ltr">{infoGroup.minScore}</bdi></span>
+            <span dir={dir} className="rounded-full border border-white/10 bg-background/35 px-3 py-1">{t("scoresLabel")}: <bdi dir="ltr">{getGroupScore(infoGroup)}</bdi></span>
           </div>
         </div>
         <div className="flex flex-wrap gap-2">

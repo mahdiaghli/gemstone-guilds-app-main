@@ -230,6 +230,8 @@ export default function Groups() {
       navigate("/groups");
       await refreshGroups();
       setGroupInfoId(created.id);
+    } catch {
+      setFeedbackMessage(t("groupSyncError"));
     } finally {
       setIsCreatingGroup(false);
     }

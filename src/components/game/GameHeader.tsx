@@ -83,18 +83,17 @@ export default function GameHeader({
               {`${t("botTurn")} ${stateCurrentPlayerIndex - humanPlayerCount + 1}`}
             </motion.span>
           ) : gameMode === "online" ? (
-            <span
-              className={
-                isCurrentPlayerMe()
-                  ? "font-bold text-green-500"
-                  : "text-amber-500"
-              }
-            >
-              {isCurrentPlayerMe() ? t("yourTurn") : t("waiting")}
+            <span className="flex flex-col leading-tight">
+              <span className="font-semibold text-primary">
+                {t("turnOfPlayer").replace("{{player}}", truncatedPlayerName)}
+              </span>
+              <span className={isCurrentPlayerMe() ? "font-bold text-green-500" : "text-amber-500"}>
+                {isCurrentPlayerMe() ? t("yourTurn") : t("opponentTurn")}
+              </span>
             </span>
           ) : (
             <>
-              {truncatedPlayerName}
+              {t("turnOfPlayer").replace("{{player}}", truncatedPlayerName)}
               {isAIPlayer(stateCurrentPlayerIndex) ? " 🤖" : ""}
             </>
           )}

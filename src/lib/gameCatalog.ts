@@ -13,7 +13,7 @@ export type GameConfig = {
   badge: string;
   accentFrom: string;
   accentTo: string;
-    playable: false,
+  playable: boolean;
 };
 
 export const DEFAULT_GAME_ID: GameId = "splendor";

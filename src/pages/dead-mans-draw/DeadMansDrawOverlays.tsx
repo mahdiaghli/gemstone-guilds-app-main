@@ -10,24 +10,26 @@ import type {
   DeadMansDrawPendingDrawerProps,
   DeadMansDrawSummaryModalProps,
 } from "./types";
-import {
-  type DeadMansDrawTutorialTitleKey,
-} from "./shared";
 
 export function DeadMansDrawSummaryModal({
   open,
   dir,
   t,
-  tutorialSteps,
-  tutorialStep,
-  onNext,
-  onPrev,
   onClose,
 }: DeadMansDrawSummaryModalProps) {
   if (!open) return null;
-  const currentStep = tutorialSteps[tutorialStep] ?? tutorialSteps[0];
-
   const isRTL = dir === "rtl";
+  const powers = [
+    ["deadMansDrawPowerLeCorsaireName", "deadMansDrawPowerLeCorsaireAbility"],
+    ["deadMansDrawPowerMadamMargotName", "deadMansDrawPowerMadamMargotAbility"],
+    ["deadMansDrawPowerGhallegarName", "deadMansDrawPowerGhallegarAbility"],
+    ["deadMansDrawPowerScurvyPeteName", "deadMansDrawPowerScurvyPeteAbility"],
+    ["deadMansDrawPowerZaharaName", "deadMansDrawPowerZaharaAbility"],
+    ["deadMansDrawPowerGunnieName", "deadMansDrawPowerGunnieAbility"],
+    ["deadMansDrawPowerBlackBonnieName", "deadMansDrawPowerBlackBonnieAbility"],
+    ["deadMansDrawPowerSirLoveswordName", "deadMansDrawPowerSirLoveswordAbility"],
+    ["deadMansDrawPowerSeamusQuinnName", "deadMansDrawPowerSeamusQuinnAbility"],
+  ] as const;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-sm" onClick={onClose}>
@@ -51,24 +53,20 @@ export function DeadMansDrawSummaryModal({
         >
           x
         </button>
-        <p className={cn("text-xs uppercase tracking-[0.35em] text-teal-100/55", isRTL ? "font-persian text-right" : "font-cinzel")}>
-          {t("deadMansDrawWalkthroughProgress", {
-            current: tutorialStep + 1,
-            total: tutorialSteps.length,
-          })}
+        <p className={cn("mt-3 text-sm leading-6 text-slate-200/85", isRTL && "text-right font-persian")}>
+          {t("deadMansDrawTutorialSummaryIntro")}
         </p>
-        <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-slate-700">
-          <div className="h-full rounded-full bg-teal-300 transition-all" style={{ width: `${((tutorialStep + 1) / tutorialSteps.length) * 100}%` }} />
+        <div className="mt-5 max-h-[62vh] space-y-3 overflow-y-auto pr-1">
+          <h3 className={cn("text-base font-semibold text-teal-100", isRTL && "text-right")}>{t("deadMansDrawSpecialPowersLabel")}</h3>
+          {powers.map(([nameKey, abilityKey]) => (
+            <section key={nameKey} className={cn("rounded-2xl border border-white/10 bg-white/5 p-3", isRTL && "text-right")}>
+              <h4 className="font-semibold text-teal-100">{t(nameKey)}</h4>
+              <p className="mt-1 text-sm leading-6 text-slate-200/85">{t(abilityKey)}</p>
+            </section>
+          ))}
         </div>
-        <h2 className="mt-4 font-cinzel text-3xl text-white">
-          {t(`deadMansDrawTutorialStep${currentStep}Title` as DeadMansDrawTutorialTitleKey)}
-        </h2>
-        <p className="mt-3 text-sm leading-6 text-slate-200/85">
-          {t(`deadMansDrawTutorialStep${currentStep}Body` as any)}
-        </p>
-        <div className={cn("mt-6 flex flex-wrap gap-3", isRTL && "flex-row-reverse")}>
-          <Button variant="outline" onClick={onPrev} disabled={tutorialStep === 0}>{t("tutorialPrev")}</Button>
-          <Button variant="game" onClick={onNext} disabled={tutorialStep === tutorialSteps.length - 1}>{t("tutorialNext")}</Button>
+        <div className={cn("mt-5 flex", isRTL ? "justify-start" : "justify-end")}>
+          <Button variant="game" onClick={onClose}>{t("quickRulesClose")}</Button>
         </div>
       </motion.div>
     </div>

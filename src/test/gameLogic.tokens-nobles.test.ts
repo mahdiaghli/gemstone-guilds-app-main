@@ -2,10 +2,19 @@ import { describe, expect, it } from "vitest";
 import { initializeGame, performTakeTokens, advanceTurn } from "@/lib/gameLogic";
 
 describe("performTakeTokens", () => {
-  it("rejects a single token when three colors are available", () => {
+  it("accepts a single token when three colors are available", () => {
     const state = initializeGame(2);
     const next = performTakeTokens(state, ["diamond"]);
-    expect(next).toBe(state);
+    expect(next).not.toBe(state);
+    expect(next.players[0].tokens.diamond).toBe(1);
+  });
+
+  it("accepts two different tokens", () => {
+    const state = initializeGame(2);
+    const next = performTakeTokens(state, ["diamond", "sapphire"]);
+    expect(next).not.toBe(state);
+    expect(next.players[0].tokens.diamond).toBe(1);
+    expect(next.players[0].tokens.sapphire).toBe(1);
   });
 
   it("accepts three different tokens", () => {

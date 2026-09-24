@@ -42,7 +42,7 @@ import {
 
 export default function Friends() {
   const { user } = useAuth();
-  const { t, dir } = useLanguage();
+  const { t, dir, lang } = useLanguage();
   const navigate = useNavigate();
   const [query, setQuery] = useState("");
   const [messageText, setMessageText] = useState("");
@@ -54,8 +54,6 @@ export default function Friends() {
   const [activeTab, setActiveTab] = useState("chats");
   const [inviteDialogFriendId, setInviteDialogFriendId] = useState<string | null>(null);
   const [inviteGameId, setInviteGameId] = useState("splendor");
-  const [invitePlayerCount, setInvitePlayerCount] = useState(2);
-  const [inviteHumanPlayers, setInviteHumanPlayers] = useState(2);
   const [inviteTurnTime, setInviteTurnTime] = useState<15 | 30 | 45 | 60>(15);
 
   const requests = useMemo(() => (user ? getFriendRequests(user.id) : []), [user, refreshKey]);
@@ -71,6 +69,12 @@ export default function Friends() {
   const refresh = () => setRefreshKey((value) => value + 1);
   const myUserCode = getUserCode(user?.id);
   const inviteFriendName = getUserDisplayName(inviteDialogFriendId || undefined);
+  const inviteableGames = GAME_CATALOG.filter((game) => game.id === "splendor" || game.id === "dead-mans-draw");
+  const formatInviteNumber = (value: number) => lang === "fa" ? value.toLocaleString("fa-IR") : String(value);
+  const getInviteGameName = (gameId: string) => {
+    if (lang !== "fa") return getGameById(gameId).name;
+    return gameId === "dead-mans-draw" ? "دد منز دراو" : "اسپلندور";
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -297,8 +301,6 @@ export default function Friends() {
                     onClick={() => {
                       setInviteDialogFriendId(friendId);
                       setInviteGameId("splendor");
-                      setInvitePlayerCount(2);
-                      setInviteHumanPlayers(2);
                       setInviteTurnTime(15);
                     }}
                   >
@@ -324,8 +326,8 @@ export default function Friends() {
                 <div>
                   <p className="font-medium">{getUserDisplayName(invite.fromUserId)}</p>
                   <p className="text-xs text-muted-foreground">{t("incomingGameInvite")}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {getGameById(invite.gameId).name} | {invite.playerCount} players | {invite.humanPlayers} human | {invite.turnTime}s
+                  <p className="text-xs text-muted-foreground" dir={dir}>
+                    {getInviteGameName(invite.gameId)} | {lang === "fa" ? `۲ بازیکن | زمان هر نوبت: ${formatInviteNumber(invite.turnTime)} ثانیه` : `2 players | ${invite.turnTime}s per turn`}
                   </p>
                 </div>
                 <div className="flex gap-2">
@@ -450,67 +452,47 @@ export default function Friends() {
       <Dialog open={Boolean(inviteDialogFriendId)} onOpenChange={(open) => !open && setInviteDialogFriendId(null)}>
         <DialogContent className="max-w-md rounded-[28px]" dir={dir}>
           <DialogHeader className={dir === "rtl" ? "text-right" : ""}>
-            <DialogTitle>Send Game Invite to {inviteFriendName}</DialogTitle>
+            <DialogTitle>{lang === "fa" ? `ارسال دعوت بازی برای ${inviteFriendName}` : `Send Game Invite to ${inviteFriendName}`}</DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
-            <label className="text-sm font-medium">Game</label>
+            <label htmlFor="friend-invite-game" className="block text-sm font-medium">{lang === "fa" ? "بازی" : "Game"}</label>
             <select
+              id="friend-invite-game"
               value={inviteGameId}
               onChange={(event) => setInviteGameId(event.target.value)}
-              className="w-full rounded-xl border border-primary/20 bg-background/60 px-3 py-2 text-sm"
+              dir={dir}
+              className={`min-h-11 w-full rounded-xl border border-primary/20 bg-background/60 px-3 py-2 text-sm ${dir === "rtl" ? "text-right" : "text-left"}`}
             >
-              {GAME_CATALOG.map((game) => (
+              {inviteableGames.map((game) => (
                 <option key={game.id} value={game.id}>
-                  {game.name}
+                  {lang === "fa" ? (game.id === "splendor" ? "اسپلندور" : "دد منز دراو") : game.name}
                 </option>
               ))}
             </select>
 
             <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Total players</label>
-                <select
-                  value={invitePlayerCount}
-                  onChange={(event) => {
-                    const nextPlayers = Number(event.target.value);
-                    setInvitePlayerCount(nextPlayers);
-                    setInviteHumanPlayers((current) => Math.min(nextPlayers, Math.max(1, current)));
-                  }}
-                  className="w-full rounded-xl border border-primary/20 bg-background/60 px-3 py-2 text-sm"
-                >
-                  {[2, 3, 4].map((count) => (
-                    <option key={count} value={count}>
-                      {count}
-                    </option>
-                  ))}
-                </select>
+              <div className={`rounded-xl border border-primary/20 bg-background/40 p-3 ${dir === "rtl" ? "text-right" : "text-left"}`}>
+                <span className="block text-xs text-muted-foreground">{lang === "fa" ? "تعداد کل بازیکنان" : "Total players"}</span>
+                <strong className="mt-1 block">{lang === "fa" ? "۲ نفر" : "2"}</strong>
               </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Human players</label>
-                <select
-                  value={inviteHumanPlayers}
-                  onChange={(event) => setInviteHumanPlayers(Number(event.target.value))}
-                  className="w-full rounded-xl border border-primary/20 bg-background/60 px-3 py-2 text-sm"
-                >
-                  {Array.from({ length: invitePlayerCount }, (_, i) => i + 1).map((count) => (
-                    <option key={count} value={count}>
-                      {count}
-                    </option>
-                  ))}
-                </select>
+              <div className={`rounded-xl border border-primary/20 bg-background/40 p-3 ${dir === "rtl" ? "text-right" : "text-left"}`}>
+                <span className="block text-xs text-muted-foreground">{lang === "fa" ? "بازیکنان انسانی" : "Human players"}</span>
+                <strong className="mt-1 block">{lang === "fa" ? "۲ نفر" : "2"}</strong>
               </div>
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium">Turn time limit</label>
+              <label htmlFor="friend-invite-turn-time" className="block text-sm font-medium">{lang === "fa" ? "زمان هر نوبت" : "Turn time limit"}</label>
               <select
+                id="friend-invite-turn-time"
                 value={inviteTurnTime}
                 onChange={(event) => setInviteTurnTime(Number(event.target.value) as 15 | 30 | 45 | 60)}
-                className="w-full rounded-xl border border-primary/20 bg-background/60 px-3 py-2 text-sm"
+                dir={dir}
+                className={`min-h-11 w-full rounded-xl border border-primary/20 bg-background/60 px-3 py-2 text-sm ${dir === "rtl" ? "text-right" : "text-left"}`}
               >
                 {[15, 30, 45, 60].map((seconds) => (
                   <option key={seconds} value={seconds}>
-                    {seconds} seconds
+                    {lang === "fa" ? `${formatInviteNumber(seconds)} ثانیه` : `${seconds} seconds`}
                   </option>
                 ))}
               </select>
@@ -520,16 +502,29 @@ export default function Friends() {
               className="w-full"
               onClick={() => {
                 if (!user || !inviteDialogFriendId) return;
-                sendGameInvite({
+                const invite = sendGameInvite({
                   fromUserId: user.id,
                   toUserId: inviteDialogFriendId,
                   gameId: inviteGameId,
-                  playerCount: invitePlayerCount,
-                  humanPlayers: inviteHumanPlayers,
                   turnTime: inviteTurnTime,
                 });
+                if (!invite) return;
+                const playerId = generateClientId();
+                localStorage.setItem(
+                  "splendor-online-room",
+                  JSON.stringify({
+                    roomId: invite.roomId,
+                    playerId,
+                    playerName: user.username,
+                    isHost: true,
+                    playerCount: 2,
+                    turnTime: invite.turnTime,
+                    gameId: invite.gameId,
+                    invitedUserId: invite.toUserId,
+                  }),
+                );
                 setInviteDialogFriendId(null);
-                refresh();
+                navigate(`/online-game/${invite.roomId}?player=${playerId}&game=${invite.gameId}`);
               }}
             >
               {t("sendGameInvite")}

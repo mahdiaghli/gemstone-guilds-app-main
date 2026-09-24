@@ -102,8 +102,11 @@ export function performTakeTokens(state: GameState, gems: GemType[]): GameState 
   } else {
     const unique = new Set(gems);
     if (unique.size !== gems.length) return state;
-    const expectedCount = Math.min(3, availableColors.length);
-    if (gems.length !== expectedCount) return state;
+    // A turn may take one, two, or three different colours.  The previous
+    // implementation required exactly three whenever the bank had three
+    // colours available, which made a single token (and two different
+    // tokens) disappear without being added to the player's inventory.
+    if (gems.length < 1 || gems.length > Math.min(3, availableColors.length)) return state;
     for (const g of gems) {
       if (newPool[g] <= 0) return state;
       newPool[g]--;

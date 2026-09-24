@@ -716,6 +716,13 @@ const httpServer = createServer(async (req, res) => {
       return;
     }
 
+    const gameId = payload.gameId === "dead-mans-draw" ? "dead-mans-draw" : "splendor";
+    const turnTime = normalizeTurnTimeSeconds(payload.turnTime);
+    const requestedRoomId = typeof payload.roomId === "string" ? payload.roomId.trim() : "";
+    const roomId = /^FR-[A-Z0-9]{6,32}$/.test(requestedRoomId)
+      ? requestedRoomId
+      : `FR-${Date.now().toString(36).toUpperCase()}${Math.random().toString(36).slice(2, 5).toUpperCase()}`;
+
     const exists = state.gameInvites.some(
       (invite) =>
         invite.status === "pending" &&
@@ -730,6 +737,11 @@ const httpServer = createServer(async (req, res) => {
         toUserId: payload.toUserId,
         createdAt: new Date().toISOString(),
         status: "pending",
+        gameId,
+        playerCount: 2,
+        humanPlayers: 2,
+        turnTime,
+        roomId,
       });
       writeSharedState(state);
     }
@@ -1066,6 +1078,7 @@ function startTurnTimer(roomId) {
   room.turn.endsAt = Date.now() + durationMs;
   io.to(roomId).emit("turn-timer-updated", {
     endsAt: room.turn.endsAt,
+    serverNow: Date.now(),
     currentPlayerIndex: room.turn.currentIndex,
     durationMs,
   });
@@ -1336,6 +1349,10 @@ io.on("connection", (socket) => {
     const existingRoom = rooms.get(roomId);
     const room = existingRoom || getOrCreateRoom(roomId);
     if (!room) return;
+    const isFriendInviteRoom = typeof roomId === "string" && roomId.startsWith("FR-");
+    if (isFriendInviteRoom) {
+      room.maxPlayers = 2;
+    }
 
     const already = room.players.get(playerId);
     if (already) {
@@ -1357,6 +1374,7 @@ io.on("connection", (socket) => {
         if (Number.isFinite(room.turn?.endsAt)) {
           socket.emit("turn-timer-updated", {
             endsAt: room.turn.endsAt,
+            serverNow: Date.now(),
             currentPlayerIndex: room.gameState.currentPlayerIndex || 0,
             durationMs: room.turn.durationMs,
           });
@@ -1390,11 +1408,11 @@ io.on("connection", (socket) => {
 
     // Update max players if host is setting it
     if (isHost && playerCount) {
-      room.maxPlayers = playerCount;
+      room.maxPlayers = isFriendInviteRoom ? 2 : playerCount;
       console.log(`   Max Players set to: ${playerCount}`);
     }
     if (gameId) {
-      room.gameId = gameId;
+      room.gameId = isFriendInviteRoom && gameId !== "dead-mans-draw" ? "splendor" : gameId;
     }
     if (turnTime) {
       room.turn.durationMs = normalizeTurnTimeSeconds(turnTime) * 1000;

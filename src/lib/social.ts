@@ -129,16 +129,16 @@ function normalizeGroup(entry: Partial<GroupEntry> & { id: string; creatorId: st
 }
 
 function normalizeGameInvite(invite: Partial<GameInvite> & Pick<GameInvite, "id" | "fromUserId" | "toUserId" | "createdAt" | "status">): GameInvite {
-  const playerCount = normalizePlayerCount(Number(invite.playerCount) || 2);
+  const gameId = invite.gameId === "dead-mans-draw" ? "dead-mans-draw" : "splendor";
   return {
     id: invite.id,
     fromUserId: invite.fromUserId,
     toUserId: invite.toUserId,
     createdAt: invite.createdAt,
     status: invite.status,
-    gameId: typeof invite.gameId === "string" && invite.gameId ? invite.gameId : "splendor",
-    playerCount,
-    humanPlayers: normalizeHumanPlayers(Number(invite.humanPlayers) || playerCount, playerCount),
+    gameId,
+    playerCount: 2,
+    humanPlayers: 2,
     turnTime: normalizeTurnTime(Number(invite.turnTime) || 15),
     roomId: typeof invite.roomId === "string" && invite.roomId ? invite.roomId : `FR-${invite.id.slice(-6).toUpperCase()}`,
   };
@@ -266,6 +266,7 @@ async function fetchRemoteJson<T>(url: string, init?: RequestInit): Promise<T | 
 async function postRemote(url: string, payload: Record<string, unknown>) {
   return fetchRemoteJson<{ ok?: boolean }>(`${API_SERVER_URL}${url}`, {
     method: "POST",
+    keepalive: true,
     body: JSON.stringify(payload),
   });
 }
@@ -447,18 +448,8 @@ type SendGameInviteInput = {
   fromUserId: string;
   toUserId: string;
   gameId: string;
-  playerCount: number;
-  humanPlayers: number;
   turnTime: 15 | 30 | 45 | 60;
 };
-
-function normalizePlayerCount(playerCount: number) {
-  return Math.max(2, Math.min(4, Math.floor(playerCount || 2)));
-}
-
-function normalizeHumanPlayers(humanPlayers: number, playerCount: number) {
-  return Math.max(1, Math.min(playerCount, Math.floor(humanPlayers || 2)));
-}
 
 function normalizeTurnTime(turnTime: number): 15 | 30 | 45 | 60 {
   return turnTime === 15 || turnTime === 30 || turnTime === 45 || turnTime === 60 ? turnTime : 15;
@@ -467,32 +458,36 @@ function normalizeTurnTime(turnTime: number): 15 | 30 | 45 | 60 {
 export function sendGameInvite(input: SendGameInviteInput) {
   const { fromUserId, toUserId, gameId } = input;
   const store = readStore();
-  const playerCount = normalizePlayerCount(input.playerCount);
-  const humanPlayers = normalizeHumanPlayers(input.humanPlayers, playerCount);
+  const safeGameId = gameId === "dead-mans-draw" ? "dead-mans-draw" : "splendor";
+  const playerCount = 2;
+  const humanPlayers = 2;
   const turnTime = normalizeTurnTime(input.turnTime);
-  const exists = store.gameInvites.some(
+  const existingInvite = store.gameInvites.find(
     (invite) =>
       invite.status === "pending" &&
       ((invite.fromUserId === fromUserId && invite.toUserId === toUserId) ||
         (invite.fromUserId === toUserId && invite.toUserId === fromUserId)),
   );
-  if (exists) return false;
+  if (existingInvite) {
+    return existingInvite.fromUserId === fromUserId ? normalizeGameInvite(existingInvite) : null;
+  }
   const roomId = `FR-${Date.now().toString(36).toUpperCase()}${Math.random().toString(36).slice(2, 5).toUpperCase()}`;
-  store.gameInvites.unshift({
+  const invite: GameInvite = {
     id: `invite-${Date.now()}-${fromUserId}-${toUserId}`,
     fromUserId,
     toUserId,
     createdAt: new Date().toISOString(),
     status: "pending",
-    gameId: gameId || "splendor",
+    gameId: safeGameId,
     playerCount,
     humanPlayers,
     turnTime,
     roomId,
-  });
+  };
+  store.gameInvites.unshift(invite);
   persistStore(store);
-  postRemote("/social/game-invites", { fromUserId, toUserId, gameId, playerCount, humanPlayers, turnTime, roomId }).then(() => syncSocialStateRemote());
-  return true;
+  postRemote("/social/game-invites", { fromUserId, toUserId, gameId: safeGameId, playerCount, humanPlayers, turnTime, roomId }).then(() => syncSocialStateRemote());
+  return invite;
 }
 
 export function respondToGameInvite(inviteId: string, accept: boolean) {
@@ -531,7 +526,9 @@ export async function getGroupsRemote() {
   if (Array.isArray(data?.groups)) {
     const store = readStore();
     store.groups = data.groups.map((group) => normalizeGroup(group as any));
-    persistStore(store);
+    // This is a read/hydration path. Emitting a social-change event here makes
+    // the Groups page request groups again from its own event listener.
+    writeStore(store);
     return store.groups;
   }
   return getGroups();

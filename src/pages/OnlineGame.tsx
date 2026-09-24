@@ -51,6 +51,7 @@ export default function OnlineGame() {
   const [postGameNoticeDialog, setPostGameNoticeDialog] = useState<PostGameNoticeDialog | null>(null);
   const [playAgainVotes, setPlayAgainVotes] = useState<string[]>([]);
   const [friendRequestLocked, setFriendRequestLocked] = useState(false);
+  const [postGameOpponentIds, setPostGameOpponentIds] = useState<string[]>([]);
   const [leaveOpen, setLeaveOpen] = useState(false);
 
   const {
@@ -61,6 +62,7 @@ export default function OnlineGame() {
     error,
     playerIndexMap,
     turnTimerEndsAt,
+    lastRemovedPlayerId,
     socket,
     joinRoom,
     leaveRoom,
@@ -78,12 +80,17 @@ export default function OnlineGame() {
     [actualPlayerCount, localGameState, selectedGame.id],
   );
 
-  const opponentIds = useMemo(
+  const activeOpponentIds = useMemo(
     () => Object.values(roomPlayers)
       .map((player: any) => player.id)
       .filter((id): id is string => Boolean(id) && id !== playerId),
     [playerId, roomPlayers],
   );
+  const opponentIds = useMemo(
+    () => Array.from(new Set([...activeOpponentIds, ...postGameOpponentIds])).filter((id) => id !== playerId),
+    [activeOpponentIds, playerId, postGameOpponentIds],
+  );
+  const opponentLeft = Boolean(lastRemovedPlayerId) && !activeOpponentIds.includes(lastRemovedPlayerId!);
 
   const playerHasVotedPlayAgain = playAgainVotes.includes(playerId);
 
@@ -136,6 +143,7 @@ export default function OnlineGame() {
       setGameStarted(true);
       setPlayAgainVotes([]);
       setFriendRequestLocked(false);
+      setPostGameOpponentIds([]);
     }
   }, [roomStatus, gameStarted]);
 
@@ -155,6 +163,15 @@ export default function OnlineGame() {
     setFriendRequestLocked(false);
     setPostGameNoticeDialog(null);
   }, [gameState]);
+
+  useEffect(() => {
+    if (!gameState?.gameOver) return;
+    setPostGameOpponentIds((current) => Array.from(new Set([
+      ...current,
+      ...activeOpponentIds,
+      ...(lastRemovedPlayerId ? [lastRemovedPlayerId] : []),
+    ])));
+  }, [activeOpponentIds, gameState?.gameOver, lastRemovedPlayerId]);
 
   useEffect(() => {
     if (!socket) return;
@@ -200,16 +217,19 @@ export default function OnlineGame() {
   }, [error, errorMsg, user?.id]);
 
   useEffect(() => {
-    if (!roomId?.startsWith("MM-")) return;
+    const isMatchmakingRoom = roomId?.startsWith("MM-");
+    const isFriendInviteRoom = roomId?.startsWith("FR-");
+    if (!isMatchmakingRoom && !isFriendInviteRoom) return;
     if (gameStarted || roomStatus !== "waiting") return;
     if (Object.keys(roomPlayers).length !== playerCount) return;
+    if (isFriendInviteRoom && !isHost) return;
     const socketIds = Object.values(roomPlayers)
       .map((player: any) => player.socketId)
       .filter(Boolean)
       .sort();
-    if (!socket?.id || socketIds[0] !== socket.id) return;
+    if (isMatchmakingRoom && (!socket?.id || socketIds[0] !== socket.id)) return;
     startGame(initialOnlineState as any, turnTime);
-  }, [actualPlayerCount, gameStarted, initialOnlineState, playerCount, roomId, roomPlayers, roomStatus, socket?.id, startGame, turnTime]);
+  }, [actualPlayerCount, gameStarted, initialOnlineState, isHost, playerCount, roomId, roomPlayers, roomStatus, socket?.id, startGame, turnTime]);
 
   const handleStartGame = async () => {
     if (!isHost) {
@@ -275,6 +295,17 @@ export default function OnlineGame() {
   const handleRequestPlayAgain = useCallback(() => {
     if (!socket || !roomId || !playerId || playerHasVotedPlayAgain) return;
 
+    if (opponentLeft || activeOpponentIds.length === 0) {
+      setPostGameNoticeDialog({
+        open: true,
+        title: lang === 'fa' ? 'حریف بازی را ترک کرده است' : 'Opponent left the game',
+        description: lang === 'fa' ? 'حریف بازی را ترک کرده است و امکان شروع مجدد این بازی وجود ندارد.' : 'Your opponent left the game, so this match cannot be restarted.',
+        confirmLabel: t('continueLabel'),
+        onConfirm: () => setPostGameNoticeDialog(null),
+      });
+      return;
+    }
+
     socket.emit('post-game-action', {
       roomId,
       playerId,
@@ -282,7 +313,7 @@ export default function OnlineGame() {
       action: 'play-again',
       initialGameState: initialOnlineState,
     });
-  }, [initialOnlineState, playerHasVotedPlayAgain, playerId, playerName, roomId, socket]);
+  }, [activeOpponentIds.length, initialOnlineState, lang, opponentLeft, playerHasVotedPlayAgain, playerId, playerName, roomId, socket, t]);
 
   const handleExitFinishedGame = useCallback(() => {
     if (socket && roomId && playerId) {
