@@ -19,16 +19,17 @@ export function DeadMansDrawSummaryModal({
 }: DeadMansDrawSummaryModalProps) {
   if (!open) return null;
   const isRTL = dir === "rtl";
-  const powers = [
-    ["deadMansDrawPowerLeCorsaireName", "deadMansDrawPowerLeCorsaireAbility"],
-    ["deadMansDrawPowerMadamMargotName", "deadMansDrawPowerMadamMargotAbility"],
-    ["deadMansDrawPowerGhallegarName", "deadMansDrawPowerGhallegarAbility"],
-    ["deadMansDrawPowerScurvyPeteName", "deadMansDrawPowerScurvyPeteAbility"],
-    ["deadMansDrawPowerZaharaName", "deadMansDrawPowerZaharaAbility"],
-    ["deadMansDrawPowerGunnieName", "deadMansDrawPowerGunnieAbility"],
-    ["deadMansDrawPowerBlackBonnieName", "deadMansDrawPowerBlackBonnieAbility"],
-    ["deadMansDrawPowerSirLoveswordName", "deadMansDrawPowerSirLoveswordAbility"],
-    ["deadMansDrawPowerSeamusQuinnName", "deadMansDrawPowerSeamusQuinnAbility"],
+  const cardPowers = [
+    ["deadMansDrawSuitAstrolabe", "deadMansDrawSuitHelpAstrolabe"],
+    ["deadMansDrawSuitPistol", "deadMansDrawSuitHelpPistol"],
+    ["deadMansDrawSuitDagger", "deadMansDrawSuitHelpDagger"],
+    ["deadMansDrawSuitCarpet", "deadMansDrawSuitHelpCarpet"],
+    ["deadMansDrawSuitSnake", "deadMansDrawSuitHelpSnake"],
+    ["deadMansDrawSuitCoin", "deadMansDrawSuitHelpCoin"],
+    ["deadMansDrawSuitHorseshoe", "deadMansDrawSuitHelpHorseshoe"],
+    ["deadMansDrawSuitMap", "deadMansDrawSuitHelpMap"],
+    ["deadMansDrawSuitChest", "deadMansDrawSuitHelpChest"],
+    ["deadMansDrawSuitKey", "deadMansDrawSuitHelpKey"],
   ] as const;
 
   return (
@@ -37,7 +38,7 @@ export function DeadMansDrawSummaryModal({
         initial={{ opacity: 0, y: 18, scale: 0.96 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         dir={dir}
-        className="relative w-full max-w-lg rounded-[32px] border border-teal-300/25 bg-cover bg-center p-6 shadow-[0_24px_80px_rgba(2,6,23,0.7)]"
+        className="relative max-h-[70dvh] w-full max-w-lg overflow-y-auto rounded-[28px] border border-teal-300/25 bg-cover bg-center p-4 shadow-[0_24px_80px_rgba(2,6,23,0.7)]"
         style={{
           backgroundImage: `linear-gradient(rgba(2,6,23,0.9), rgba(2,6,23,0.93)), url(${zirkhakiBackground})`,
         }}
@@ -53,19 +54,21 @@ export function DeadMansDrawSummaryModal({
         >
           x
         </button>
-        <p className={cn("mt-3 text-sm leading-6 text-slate-200/85", isRTL && "text-right font-persian")}>
+        <h2 className={cn("mt-2 pr-10 text-xl font-bold text-teal-100", isRTL && "text-right font-persian")}>
+          {t("deadMansDrawSummaryTitle")}
+        </h2>
+        <p className={cn("mt-2 whitespace-pre-line text-sm leading-5 text-slate-200/85", isRTL && "text-right font-persian")}>
           {t("deadMansDrawTutorialSummaryIntro")}
         </p>
-        <div className="mt-5 max-h-[62vh] space-y-3 overflow-y-auto pr-1">
-          <h3 className={cn("text-base font-semibold text-teal-100", isRTL && "text-right")}>{t("deadMansDrawSpecialPowersLabel")}</h3>
-          {powers.map(([nameKey, abilityKey]) => (
-            <section key={nameKey} className={cn("rounded-2xl border border-white/10 bg-white/5 p-3", isRTL && "text-right")}>
-              <h4 className="font-semibold text-teal-100">{t(nameKey)}</h4>
-              <p className="mt-1 text-sm leading-6 text-slate-200/85">{t(abilityKey)}</p>
-            </section>
-          ))}
+        <div className="mt-3">
+          <h3 className={cn("text-base font-semibold text-teal-100", isRTL && "text-right")}>
+            {t("deadMansDrawCardPowersLabel")}
+          </h3>
+          <p className={cn("mt-2 whitespace-pre-line text-sm leading-6 text-slate-200/85", isRTL && "text-right")}>
+            {cardPowers.map(([nameKey, abilityKey]) => `${t(nameKey)}: ${t(abilityKey)}`).join("\n")}
+          </p>
         </div>
-        <div className={cn("mt-5 flex", isRTL ? "justify-start" : "justify-end")}>
+        <div className={cn("mt-3 flex", isRTL ? "justify-start" : "justify-end")}>
           <Button variant="game" onClick={onClose}>{t("quickRulesClose")}</Button>
         </div>
       </motion.div>
@@ -91,9 +94,9 @@ export function DeadMansDrawExitModal({
           <AlertDialogTitle>{t("leaveGameTitle")}</AlertDialogTitle>
         </AlertDialogHeader>
         <p className={cn("mt-2 text-sm text-slate-200/85", isRTL && "font-persian")}>{t("leaveGameDescription")}</p>
-        <AlertDialogFooter className={cn("mt-4", isRTL && "flex-row-reverse") }>
-          <AlertDialogCancel onClick={onClose}>{t("stay")}</AlertDialogCancel>
-          <AlertDialogAction onClick={onLeave}>{t("leaveGameAction")}</AlertDialogAction>
+        <AlertDialogFooter className={cn("mt-4 gap-3 sm:justify-end", isRTL && "flex-row-reverse")}>
+          <AlertDialogCancel className="h-11 min-w-[120px] px-5" onClick={onClose}>{t("stay")}</AlertDialogCancel>
+          <AlertDialogAction className="h-11 min-w-[120px] px-5" onClick={onLeave}>{t("leaveGameAction")}</AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>

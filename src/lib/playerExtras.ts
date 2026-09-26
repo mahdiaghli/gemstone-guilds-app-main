@@ -1,4 +1,6 @@
 import defaultAvatar from "@/assets/avatar.webp";
+import defaultGameBackground from "@/assets/background-game-splendor.png";
+import legacyDefaultBackground from "@/assets/background.webp";
 import { syncSelectedAvatar } from "@/lib/social";
 import type { CardBackId } from "@/lib/cosmetics";
 
@@ -9,6 +11,8 @@ export interface PlayerExtras {
   selectedAvatar: string;
   cardBacks: CardBackId[];
   selectedCardBack: CardBackId;
+  backgrounds: string[];
+  selectedBackground: string;
   dailyRewardClaimedOn: string | null;
   dailyRewardIndex: number;
   premiumExpiresAt: string | null;
@@ -23,6 +27,8 @@ const DEFAULT_EXTRAS: PlayerExtras = {
   selectedAvatar: defaultAvatar,
   cardBacks: ["classic"],
   selectedCardBack: "classic",
+  backgrounds: [defaultGameBackground],
+  selectedBackground: defaultGameBackground,
   dailyRewardClaimedOn: null,
   dailyRewardIndex: 0,
   premiumExpiresAt: null,
@@ -43,9 +49,20 @@ export function readPlayerExtras(userId?: string): PlayerExtras {
   }
 
   try {
+    const parsed = JSON.parse(raw) as Partial<PlayerExtras>;
+    const legacyDefault = legacyDefaultBackground;
+    const savedBackgrounds = Array.isArray(parsed.backgrounds) ? parsed.backgrounds : [];
+    const backgrounds = Array.from(new Set([
+      defaultGameBackground,
+      ...savedBackgrounds.map((background) => background === legacyDefault ? defaultGameBackground : background),
+    ]));
     return {
       ...DEFAULT_EXTRAS,
-      ...JSON.parse(raw),
+      ...parsed,
+      backgrounds,
+      selectedBackground: !parsed.selectedBackground || parsed.selectedBackground === legacyDefault
+        ? defaultGameBackground
+        : parsed.selectedBackground,
     };
   } catch {
     localStorage.setItem(getKey(userId), JSON.stringify(DEFAULT_EXTRAS));

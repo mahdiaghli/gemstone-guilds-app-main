@@ -8,6 +8,7 @@ import { ArrowLeft, Crown, Sparkles } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import type { AIDifficulty } from "@/lib/aiPlayer";
 import beastyBarBackground from "@/assets/background.png";
+import { getSelectedBackground } from "@/lib/pageBackgrounds";
 
 export default function BeastyBarGame() {
   const [searchParams] = useSearchParams();
@@ -90,7 +91,7 @@ export default function BeastyBarGame() {
     <div className="relative min-h-screen overflow-hidden bg-slate-950 text-white">
       <div
         className="absolute inset-0 bg-cover bg-center opacity-30"
-        style={{ backgroundImage: `url(${beastyBarBackground})` }}
+        style={{ backgroundImage: `url(${getSelectedBackground() || beastyBarBackground})` }}
       />
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(249,115,22,0.22),_transparent_28%),radial-gradient(circle_at_85%_20%,_rgba(34,197,94,0.16),_transparent_24%),linear-gradient(180deg,rgba(2,6,23,0.7),rgba(2,6,23,0.95))]" />
       <div className="absolute -left-20 top-16 h-60 w-60 rounded-full bg-orange-400/10 blur-3xl" />

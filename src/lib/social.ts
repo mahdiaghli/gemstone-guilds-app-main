@@ -108,6 +108,13 @@ const DEFAULT_STORE: SocialStore = {
 
 const MAX_SAVED_MESSAGES = 100;
 
+const DEFAULT_PLAYERS = Array.from({ length: 10 }, (_, index) => ({
+  id: `default-player-${index + 1}`,
+  username: `Player ${index + 1}`,
+  email: "",
+  createdAt: "2026-01-01T00:00:00.000Z",
+}));
+
 function normalizeGroup(entry: Partial<GroupEntry> & { id: string; creatorId: string; name: string }): GroupEntry {
   const visibility =
     entry.visibility === "private" || entry.visibility === "closed"
@@ -198,18 +205,25 @@ function mergeStore(partial: Partial<SocialStore>) {
 }
 
 function generateGroupCode(seed?: string) {
-  const base = `${seed || Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`
-    .replace(/[^a-z0-9]/gi, "")
-    .toUpperCase();
-  return `GRP-${base.slice(0, 6).padEnd(6, "X")}`;
+  const space = 36 ** 6;
+  let value = Math.floor(Math.random() * space);
+  if (seed) {
+    value = 0;
+    for (const character of seed) value = (Math.imul(value, 31) + character.charCodeAt(0)) >>> 0;
+  }
+  return `GRP-${(value % space).toString(36).toUpperCase().padStart(6, "0")}`;
 }
 
 function generateUniqueGroupCode(groups: GroupEntry[], seed?: string) {
-  let nextCode = generateGroupCode(seed);
-  while (groups.some((group) => group.code === nextCode)) {
-    nextCode = generateGroupCode(`${seed || Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`);
+  const used = new Set(groups.map((group) => group.code));
+  const space = 36 ** 6;
+  let value = parseInt(generateGroupCode(seed).slice(4), 36);
+  for (let attempts = 0; attempts < space; attempts += 1) {
+    const nextCode = `GRP-${value.toString(36).toUpperCase().padStart(6, "0")}`;
+    if (!used.has(nextCode)) return nextCode;
+    value = (value + 1) % space;
   }
-  return nextCode;
+  throw new Error("Group code space exhausted");
 }
 
 function removeUserFromGroups(store: SocialStore, userId: string) {
@@ -556,14 +570,11 @@ export async function createGroupRemote(group: Omit<GroupEntry, "id" | "code" | 
     method: "POST",
     body: JSON.stringify(group),
   });
-  if (Array.isArray(data?.groups)) {
-    const store = readStore();
-    store.groups = data.groups.map((entry) => normalizeGroup(entry as any));
-    persistStore(store);
-  }
-  // Keep group creation usable during a short server restart; the local store
-  // is synchronized on the next successful /social request.
-  return data?.group ? normalizeGroup(data.group as any) : createGroup(group);
+  if (!data?.group || !Array.isArray(data.groups)) return null;
+  const store = readStore();
+  store.groups = data.groups.map((entry) => normalizeGroup(entry as any));
+  persistStore(store);
+  return normalizeGroup(data.group as any);
 }
 
 export function updateGroup(groupId: string, actorId: string, updates: Partial<Pick<GroupEntry, "name" | "description" | "flag" | "minScore" | "visibility">>) {
@@ -752,7 +763,8 @@ export function getGroupMembersInfo(groupId: string): GroupMemberInfo[] {
 }
 
 export function getRankedPlayers(): RankedPlayerInfo[] {
-  return getRegisteredUsers()
+  const users = getRegisteredUsers();
+  return (users.length ? users : DEFAULT_PLAYERS)
     .map((user: any) => {
       const progress = readProgress(user.id);
       const extras = readPlayerExtras(user.id);
@@ -790,7 +802,9 @@ export function sendGroupMessage(groupId: string, senderId: string, text: string
     .slice(-MAX_SAVED_MESSAGES);
   store.groupMessages = [...otherGroups, ...latestGroupMessages];
   persistStore(store);
-  postRemote("/social/group-messages", { groupId, senderId, text }).then(() => syncSocialStateRemote());
+  // The local event above renders the message immediately. The server write is
+  // fire-and-forget so every message does not trigger a second full social sync.
+  void postRemote("/social/group-messages", { groupId, senderId, text });
 }
 
 export function syncSelectedAvatar(userId: string | undefined, selectedAvatar: string) {

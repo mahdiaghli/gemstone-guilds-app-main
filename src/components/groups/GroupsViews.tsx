@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import type { ReactNode } from "react";
 import { Lock, MessageCircle, Pencil, Search, Trophy, UserRound, Users } from "lucide-react";
 import { motion } from "framer-motion";
@@ -97,6 +98,13 @@ export function GroupsChatSection({
   renderFlag: (flagId?: string, alt?: string) => ReactNode;
   cupImg: string;
 }) {
+  const messagesRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const element = messagesRef.current;
+    if (element) element.scrollTop = element.scrollHeight;
+  }, [currentMessages.length, currentGroup?.id]);
+
   if (!currentGroup) {
     return (
       <div className="rounded-[32px] border border-primary/20 bg-card/70 p-4 shadow-xl backdrop-blur">
@@ -117,14 +125,14 @@ export function GroupsChatSection({
       <button
         type="button"
         onClick={() => onOpenGroupInfo(currentGroup.id)}
-        className={`flex w-full items-center justify-between gap-3 rounded-[28px] border border-primary/20 bg-background/40 px-4 py-4 ${dir === "rtl" ? "flex-row-reverse text-right" : "text-left"}`}
+        className={`flex w-full min-w-0 items-center justify-between gap-3 rounded-[28px] border border-primary/20 bg-background/40 px-4 py-4 ${dir === "rtl" ? "flex-row-reverse text-right" : "text-left"}`}
       >
             <div className={cn("flex items-center gap-3", dir === "rtl" && "flex-row-reverse")}>
           <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10">
             {renderFlag(currentGroup.flag, currentGroup.name)}
           </div>
-          <div>
-            <h2 className={cn("text-xl text-primary", dir === "rtl" ? "font-persian" : "font-cinzel")}>{currentGroup.name}</h2>
+          <div className="min-w-0 flex-1">
+            <h2 className={cn("truncate text-xl text-primary", dir === "rtl" ? "font-persian" : "font-cinzel")}>{currentGroup.name}</h2>
             <div className={`mt-1 flex flex-wrap gap-3 text-xs text-muted-foreground ${dir === "rtl" ? "justify-end" : ""}`}>
               <span>{t("groupCode")}: {currentGroup.code}</span>
               <span className="inline-flex items-center gap-1"><Users className="h-3.5 w-3.5" /> {currentGroup.members.length}</span>
@@ -135,7 +143,7 @@ export function GroupsChatSection({
         <span className="text-xs text-muted-foreground">{t("groupInfo")}</span>
       </button>
 
-      <div className="h-[360px] space-y-3 overflow-y-auto rounded-[28px] border border-primary/15 bg-background/35 p-4">
+      <div ref={messagesRef} className="h-[360px] space-y-3 overflow-y-auto rounded-[28px] border border-primary/15 bg-background/35 p-4">
         {currentMessages.length === 0 ? (
           <p className={`text-sm text-muted-foreground ${dir === "rtl" ? "text-right" : "text-left"}`}>{t("noMessagesYet")}</p>
         ) : (
@@ -322,7 +330,7 @@ export function GroupsFindView({
               <span>{t("maxPlayersLabel")}: {maxPlayers}</span>
             </div>
             <Slider
-              min={1}
+              min={0}
               max={50}
               step={1}
               value={[Number(minPlayers), Number(maxPlayers)]}
@@ -352,7 +360,7 @@ export function GroupsFindView({
             key={group.id}
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: index * 0.04 }}
+            transition={{ delay: Math.min(index * 0.04, 0.3) }}
             className="overflow-hidden rounded-[32px] border border-primary/20 bg-[radial-gradient(circle_at_top_right,rgba(251,191,36,0.18),transparent_34%),linear-gradient(135deg,rgba(15,23,42,0.88),rgba(30,41,59,0.72))] p-4 shadow-[0_24px_70px_rgba(2,6,23,0.42)] backdrop-blur"
           >
             <div className={`flex flex-col gap-4 ${dir === "rtl" ? "text-right" : ""}`}>
@@ -360,8 +368,8 @@ export function GroupsFindView({
                 <div className={`flex items-center gap-3 ${dir === "rtl" ? "flex-row-reverse" : ""}`}>
                   <div className="flex h-16 w-16 items-center justify-center rounded-3xl border border-primary/25 bg-primary/10 shadow-[0_0_24px_rgba(251,191,36,0.16)]">{renderFlag(group.flag, group.name)}</div>
                   <div>
-                    <div className={`flex items-center gap-2 ${dir === "rtl" ? "flex-row-reverse justify-end" : ""}`}>
-                      <h3 className="text-lg font-semibold">{group.name}</h3>
+                  <div className={`min-w-0 flex items-center gap-2 ${dir === "rtl" ? "flex-row-reverse justify-end" : ""}`}>
+                      <h3 className="min-w-0 break-words text-lg font-semibold">{group.name}</h3>
                       {group.visibility !== "public" && <Lock className="h-4 w-4 text-muted-foreground" />}
                     </div>
                     <p className="mt-1 text-xs text-muted-foreground">{t("groupCode")}: {group.code}</p>
@@ -567,11 +575,11 @@ export function GroupInfoCard({
 
   return (
     <div className="overflow-hidden rounded-[28px] border border-primary/20 bg-[radial-gradient(circle_at_top_right,rgba(251,191,36,0.20),transparent_34%),linear-gradient(135deg,rgba(15,23,42,0.94),rgba(30,41,59,0.82))] p-3 shadow-2xl backdrop-blur sm:rounded-[32px] sm:p-5">
-      <div className={`flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between ${dir === "rtl" ? "sm:flex-row-reverse" : ""}`}>
-        <div className={dir === "rtl" ? "text-right" : ""}>
+      <div className={`flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between ${dir === "rtl" ? "sm:flex-row-reverse" : ""}`}>
+        <div className={`min-w-0 flex-1 ${dir === "rtl" ? "text-right" : ""}`}>
           <h3 className={`flex items-center gap-2 text-xl text-primary sm:gap-3 sm:text-2xl ${dir === "rtl" ? "flex-row-reverse font-persian" : "font-cinzel"}`}>
             <span className="flex h-14 w-14 items-center justify-center rounded-2xl border border-primary/25 bg-primary/10">{renderFlag(infoGroup.flag, infoGroup.name)}</span>
-            <span>{infoGroup.name}</span>
+            <span className="min-w-0 break-words">{infoGroup.name}</span>
           </h3>
           <div dir={dir} className={`mt-3 flex w-full flex-wrap gap-2 text-xs text-muted-foreground ${dir === "rtl" ? "justify-start text-right" : "justify-start text-left"}`}>
             <span dir={dir} className="rounded-full border border-white/10 bg-background/35 px-3 py-1">{t("groupCode")}: <bdi dir="ltr">{infoGroup.code}</bdi></span>
@@ -580,7 +588,7 @@ export function GroupInfoCard({
             <span dir={dir} className="rounded-full border border-white/10 bg-background/35 px-3 py-1">{t("scoresLabel")}: <bdi dir="ltr">{getGroupScore(infoGroup)}</bdi></span>
           </div>
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className={`flex shrink-0 flex-wrap gap-2 ${dir === "rtl" ? "justify-end" : "justify-start"}`}>
           {isCreator && (
             <Button variant="outline" onClick={onEditGroup}>
               <Pencil className="h-4 w-4" />

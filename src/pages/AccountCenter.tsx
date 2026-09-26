@@ -31,6 +31,7 @@ import { getUserCode } from "@/lib/social";
 import { getLevelFromXp, getLevelProgress, readProgress } from "@/lib/progression";
 
 import avatarArt from "@/assets/avatar.webp";
+import defaultGameBackground from "@/assets/background.webp";
 
 // اگر type برای t سخت‌گیر است، این helper کمک می‌کند fallback داشته باشیم
 function useSafeT() {
@@ -75,6 +76,9 @@ export default function AccountCenter() {
       ? extras.avatars
       : [extras.selectedAvatar || avatarArt]
   ).map(normalizeAvatar);
+  const backgroundGallery = Array.from(
+    new Set([defaultGameBackground, ...(extras.backgrounds || [])]),
+  );
 
 
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
@@ -316,6 +320,37 @@ export default function AccountCenter() {
                         <div className="absolute inset-0 bg-gradient-to-t from-amber-500/25 via-transparent to-transparent" />
                       )}
                     </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="rounded-3xl border border-slate-600/60 bg-[linear-gradient(145deg,rgba(15,23,42,0.96),rgba(2,6,23,0.98))] p-5 shadow-[0_18px_45px_rgba(0,0,0,0.75)]">
+            <h3 className={`font-semibold text-amber-200 ${dir === "rtl" ? "text-right" : ""}`}>
+              {t("backgroundsLabel")}
+            </h3>
+            <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
+              {backgroundGallery.map((background, index) => {
+                const isSelected = extras.selectedBackground === background;
+                return (
+                  <button
+                    key={`${background}-${index}`}
+                    type="button"
+                    onClick={() => updatePlayerExtras(user?.id, (current) => ({ ...current, selectedBackground: background }))}
+                    className={`group overflow-hidden rounded-2xl border bg-black/40 p-[3px] transition-all ${
+                      isSelected
+                        ? "border-amber-300 shadow-[0_0_25px_rgba(245,158,11,0.7)]"
+                        : "border-slate-600/60 hover:border-amber-300/60"
+                    }`}
+                  >
+                    <div className="relative h-24 w-full overflow-hidden rounded-xl">
+                      <img src={background} alt={index === 0 ? t("defaultBackground") : t("backgroundsLabel")} className="h-full w-full object-cover object-center transition-transform duration-300 group-hover:scale-[1.05]" />
+                      {isSelected && <div className="absolute inset-0 bg-gradient-to-t from-amber-500/30 via-transparent to-transparent" />}
+                    </div>
+                    <span className={`block px-1 py-1 text-[11px] text-slate-200 ${dir === "rtl" ? "text-right" : "text-left"}`}>
+                      {index === 0 ? t("defaultBackground") : t((`backgroundName${index}`) as any)}
+                    </span>
                   </button>
                 );
               })}

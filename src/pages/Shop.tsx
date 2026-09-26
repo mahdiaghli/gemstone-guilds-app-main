@@ -15,7 +15,6 @@ import {
   SHOP_SECTIONS,
   WEEKLY_REWARDS,
   purchaseShopOffer,
-  canGrantPaidReward,
   claimWeeklyReward,
   formatTomans,
   getCurrentRewardState,
@@ -25,7 +24,7 @@ import {
   type ShopSection,
   type StoreProvider,
 } from "@/lib/shop";
-import { getNativePlatform, isAndroidApp, isIosApp, isNativeApp } from "@/lib/nativeApp";
+import { getNativePlatform, isAndroidApp, isIosApp } from "@/lib/nativeApp";
 import bannerImage from "@/assets/banner.webp";
 import coinImage from "@/assets/coin.webp";
 import coinStackImage from "@/assets/5coins.webp";
@@ -50,6 +49,7 @@ const sectionParamMap: Record<string, ShopSection["id"]> = {
   coins: "coins",
   diamonds: "diamonds",
   avatars: "avatars",
+  backgrounds: "backgrounds",
 };
 
 const rewardImageMap = {
@@ -82,6 +82,14 @@ const offerImageMap: Record<ShopSection["id"], string[]> = {
     merchantGirlTwoImage,
     merchantThreeImage,
     merchantGirlThreeImage,
+  ],
+  backgrounds: [
+    new URL("../assets/back-ground1.png", import.meta.url).href,
+    new URL("../assets/back-ground2.png", import.meta.url).href,
+    new URL("../assets/back-ground3.png", import.meta.url).href,
+    new URL("../assets/back-ground4.png", import.meta.url).href,
+    new URL("../assets/back-ground5.png", import.meta.url).href,
+    new URL("../assets/back-ground6.png", import.meta.url).href,
   ],
 };
 
@@ -129,10 +137,18 @@ export default function Shop() {
     sectionId: ShopSection["id"],
     offerId: string
   ) => {
-    const result = await purchaseShopOffer(user?.id, sectionId, offerId, availableProviders[0]);
-    setMessage(result.ok ? t("purchaseSuccess") : (isFa
-      ? "خرید فقط در فروشگاه برنامه در دسترس است."
-      : "Purchases are only available in the app stores."));
+    if (isProcessingPurchase) return;
+    setIsProcessingPurchase(true);
+    try {
+      const result = await purchaseShopOffer(user?.id, sectionId, offerId, availableProviders[0]);
+      setMessage(result.ok ? t("purchaseSuccess") : (isFa
+        ? "پرداخت درون‌برنامه‌ای هنوز به بازار/مایکت و تأیید سرور متصل نشده است؛ مبلغی از شما گرفته نشد."
+        : "Store billing and server verification are not configured yet. You were not charged."));
+    } catch {
+      setMessage(isFa ? "خرید انجام نشد و آیتمی اضافه نشد." : "Purchase failed; no item was granted.");
+    } finally {
+      setIsProcessingPurchase(false);
+    }
   };
 
   const handleClaimReward = () => {
@@ -208,11 +224,18 @@ export default function Shop() {
     index: number
   ) => {
     const image =
-      offerImageMap[sectionId][index] || rewardImageMap[offer.rewardType];
-    const amountLabel =
-      sectionId === "avatars" ? t(avatarNameKeys[index]) : `${offer.amount}`;
+      offerImageMap[sectionId][index] || rewardImageMap[offer.rewardType as keyof typeof rewardImageMap];
+    const amountLabel = sectionId === "backgrounds"
+      ? ""
+      : sectionId === "avatars"
+      ? t(avatarNameKeys[index])
+        : `${offer.amount}`;
     const costLabel =
-      offer.price === 0 ? t("watchAd") : formatTomans(offer.price);
+      offer.price === 0
+        ? t("watchAd")
+        : offer.currency === "gems"
+          ? `${offer.price} 💎`
+          : formatTomans(offer.price);
 
     const hasDiscount = offer.discount && offer.discount > 0;
 
@@ -224,7 +247,7 @@ export default function Shop() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: index * 0.04 }}
         onClick={() => handleOfferPurchase(sectionId, offer.id)}
-        disabled={offer.price > 0 && isNativeApp() && !canGrantPaidReward(window.GemstoneNativeBilling)}
+        disabled={isProcessingPurchase}
         className={[
           "group relative flex flex-col items-center justify-between",
           // نسبت نزدیک به مربعی (کمی پهن‌تر برای زیبایی)
@@ -251,23 +274,27 @@ export default function Shop() {
           </div>
         )}
 
-        {/* مقدار / نام آواتار */}
-        <div className="mt-1 text-sm font-bold text-primary">
-          {amountLabel}
+        {/* مقدار، نام آواتار یا نام پس‌زمینه */}
+        <div className="mt-1 min-h-5 text-sm font-bold text-primary">
+          {sectionId === "backgrounds" ? t(offer.titleKey) : amountLabel}
         </div>
 
         {/* تصویر - کمی کوچک‌تر نسبت به قبل */}
-        <div className="flex flex-1 items-center justify-center py-2">
-          <img
-            src={image}
-            alt={amountLabel}
-            className={[
-              "object-contain drop-shadow-[0_10px_26px_rgba(0,0,0,0.35)]",
-              sectionId === "avatars"
-                ? "h-20 w-16 rounded-2xl"
-                : "h-16 w-16",
-            ].join(" ")}
-          />
+        <div className="flex min-h-24 flex-1 w-full items-center justify-center py-2">
+          <div className={sectionId === "backgrounds" ? "h-24 w-full overflow-hidden rounded-2xl" : "flex items-center justify-center"}>
+            <img
+              src={image}
+              alt={amountLabel || t("backgroundsLabel")}
+              className={[
+                "object-contain drop-shadow-[0_10px_26px_rgba(0,0,0,0.35)]",
+                sectionId === "backgrounds"
+                  ? `block h-full w-full object-cover object-center ${index === 0 ? "translate-y-1" : ""}`
+                  : sectionId === "avatars"
+                  ? "h-20 w-16 rounded-2xl"
+                  : "h-16 w-16",
+              ].join(" ")}
+            />
+          </div>
         </div>
 
         {/* دکمه قیمت ؛ ارتفاع کم‌تر */}

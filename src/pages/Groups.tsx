@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 
 import AppPageShell from "@/components/game/AppPageShell";
 import GroupsDialogs from "@/components/groups/GroupsDialogs";
@@ -20,7 +21,6 @@ import {
   createGroupRemote,
   getCurrentGroupForUser,
   getGroupMessages,
-  getGroupsRemote,
   getRankedGroups,
   getRankedPlayers,
   getRegisteredUsers,
@@ -86,7 +86,7 @@ export default function Groups() {
   const [visibility, setVisibility] = useState<"public" | "private" | "closed">("public");
   const [flag, setFlag] = useState(FLAG_OPTIONS[0].id);
   const [search, setSearch] = useState("");
-  const [minPlayers, setMinPlayers] = useState("1");
+  const [minPlayers, setMinPlayers] = useState("0");
   const [maxPlayers, setMaxPlayers] = useState("50");
   const [statusFilter, setStatusFilter] = useState("all");
   const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null);
@@ -100,6 +100,8 @@ export default function Groups() {
   const [settingsDraft, setSettingsDraft] = useState<GroupSettingsDraft>(DEFAULT_SETTINGS_DRAFT);
   const [rankViewMode, setRankViewMode] = useState<RankViewMode>("groups");
   const [isCreatingGroup, setIsCreatingGroup] = useState(false);
+  const [socialVersion, setSocialVersion] = useState(0);
+  const refreshInFlight = useRef<Promise<void> | null>(null);
 
   const view = useMemo<GroupsView>(() => {
     if (location.pathname === "/groups") return "chat";
@@ -109,10 +111,20 @@ export default function Groups() {
     return "chat";
   }, [location.pathname]);
 
-  const refreshGroups = async () => {
-    await syncSocialStateRemote();
-    const next = await getGroupsRemote();
-    setGroups(next);
+  const refreshGroups = () => {
+    if (refreshInFlight.current) return refreshInFlight.current;
+    const request = syncSocialStateRemote()
+      .then((store) => {
+        setSocialVersion((version) => version + 1);
+        setGroups((current) =>
+          JSON.stringify(current) === JSON.stringify(store.groups) ? current : store.groups,
+        );
+      })
+      .finally(() => {
+        refreshInFlight.current = null;
+      });
+    refreshInFlight.current = request;
+    return request;
   };
 
   useEffect(() => {
@@ -121,19 +133,23 @@ export default function Groups() {
 
   useEffect(() => {
     const interval = window.setInterval(() => {
-      refreshGroups();
-    }, 1500);
-    const sync = () => {
+      if (view === "chat") refreshGroups();
+    }, 15000);
+    const localSocialSync = () => {
+      setSocialVersion((version) => version + 1);
+    };
+    const storageSync = () => {
+      setSocialVersion((version) => version + 1);
       refreshGroups();
     };
-    window.addEventListener("splendor-social-updated", sync);
-    window.addEventListener("storage", sync);
+    window.addEventListener("splendor-social-updated", localSocialSync);
+    window.addEventListener("storage", storageSync);
     return () => {
       window.clearInterval(interval);
-      window.removeEventListener("splendor-social-updated", sync);
-      window.removeEventListener("storage", sync);
+      window.removeEventListener("splendor-social-updated", localSocialSync);
+      window.removeEventListener("storage", storageSync);
     };
-  }, []);
+  }, [view]);
 
   useEffect(() => {
     if (view === "rank") {
@@ -141,8 +157,8 @@ export default function Groups() {
     }
   }, [view]);
 
-  const currentGroup = useMemo(() => getCurrentGroupForUser(user?.id), [user?.id, groups]);
-  const currentMessages = useMemo(() => (currentGroup ? getGroupMessages(currentGroup.id) : []), [currentGroup, groups]);
+  const currentGroup = useMemo(() => getCurrentGroupForUser(user?.id), [user?.id, groups, socialVersion]);
+  const currentMessages = useMemo(() => (currentGroup ? getGroupMessages(currentGroup.id) : []), [currentGroup, socialVersion]);
   const filteredGroups = useMemo(() => {
     return groups.filter((group) => {
       const normalizedSearch = search.trim().toLowerCase();
@@ -150,7 +166,7 @@ export default function Groups() {
         !normalizedSearch ||
         group.name.toLowerCase().includes(normalizedSearch) ||
         group.code.toLowerCase().includes(normalizedSearch);
-      const min = Math.max(1, Number(minPlayers) || 1);
+      const min = Math.max(0, Number(minPlayers) || 0);
       const max = Math.min(50, Math.max(min, Number(maxPlayers) || 50));
       const matchesMembers = group.members.length >= min && group.members.length <= max;
       const matchesStatus = statusFilter === "all" || group.visibility === statusFilter;
@@ -226,10 +242,12 @@ export default function Groups() {
       setMinScore("0");
       setVisibility("public");
       setFlag(FLAG_OPTIONS[0].id);
-      setFeedbackMessage(t("groupCreatedSuccess"));
-      navigate("/groups");
+      // Opening the success dialog together with group details creates two
+      // modal focus traps and makes the page appear frozen.
+      setFeedbackMessage(null);
+      toast.success(t("groupCreatedSuccess"));
       await refreshGroups();
-      setGroupInfoId(created.id);
+      navigate("/groups");
     } catch {
       setFeedbackMessage(t("groupSyncError"));
     } finally {
@@ -324,7 +342,6 @@ export default function Groups() {
               if (!user || !currentGroup || !chatText.trim()) return;
               sendGroupMessage(currentGroup.id, user.id, chatText.trim());
               setChatText("");
-              refreshGroups();
             }}
             onGoToFind={() => navigate("/groups/find")}
             onGoToCreate={() => navigate("/groups/create")}

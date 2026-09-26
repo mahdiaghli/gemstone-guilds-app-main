@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { getGroupsRemote, sendGameInvite } from "@/lib/social";
+import { createGroupRemote, getCurrentGroupForUser, getGroupsRemote, sendGameInvite } from "@/lib/social";
 
 describe("friend game invites", () => {
   beforeEach(() => {
@@ -46,5 +46,21 @@ describe("group hydration", () => {
 
     expect(onSocialUpdate).not.toHaveBeenCalled();
     window.removeEventListener("splendor-social-updated", onSocialUpdate);
+  });
+
+  it("does not report a locally created group when the server rejects creation", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false }));
+
+    const result = await createGroupRemote({
+      creatorId: "user-1",
+      name: "Test group",
+      description: "",
+      flag: "flag1",
+      minScore: 0,
+      visibility: "public",
+    });
+
+    expect(result).toBeNull();
+    expect(getCurrentGroupForUser("user-1")).toBeNull();
   });
 });

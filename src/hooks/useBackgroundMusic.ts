@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import lobbyMusic from "@/assets/Mohsen Lorestani _ Bacha Nana128 (UpMusic).mp3";
-import inGameMusic from "@/assets/Mohammad Alizadeh - Kheily Khosh halam.mp3";
+import casinoMusic from "@/assets/kulakovka-casino-music.mp3";
+import { audioManager } from "@/lib/audioManager";
 
 const MUSIC_ENABLED_KEY = "splendor-music-enabled";
 const MUSIC_VOLUME_KEY = "splendor-music-volume";
@@ -8,8 +8,10 @@ const MUSIC_VOLUME_KEY = "splendor-music-volume";
 export type BackgroundTrack = "lobby" | "game";
 
 const TRACKS: Record<BackgroundTrack, string> = {
-  lobby: lobbyMusic,
-  game: inGameMusic,
+  lobby: casinoMusic,
+  // The game track can be supplied as a public asset without changing code.
+  // Until that file is present, playback falls back to Kulakovka.
+  game: "/assets/sigmamusicart-casino-music.mp3",
 };
 
 let globalAudio: HTMLAudioElement | null = null;
@@ -27,7 +29,19 @@ function storedVolume() {
 }
 
 function isMusicEnabled() {
-  return localStorage.getItem(MUSIC_ENABLED_KEY) !== "false";
+  return localStorage.getItem(MUSIC_ENABLED_KEY) !== "false"
+    && localStorage.getItem("splendor-bg-music") !== "false";
+}
+
+function setMusicPreference(enabled: boolean) {
+  const value = enabled ? "true" : "false";
+  localStorage.setItem(MUSIC_ENABLED_KEY, value);
+  localStorage.setItem("splendor-bg-music", value);
+  // The game has a legacy AudioManager as well as the HTMLAudioElement above.
+  // Keep its state in lockstep, especially when music is turned off.
+  audioManager.backgroundMusicEnabled = enabled;
+  if (!enabled) audioManager.stopBackgroundMusic();
+  window.dispatchEvent(new CustomEvent("splendor-music-setting-changed"));
 }
 
 function ensureAudio(track: BackgroundTrack) {
@@ -61,6 +75,15 @@ async function playCurrentTrack(track: BackgroundTrack) {
     audioUnlocked = true;
     return true;
   } catch {
+    if (track === "game" && audio.src.includes("sigmamusicart-casino-music.mp3")) {
+      audio.src = casinoMusic;
+      audio.load();
+      try {
+        await audio.play();
+        audioUnlocked = true;
+        return true;
+      } catch {}
+    }
     return false;
   }
 }
@@ -80,7 +103,7 @@ export function useBackgroundMusic() {
   useEffect(() => {
     const audio = ensureAudio(track);
     audio.volume = volume;
-    localStorage.setItem(MUSIC_ENABLED_KEY, isPlaying ? "true" : "false");
+    setMusicPreference(isPlaying);
 
     if (isPlaying) {
       void playCurrentTrack(track);
@@ -90,6 +113,8 @@ export function useBackgroundMusic() {
   }, [track, volume, isPlaying]);
 
   useEffect(() => {
+    const syncPreference = () => setIsPlaying(isMusicEnabled());
+    window.addEventListener("splendor-music-setting-changed", syncPreference);
     const unlockAndPlay = () => {
       if (isPlaying) void playCurrentTrack(activeTrack);
     };
@@ -107,6 +132,7 @@ export function useBackgroundMusic() {
     document.addEventListener("visibilitychange", resumeOnVisible);
 
     return () => {
+      window.removeEventListener("splendor-music-setting-changed", syncPreference);
       window.removeEventListener("pointerdown", unlockAndPlay, true);
       window.removeEventListener("touchstart", unlockAndPlay, true);
       window.removeEventListener("keydown", unlockAndPlay, true);
@@ -119,8 +145,10 @@ export function useBackgroundMusic() {
     setIsPlaying((previous) => {
       const next = !previous;
       if (next) {
-        localStorage.setItem(MUSIC_ENABLED_KEY, "true");
+        setMusicPreference(true);
         void playCurrentTrack(activeTrack);
+      } else {
+        setMusicPreference(false);
       }
       return next;
     });

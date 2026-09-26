@@ -15,6 +15,7 @@ import {
   timeoutDeadMansDraw,
 } from "./server/splendorTurn.js";
 import { syncUsersWithDatabase, saveUserToDatabase } from "./server/database.js";
+import { ensureDefaultGroups, generateUniqueGroupCode, repairDuplicateGroupCodes } from "./server/defaultGroups.js";
 
 const sessions = new Map();
 const disconnectTimers = new Map();
@@ -52,8 +53,10 @@ function readSharedState() {
   try {
     const parsed = JSON.parse(fs.readFileSync(STATE_FILE, "utf8"));
     const users = Array.isArray(parsed.users) ? parsed.users.map(migrateUserRecord) : [];
-    const migrated = { ...parsed, users };
-    const changed = JSON.stringify(parsed.users) !== JSON.stringify(users);
+    const groups = repairDuplicateGroupCodes(ensureDefaultGroups(Array.isArray(parsed.groups) ? parsed.groups : []));
+    const migrated = { ...parsed, users, groups };
+    const changed = JSON.stringify(parsed.users) !== JSON.stringify(users) ||
+      JSON.stringify(parsed.groups) !== JSON.stringify(groups);
     if (changed) writeSharedState(migrated);
     return migrated;
   } catch {
@@ -146,21 +149,6 @@ function writeSharedState(state) {
   fs.writeFileSync(STATE_FILE, JSON.stringify(state, null, 2), "utf8");
 }
 
-function generateGroupCode(seed = Date.now().toString(36)) {
-  const base = `${seed}${Math.random().toString(36).slice(2, 8)}`
-    .replace(/[^a-z0-9]/gi, "")
-    .toUpperCase();
-  return `GRP-${base.slice(0, 6).padEnd(6, "X")}`;
-}
-
-function generateUniqueGroupCode(groups, seed = Date.now().toString(36)) {
-  let nextCode = generateGroupCode(seed);
-  while (groups.some((group) => group.code === nextCode)) {
-    nextCode = generateGroupCode(`${seed}${Math.random().toString(36).slice(2, 6)}`);
-  }
-  return nextCode;
-}
-
 function normalizeTurnTimeSeconds(value) {
   return value === 15 || value === 30 || value === 45 || value === 60 ? value : 45;
 }
@@ -172,7 +160,7 @@ function normalizeGroup(entry) {
       : "public";
   return {
     ...entry,
-    code: entry.code || generateUniqueGroupCode([], entry.id),
+    code: entry.code || generateUniqueGroupCode([]),
     description: entry.description || "",
     flag: entry.flag || "🏳️",
     minScore: Number(entry.minScore) || 0,
@@ -198,7 +186,7 @@ function removeUserFromGroups(groups, userId) {
         pendingRequests,
       };
     })
-    .filter((group) => group.members.length > 0);
+    .filter((group) => group.members.length > 0 || group.id.startsWith("default-group-"));
 }
 
 function normalizeSocialState(state) {
@@ -430,7 +418,7 @@ const httpServer = createServer(async (req, res) => {
       ...payload,
       creatorId: actor.id,
       id: groupId,
-      code: generateUniqueGroupCode(state.groups, groupId),
+      code: generateUniqueGroupCode(state.groups),
       members: [actor.id],
       pendingRequests: [],
       createdAt: new Date().toISOString(),
@@ -482,6 +470,7 @@ const httpServer = createServer(async (req, res) => {
 
       if (!joinableGroup.members.includes(payload.userId)) {
         joinableGroup.members.push(payload.userId);
+        if (!joinableGroup.creatorId) joinableGroup.creatorId = payload.userId;
       }
       writeSharedState(state);
       res.writeHead(200, { "Content-Type": "application/json" });

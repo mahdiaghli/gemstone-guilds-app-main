@@ -338,13 +338,13 @@ export default function Tutorial() {
         transition={{ duration: 0.35, ease: "easeOut" }}
       >
         {/* هدر – شبیه AboutUs اما با متن آموزش */}
-        <div className="mb-6 flex items-center justify-between">
+        <div className="relative mb-6 flex items-center justify-between">
           {/* دکمه بستن */}
           <Button
             variant="ghost"
             size="icon"
             onClick={() => navigate(backPath)}
-            className="flex h-10 w-10 items-center justify-center rounded-2xl 
+            className="absolute right-0 top-0 flex h-10 w-10 items-center justify-center rounded-2xl
                        border border-amber-400/35 bg-slate-950/70 text-amber-300 
                        shadow-[0_0_16px_rgba(251,191,36,0.35)] transition-colors 
                        hover:bg-amber-400/10"

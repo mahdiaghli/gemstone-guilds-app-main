@@ -167,9 +167,33 @@
       "createdAt": "2026-09-24T13:30:14.005Z",
       "salt": "d199c60d8a2c80570f2ac4094b513918",
       "passwordHash": "f52c26951221fc4f5d72e7bfc1019c853cd667766cd2c3b490de30dae75b882cbf9598d9370cc0c571d38d222b3558dfe03742b9603b85cf90dcb8275e1fd37c"
+    },
+    {
+      "id": "1790440773367",
+      "username": "bbb",
+      "email": "bbb",
+      "createdAt": "2026-09-26T16:39:33.367Z",
+      "salt": "4a9ff2327bf1cb23c79c4a8b2cd4f2f5",
+      "passwordHash": "d3863fba7d68113e7fc176c365b389c216bfc4cc30be28e2f535ab6a120b837d36fdcfd71dc85b076ad20a9a2dbb000488fe35b0c334841a2d27762612160ec3"
     }
   ],
   "groups": [
+    {
+      "creatorId": "1790178919347",
+      "name": "xxxx",
+      "description": "ggxxxx",
+      "flag": "flag8",
+      "minScore": 20,
+      "visibility": "public",
+      "id": "group-1790431801590",
+      "code": "GRP-XXPKFG",
+      "members": [
+        "1790178919347",
+        "1790256614005"
+      ],
+      "pendingRequests": [],
+      "createdAt": "2026-09-26T14:10:01.590Z"
+    },
     {
       "creatorId": "1775552047292",
       "name": "ccc22",
@@ -185,8 +209,7 @@
         "1775547728683",
         "1776073155790",
         "1776197456036",
-        "1778394378072",
-        "1790178919347"
+        "1778394378072"
       ],
       "pendingRequests": [],
       "createdAt": "2026-04-07T17:57:19.554Z"
@@ -203,7 +226,7 @@
       ],
       "pendingRequests": [],
       "createdAt": "2026-04-06T11:41:45.283Z",
-      "code": "GRP-GROUP1",
+      "code": "GRP-38YFN2",
       "flag": "🏳️"
     },
     {
@@ -218,8 +241,138 @@
       ],
       "pendingRequests": [],
       "createdAt": "2026-04-06T10:36:42.455Z",
-      "code": "GRP-GROUP1",
+      "code": "GRP-DG8DCI",
       "flag": "🏳️"
+    },
+    {
+      "id": "default-group-001",
+      "creatorId": "",
+      "name": "سپید اژدها",
+      "code": "GRP-D00001",
+      "description": "",
+      "flag": "flag1",
+      "minScore": 0,
+      "visibility": "public",
+      "members": [],
+      "pendingRequests": [],
+      "createdAt": "2026-01-01T00:00:00.000Z"
+    },
+    {
+      "id": "default-group-002",
+      "creatorId": "",
+      "name": "سپید ققنوس",
+      "code": "GRP-D00002",
+      "description": "",
+      "flag": "flag2",
+      "minScore": 0,
+      "visibility": "public",
+      "members": [],
+      "pendingRequests": [],
+      "createdAt": "2026-01-01T00:00:00.000Z"
+    },
+    {
+      "id": "default-group-003",
+      "creatorId": "",
+      "name": "سپید شیر",
+      "code": "GRP-D00003",
+      "description": "",
+      "flag": "flag3",
+      "minScore": 0,
+      "visibility": "public",
+      "members": [],
+      "pendingRequests": [],
+      "createdAt": "2026-01-01T00:00:00.000Z"
+    },
+    {
+      "id": "default-group-004",
+      "creatorId": "",
+      "name": "سپید شاهین",
+      "code": "GRP-D00004",
+      "description": "",
+      "flag": "flag4",
+      "minScore": 0,
+      "visibility": "public",
+      "members": [],
+      "pendingRequests": [],
+      "createdAt": "2026-01-01T00:00:00.000Z"
+    },
+    {
+      "id": "default-group-005",
+      "creatorId": "",
+      "name": "سپید سیمرغ",
+      "code": "GRP-D00005",
+      "description": "",
+      "flag": "flag5",
+      "minScore": 0,
+      "visibility": "public",
+      "members": [],
+      "pendingRequests": [],
+      "createdAt": "2026-01-01T00:00:00.000Z"
+    },
+    {
+      "id": "default-group-006",
+      "creatorId": "",
+      "name": "سپید پلنگ",
+      "code": "GRP-D00006",
+      "description": "",
+      "flag": "flag6",
+      "minScore": 0,
+      "visibility": "public",
+      "members": [],
+      "pendingRequests": [],
+      "createdAt": "2026-01-01T00:00:00.000Z"
+    },
+    {
+      "id": "default-group-007",
+      "creatorId": "",
+      "name": "سپید گرگ",
+      "code": "GRP-D00007",
+      "description": "",
+      "flag": "flag7",
+      "minScore": 0,
+      "visibility": "public",
+      "members": [],
+      "pendingRequests": [],
+      "createdAt": "2026-01-01T00:00:00.000Z"
+    },
+    {
+      "id": "default-group-008",
+      "creatorId": "",
+      "name": "سپید طوفان",
+      "code": "GRP-D00008",
+      "description": "",
+      "flag": "flag8",
+      "minScore": 0,
+      "visibility": "public",
+      "members": [],
+      "pendingRequests": [],
+      "createdAt": "2026-01-01T00:00:00.000Z"
+    },
+    {
+      "id": "default-group-009",
+      "creatorId": "",
+      "name": "سپید ستاره",
+      "code": "GRP-D00009",
+      "description": "",
+      "flag": "flag9",
+      "minScore": 0,
+      "visibility": "public",
+      "members": [],
+      "pendingRequests": [],
+      "createdAt": "2026-01-01T00:00:00.000Z"
+    },
+    {
+      "id": "default-group-010",
+      "creatorId": "",
+      "name": "سپید کوهستان",
+      "code": "GRP-D00010",
+      "description": "",
+      "flag": "flag10",
+      "minScore": 0,
+      "visibility": "public",
+      "members": [],
+      "pendingRequests": [],
+      "createdAt": "2026-01-01T00:00:00.000Z"
     }
   ],
   "friends": {
@@ -556,6 +709,16 @@
       "senderId": "1790256614005",
       "text": "Fff",
       "createdAt": "2026-09-24T13:31:03.455Z"
+    },
+    {
+      "id": "1790441080161-1790178919347",
+      "participants": [
+        "1790178919347",
+        "1790256614005"
+      ],
+      "senderId": "1790178919347",
+      "text": "تت",
+      "createdAt": "2026-09-26T16:44:40.161Z"
     }
   ],
   "groupMessages": [
@@ -670,6 +833,97 @@
       "senderId": "1790178919347",
       "text": "ززز",
       "createdAt": "2026-09-24T13:26:39.852Z"
+    },
+    {
+      "id": "1790265919806-1790178919347-group-1775584639553",
+      "groupId": "group-1775584639553",
+      "senderId": "1790178919347",
+      "text": "رر",
+      "createdAt": "2026-09-24T16:05:19.806Z"
+    },
+    {
+      "id": "1790431817047-1790178919347-group-1790431801590",
+      "groupId": "group-1790431801590",
+      "senderId": "1790178919347",
+      "text": "dd",
+      "createdAt": "2026-09-26T14:10:17.047Z"
+    },
+    {
+      "id": "1790431821626-1790178919347-group-1790431801590",
+      "groupId": "group-1790431801590",
+      "senderId": "1790178919347",
+      "text": "ddd",
+      "createdAt": "2026-09-26T14:10:21.626Z"
+    },
+    {
+      "id": "1790432018990-1790178919347-group-1790431801590",
+      "groupId": "group-1790431801590",
+      "senderId": "1790178919347",
+      "text": "سسس",
+      "createdAt": "2026-09-26T14:13:38.990Z"
+    },
+    {
+      "id": "1790432119811-1790178919347-group-1790431801590",
+      "groupId": "group-1790431801590",
+      "senderId": "1790178919347",
+      "text": "ذذذ",
+      "createdAt": "2026-09-26T14:15:19.811Z"
+    },
+    {
+      "id": "1790432129970-1790178919347-group-1790431801590",
+      "groupId": "group-1790431801590",
+      "senderId": "1790178919347",
+      "text": "ززز",
+      "createdAt": "2026-09-26T14:15:29.970Z"
+    },
+    {
+      "id": "1790433257827-1790256614005-group-1790431801590",
+      "groupId": "group-1790431801590",
+      "senderId": "1790256614005",
+      "text": "Gg",
+      "createdAt": "2026-09-26T14:34:17.827Z"
+    },
+    {
+      "id": "1790439029609-1790178919347-group-1790431801590",
+      "groupId": "group-1790431801590",
+      "senderId": "1790178919347",
+      "text": "ببب",
+      "createdAt": "2026-09-26T16:10:29.609Z"
+    },
+    {
+      "id": "1790440900281-1790178919347-group-1790431801590",
+      "groupId": "group-1790431801590",
+      "senderId": "1790178919347",
+      "text": "ئئ",
+      "createdAt": "2026-09-26T16:41:40.281Z"
+    },
+    {
+      "id": "1790441099761-1790178919347-group-1790431801590",
+      "groupId": "group-1790431801590",
+      "senderId": "1790178919347",
+      "text": "دد",
+      "createdAt": "2026-09-26T16:44:59.761Z"
+    },
+    {
+      "id": "1790441106811-1790178919347-group-1790431801590",
+      "groupId": "group-1790431801590",
+      "senderId": "1790178919347",
+      "text": "رررر",
+      "createdAt": "2026-09-26T16:45:06.811Z"
+    },
+    {
+      "id": "1790441110600-1790178919347-group-1790431801590",
+      "groupId": "group-1790431801590",
+      "senderId": "1790178919347",
+      "text": "ذذ",
+      "createdAt": "2026-09-26T16:45:10.600Z"
+    },
+    {
+      "id": "1790441130868-1790256614005-group-1790431801590",
+      "groupId": "group-1790431801590",
+      "senderId": "1790256614005",
+      "text": "Gg",
+      "createdAt": "2026-09-26T16:45:30.868Z"
     }
   ],
   "gameInvites": [

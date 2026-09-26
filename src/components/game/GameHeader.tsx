@@ -2,7 +2,6 @@ import { motion } from "framer-motion";
 
 import { Button } from "@/components/ui/button";
 import Chat from "@/components/game/Chat";
-import VoiceChatControl from "@/components/game/VoiceChatControl";
 import { cn } from "@/lib/utils";
 import type { Socket } from "socket.io-client";
 import type { VoiceRoomPlayer } from "@/hooks/useVoiceChat";
@@ -48,7 +47,6 @@ export default function GameHeader({
   roomId,
   playerId,
   playerName,
-  roomPlayers,
   highlightTimer,
 }: GameHeaderProps) {
   const currentPlayerName = getPlayerDisplayName(stateCurrentPlayerIndex);
@@ -152,15 +150,6 @@ export default function GameHeader({
 
       <div className="flex flex-col items-end gap-2">
         <div className="flex items-center gap-2">
-          {gameMode === "online" && (
-            <VoiceChatControl
-              socket={socket}
-              roomId={roomId}
-              playerId={playerId}
-              roomPlayers={roomPlayers}
-              disabled={!socket?.connected}
-            />
-          )}
           <Button
             variant="outline"
             size="sm"

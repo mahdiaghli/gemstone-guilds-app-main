@@ -31,6 +31,7 @@ import { nobleImages } from "@/components/game/NobleDisplay";
 // import { useLanguage } from '@/hooks/useLanguage';
 import { useAuth } from "@/hooks/useAuth";
 import { readPlayerExtras } from "@/lib/playerExtras";
+import { getSelectedBackground } from "@/lib/pageBackgrounds";
 import {
   awardWinProgress,
   awardLossProgress,
@@ -58,7 +59,6 @@ import {
 } from "@/pages/game/gamePageUtils";
 import { getGameById, getGameMenuPath } from "@/lib/gameCatalog";
 import type { SplendorGameSceneProps } from "@/pages/game/splendorGameSceneTypes";
-import splendorBackground from "@/assets/background-game-splendor.png";
 
 export default function useSplendorGameController(props: GameProps = {}) {
   const [searchParams] = useSearchParams();
@@ -1847,7 +1847,7 @@ export default function useSplendorGameController(props: GameProps = {}) {
 
   const sceneProps: SplendorGameSceneProps = {
     dir: "ltr",
-    backgroundImage: splendorBackground,
+    backgroundImage: getSelectedBackground(user?.id),
     gameMode: gameMode as "local" | "ai" | "online",
     phase,
     lang,

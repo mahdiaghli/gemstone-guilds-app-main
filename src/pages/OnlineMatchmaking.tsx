@@ -50,7 +50,6 @@ export default function OnlineMatchmaking() {
   const playerName = user?.username || '';
   const playerCount = 2;
   const [searching, setSearching] = useState(false);
-  const [waitingCount, setWaitingCount] = useState(0);
   const [playerId] = useState(() => generateUUID());
   const [error, setError] = useState<string | null>(null);
   const [turnTime] = useState(() => {
@@ -172,7 +171,6 @@ export default function OnlineMatchmaking() {
           currentPlayers,
           position: `${currentPlayers}/${count}`,
         });
-        setWaitingCount(currentPlayers);
         setSearching(true);
       });
 
@@ -304,7 +302,6 @@ export default function OnlineMatchmaking() {
       });
     }
     setSearching(false);
-    setWaitingCount(0);
     refundPendingEntryFee(user?.id);
     navigate(menuPath);
   };
@@ -333,27 +330,10 @@ export default function OnlineMatchmaking() {
           <p className="text-primary/70 text-xs font-cinzel uppercase tracking-[0.35em]">
             {t("findMatchTitle")}
           </p>
-          <p className="text-muted-foreground">
-            {playerCount}-Player {t('onlinePlay')}
-          </p>
         </div>
 
         {!searching ? (
           <>
-            {/* Auto-start notice */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.1 }}
-              className="space-y-2"
-            >
-              <div className="bg-card/50 border border-primary/20 rounded-xl p-4 text-center">
-                <p className="text-sm text-muted-foreground mb-2">{t("searchingAs")}</p>
-                <div className="text-2xl font-cinzel text-primary">{playerName}</div>
-                <p className="text-xs text-muted-foreground mt-2">{t("matchmakingStarts")}</p>
-              </div>
-            </motion.div>
-
             {/* Error Message */}
             {error && (
               <motion.div
@@ -417,26 +397,6 @@ export default function OnlineMatchmaking() {
                 ))}
               </motion.div>
 
-              {/* Queue Information */}
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.5 }}
-                className="bg-card/50 border border-primary/20 rounded-lg p-4 w-full text-center"
-              >
-                <p className="text-xs text-muted-foreground mb-1">{t("playersWaiting")}</p>
-                <div className="text-2xl font-cinzel text-primary">{waitingCount}</div>
-              </motion.div>
-
-              {/* Player Name Display */}
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="bg-card/30 border border-primary/10 rounded-lg p-3 w-full text-center text-sm"
-              >
-                <p className="text-muted-foreground">{t("searchingAs")}</p>
-                <p className="font-cinzel text-primary">{playerName}</p>
-              </motion.div>
             </motion.div>
 
             {/* Cancel Button */}

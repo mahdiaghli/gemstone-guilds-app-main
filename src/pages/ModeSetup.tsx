@@ -50,6 +50,7 @@ export default function ModeSetup() {
   );
 
   const isDeadMansDraw = selectedGame.id === "dead-mans-draw";
+  const isSplendor = selectedGame.id === "splendor";
 
   const pageBackground = useMemo(
     () => getPageBackground(selectedGame.id, "mode-setup"),
@@ -111,7 +112,7 @@ export default function ModeSetup() {
         `&mode=local` +
         `&humans=${localHumanPlayers}` +
         difficultyParam +
-        (isDeadMansDraw ? "" : `&turnTime=${turnTime}`),
+        (isDeadMansDraw || isSplendor ? "" : `&turnTime=${turnTime}`),
     );
   };
 
@@ -226,7 +227,7 @@ export default function ModeSetup() {
             </div>
 
             {/* Turn Time – بالای دکمه شروع */}
-            {!isDeadMansDraw && (
+            {!isDeadMansDraw && !isSplendor && (
               <div className="space-y-3">
                 <p className="text-xs text-muted-foreground font-cinzel tracking-widest">
                   {t("turnTimeLimit") ?? "Turn Time Limit"}
