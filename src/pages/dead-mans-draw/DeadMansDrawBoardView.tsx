@@ -10,10 +10,10 @@ import { PlayerStack } from "./PlayerStack";
 import { translateActionLabel } from "./helpers";
 import { SUIT_DESCRIPTION_KEYS, SUIT_IMAGES, SUIT_TRANSLATION_KEYS } from "./shared";
 import type { DeadMansDrawBoardViewProps } from "./types";
-import backgroundImage from "@/assets/background-game-splendor.png";
 
 export function DeadMansDrawBoardView({
   dir,
+  backgroundImage,
   t,
   currentState,
   canReveal,

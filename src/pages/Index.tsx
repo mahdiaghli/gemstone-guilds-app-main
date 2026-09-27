@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { X } from "lucide-react";
+import { toast } from "sonner";
 
 import { cn } from "@/lib/utils";
 import { useLanguage } from "@/hooks/useLanguage";
@@ -8,12 +9,14 @@ import PageTopBar from "@/components/game/PageTopBar";
 import AppBottomNav from "@/components/game/AppBottomNav";
 import { useAuth } from "@/hooks/useAuth";
 import { hasActivePremium } from "@/lib/shop";
+import { requirePremium } from "@/lib/featureFlags";
 import robotIcon from "@/assets/play with robots.webp";
 import localIcon from "@/assets/two player.webp";
 import onlineIcon from "@/assets/internet.webp";
 import tutorialIcon from "@/assets/manual.webp";
 import { findGameById, getGameById } from "@/lib/gameCatalog";
 import { getPageBackground } from "@/lib/pageBackgrounds";
+import { prepareOnlineMatchmaking } from "@/lib/onlineMatchmakingStart";
 
 const GEM_DECORATIONS = [
   { emoji: "\ud83d\udc8e", x: "15%", y: "20%", delay: 0 },
@@ -42,7 +45,7 @@ export default function Index() {
     const requiresPremium =
       targetPath.includes("mode=local") || targetPath.includes("mode=online");
 
-    if (requiresPremium && !hasActivePremium(user?.id)) {
+    if (requiresPremium && requirePremium() && !hasActivePremium(user?.id)) {
       navigate("/shop?section=premium&reason=premium-required");
       return;
     }
@@ -62,6 +65,25 @@ export default function Index() {
     }
 
     navigate(targetPath);
+  };
+
+  const startOnlinePlay = () => {
+    if (requirePremium() && !hasActivePremium(user?.id)) {
+      navigate("/shop?section=premium&reason=premium-required");
+      return;
+    }
+
+    const result = prepareOnlineMatchmaking(user?.id, game.id);
+    if (!result.ok) {
+      toast.error(
+        dir === "rtl"
+          ? `برای بازی آنلاین به ${result.required} سکه نیاز دارید.`
+          : `You need ${result.required} coins to play online.`,
+      );
+      return;
+    }
+
+    navigate(result.path);
   };
 
   const menuItems = [
@@ -84,7 +106,7 @@ export default function Index() {
       icon: onlineIcon,
       title: t("onlinePlay"),
       subtitle: t("onlinePlayDesc"),
-      action: () => openSplendorDestination(`/mode-setup?mode=online&game=${game.id}`),
+      action: startOnlinePlay,
     },
     {
       id: "tutorial" as const,
@@ -142,7 +164,7 @@ export default function Index() {
         {/* </p> */}
 
         <div className="space-y-3 mb-6">
-          {menuItems.map((item) => (
+          {menuItems.filter((item) => !(game.id === "beasty-bar" && item.id === "online")).map((item) => (
             <button
               key={item.id}
               onClick={item.action}

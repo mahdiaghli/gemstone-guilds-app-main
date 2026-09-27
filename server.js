@@ -1,9 +1,39 @@
 import { createServer } from "http";
+import { createHmac, randomBytes, timingSafeEqual } from "crypto";
 import fs from "fs";
 import path from "path";
 import { Server } from "socket.io";
+import {
+  hashPassword,
+  verifyPassword,
+  migrateUserRecord,
+  toPublicUser,
+  MAX_BODY_BYTES,
+} from "./server/security.js";
+import {
+  advanceSplendorTurn,
+  timeoutDeadMansDraw,
+} from "./server/splendorTurn.js";
+import { syncUsersWithDatabase, saveUserToDatabase } from "./server/database.js";
+import { ensureDefaultGroups, generateUniqueGroupCode, repairDuplicateGroupCodes } from "./server/defaultGroups.js";
+import {
+  consumePhoneOtp,
+  isIranianMobile,
+  normalizePhone,
+  requestPhoneOtp,
+} from "./server/phoneAuth.js";
 
-const DATA_DIR = path.resolve("./server-data");
+const sessions = new Map();
+const disconnectTimers = new Map();
+let databaseUsersSnapshot = null;
+let userMutationRevision = 0;
+const RECONNECT_MS = 60_000;
+const AUTH_SECRET = process.env.AUTH_SECRET || "dev-only-change-this-auth-secret";
+const OTP_IP_WINDOW_MS = 10 * 60 * 1000;
+const OTP_IP_MAX_REQUESTS = 10;
+const otpIpWindows = new Map();
+
+const DATA_DIR = path.resolve(process.env.SPLENDOR_DATA_DIR || "./server-data");
 const STATE_FILE = path.join(DATA_DIR, "shared-state.json");
 
 function ensureStateFile() {
@@ -30,7 +60,14 @@ function ensureStateFile() {
 function readSharedState() {
   ensureStateFile();
   try {
-    return JSON.parse(fs.readFileSync(STATE_FILE, "utf8"));
+    const parsed = JSON.parse(fs.readFileSync(STATE_FILE, "utf8"));
+    const users = Array.isArray(parsed.users) ? parsed.users.map(migrateUserRecord) : [];
+    const groups = repairDuplicateGroupCodes(ensureDefaultGroups(Array.isArray(parsed.groups) ? parsed.groups : []));
+    const migrated = { ...parsed, users, groups };
+    const changed = JSON.stringify(parsed.users) !== JSON.stringify(users) ||
+      JSON.stringify(parsed.groups) !== JSON.stringify(groups);
+    if (changed) writeSharedState(migrated);
+    return migrated;
   } catch {
     return {
       users: [],
@@ -44,24 +81,96 @@ function readSharedState() {
   }
 }
 
+function signSessionPayload(payload) {
+  return createHmac("sha256", AUTH_SECRET).update(payload).digest("base64url");
+}
+
+function createSessionToken(userId) {
+  const payload = `${userId}.${randomBytes(16).toString("base64url")}`;
+  const token = `${payload}.${signSessionPayload(payload)}`;
+  sessions.set(token, { userId, createdAt: Date.now() });
+  return token;
+}
+
+function tokenFromReq(req) {
+  const header = req.headers.authorization || "";
+  return header.startsWith("Bearer ") ? header.slice(7) : "";
+}
+
+function userFromRequest(req, state) {
+  const token = tokenFromReq(req);
+  let session = sessions.get(token);
+  if (!session && token) {
+    const parts = token.split(".");
+    if (parts.length === 3) {
+      const payload = `${parts[0]}.${parts[1]}`;
+      const actual = Buffer.from(parts[2]);
+      const expected = Buffer.from(signSessionPayload(payload));
+      if (actual.length === expected.length && timingSafeEqual(actual, expected)) {
+        session = { userId: parts[0], createdAt: Date.now() };
+        sessions.set(token, session);
+      }
+    }
+  }
+  if (!session) return null;
+  return (state.users || []).find((user) => user.id === session.userId) || null;
+}
+
+
+function sendJson(res, status, body) {
+  res.writeHead(status, { "Content-Type": "application/json" });
+  res.end(JSON.stringify(body));
+}
+
+function unauthorized(res) {
+  sendJson(res, 401, { error: "Unauthorized" });
+}
+
+function allowOtpRequestFromIp(req) {
+  const ip = req.socket?.remoteAddress || "unknown";
+  const now = Date.now();
+  const recent = (otpIpWindows.get(ip) || []).filter(
+    (timestamp) => timestamp > now - OTP_IP_WINDOW_MS,
+  );
+  if (recent.length >= OTP_IP_MAX_REQUESTS) {
+    otpIpWindows.set(ip, recent);
+    return false;
+  }
+  recent.push(now);
+  otpIpWindows.set(ip, recent);
+  return true;
+}
+
+function buildPlayerIndexMap(playersArray) {
+  const playerIndexMap = {};
+  playersArray.forEach((player, idx) => {
+    playerIndexMap[player.id] = idx;
+    if (player.socketId) playerIndexMap[player.socketId] = idx;
+  });
+  return playerIndexMap;
+}
+
+function assertCanPublishState(socket, room, playerId) {
+  const member = room.players.get(playerId);
+  if (!member || member.socketId !== socket.id) return false;
+  if (room.gameId === "totem" || room.gameId === "beasty-bar") return true;
+  const idx = room.gameState?.currentPlayerIndex;
+  const seated = room.turn.playersInGame?.[idx];
+  return Boolean(seated && seated.id === playerId);
+}
+
+function clearDisconnectTimer(roomId, playerId) {
+  const key = `${roomId}:${playerId}`;
+  const timer = disconnectTimers.get(key);
+  if (timer) {
+    clearTimeout(timer);
+    disconnectTimers.delete(key);
+  }
+}
+
 function writeSharedState(state) {
   ensureStateFile();
   fs.writeFileSync(STATE_FILE, JSON.stringify(state, null, 2), "utf8");
-}
-
-function generateGroupCode(seed = Date.now().toString(36)) {
-  const base = `${seed}${Math.random().toString(36).slice(2, 8)}`
-    .replace(/[^a-z0-9]/gi, "")
-    .toUpperCase();
-  return `GRP-${base.slice(0, 6).padEnd(6, "X")}`;
-}
-
-function generateUniqueGroupCode(groups, seed = Date.now().toString(36)) {
-  let nextCode = generateGroupCode(seed);
-  while (groups.some((group) => group.code === nextCode)) {
-    nextCode = generateGroupCode(`${seed}${Math.random().toString(36).slice(2, 6)}`);
-  }
-  return nextCode;
 }
 
 function normalizeTurnTimeSeconds(value) {
@@ -75,7 +184,7 @@ function normalizeGroup(entry) {
       : "public";
   return {
     ...entry,
-    code: entry.code || generateUniqueGroupCode([], entry.id),
+    code: entry.code || generateUniqueGroupCode([]),
     description: entry.description || "",
     flag: entry.flag || "🏳️",
     minScore: Number(entry.minScore) || 0,
@@ -101,7 +210,7 @@ function removeUserFromGroups(groups, userId) {
         pendingRequests,
       };
     })
-    .filter((group) => group.members.length > 0);
+    .filter((group) => group.members.length > 0 || group.id.startsWith("default-group-"));
 }
 
 function normalizeSocialState(state) {
@@ -149,6 +258,10 @@ function parseBody(req) {
     let body = "";
     req.on("data", (chunk) => {
       body += chunk;
+      if (body.length > MAX_BODY_BYTES) {
+        req.destroy();
+        reject(new Error("payload too large"));
+      }
     });
     req.on("end", () => {
       try {
@@ -170,34 +283,160 @@ const httpServer = createServer(async (req, res) => {
     return;
   }
 
+  if (req.method === "GET" && req.url === "/health") {
+    sendJson(res, 200, { ok: true, service: "splendor-server" });
+    return;
+  }
+
   const url = new URL(req.url || "/", "http://localhost:3001");
   const state = normalizeSocialState(readSharedState());
+  if (Array.isArray(databaseUsersSnapshot)) {
+    state.users = databaseUsersSnapshot;
+  }
   state.groups = Array.isArray(state.groups) ? state.groups.map(normalizeGroup) : [];
+  const mutatingSocial =
+    req.method === "POST" &&
+    (url.pathname.startsWith("/groups") || url.pathname.startsWith("/social"));
+  const actor = mutatingSocial ? userFromRequest(req, state) : null;
+  if (mutatingSocial && !actor) {
+    unauthorized(res);
+    return;
+  }
+
+  if (req.method === "POST" && url.pathname === "/auth/otp/request") {
+    if (!allowOtpRequestFromIp(req)) {
+      sendJson(res, 429, { error: "Too many verification-code requests" });
+      return;
+    }
+    const payload = (await parseBody(req).catch(() => null)) || {};
+    const result = await requestPhoneOtp(payload?.phone);
+    if (!result.ok) {
+      sendJson(res, result.status || 503, { error: result.error });
+      return;
+    }
+    sendJson(res, 200, result);
+    return;
+  }
+
+  if (req.method === "POST" && url.pathname === "/auth/register") {
+    const payload = (await parseBody(req).catch(() => null)) || {};
+    const username = String(payload?.username || "").trim();
+    const phone = normalizePhone(payload?.phone);
+    const code = String(payload?.code || "").trim();
+    if (!username || username.length > 15 || !isIranianMobile(phone) || !/^\d{6}$/.test(code)) {
+      sendJson(res, 400, { error: "Invalid registration payload" });
+      return;
+    }
+    if (state.users.some((user) => user.username.toLocaleLowerCase("en-US") === username.toLocaleLowerCase("en-US"))) {
+      sendJson(res, 409, { error: "Username already exists" });
+      return;
+    }
+    if (state.users.some((user) => normalizePhone(user.phone) === phone)) {
+      sendJson(res, 409, { error: "Phone already exists" });
+      return;
+    }
+    if (!consumePhoneOtp(phone, code)) {
+      sendJson(res, 401, { error: "Invalid or expired verification code" });
+      return;
+    }
+    const { salt, hash } = hashPassword(randomBytes(32).toString("hex"));
+    const user = {
+      id: Date.now().toString(),
+      username,
+      email: "",
+      phone,
+      createdAt: new Date().toISOString(),
+      salt,
+      passwordHash: hash,
+    };
+    state.users.push(user);
+    userMutationRevision += 1;
+    databaseUsersSnapshot = state.users;
+    void saveUserToDatabase(user);
+    writeSharedState(state);
+    const token = createSessionToken(user.id);
+    sendJson(res, 200, { ok: true, token, user: toPublicUser(user) });
+    return;
+  }
+
+  if (req.method === "POST" && url.pathname === "/auth/login") {
+    const payload = (await parseBody(req).catch(() => null)) || {};
+    const phone = normalizePhone(payload?.phone);
+    const code = String(payload?.code || "").trim();
+    if (!isIranianMobile(phone) || !/^\d{6}$/.test(code)) {
+      sendJson(res, 400, { error: "Invalid login payload" });
+      return;
+    }
+    const user = state.users.find((entry) => normalizePhone(entry.phone) === phone);
+    if (!user) {
+      sendJson(res, 404, { error: "ACCOUNT_NOT_FOUND" });
+      return;
+    }
+    if (!consumePhoneOtp(phone, code)) {
+      sendJson(res, 401, { error: "Invalid phone number or verification code" });
+      return;
+    }
+    const token = createSessionToken(user.id);
+    sendJson(res, 200, { ok: true, token, user: toPublicUser(user) });
+    return;
+  }
+
+  if (req.method === "GET" && url.pathname === "/auth/me") {
+    const user = userFromRequest(req, state);
+    if (!user) {
+      unauthorized(res);
+      return;
+    }
+    sendJson(res, 200, { user: toPublicUser(user) });
+    return;
+  }
+
+  if (req.method === "POST" && url.pathname === "/auth/logout") {
+    sessions.delete(tokenFromReq(req));
+    sendJson(res, 200, { ok: true });
+    return;
+  }
 
   if (req.method === "GET" && url.pathname === "/users") {
-    res.writeHead(200, { "Content-Type": "application/json" });
-    res.end(JSON.stringify({ users: state.users }));
+    sendJson(res, 200, { users: (state.users || []).map(toPublicUser) });
     return;
   }
 
   if (req.method === "POST" && url.pathname === "/users") {
-    const payload = await parseBody(req).catch(() => null);
-    if (!payload?.id || !payload?.username) {
-      res.writeHead(400, { "Content-Type": "application/json" });
-      res.end(JSON.stringify({ error: "Invalid user payload" }));
+    const actor = userFromRequest(req, state);
+    if (!actor) {
+      unauthorized(res);
       return;
     }
-
-    const existingIndex = state.users.findIndex((user) => user.id === payload.id);
-    if (existingIndex >= 0) {
-      state.users[existingIndex] = payload;
-    } else if (!state.users.some((user) => user.username === payload.username)) {
-      state.users.push(payload);
+    const payload = (await parseBody(req).catch(() => null)) || {};
+    const username = String(payload?.username || actor.username).trim();
+    if (!username || username.length > 15) {
+      sendJson(res, 400, { error: "Invalid user payload" });
+      return;
     }
-
+    if (state.users.some((user) => user.id !== actor.id && user.username.toLocaleLowerCase("en-US") === username.toLocaleLowerCase("en-US"))) {
+      sendJson(res, 409, { error: "Username already exists" });
+      return;
+    }
+    const existingIndex = state.users.findIndex((user) => user.id === actor.id);
+    if (existingIndex >= 0) {
+      state.users[existingIndex] = {
+        ...state.users[existingIndex],
+        username,
+        email: payload?.email ?? state.users[existingIndex].email,
+        selectedAvatar: payload?.selectedAvatar ?? state.users[existingIndex].selectedAvatar,
+      };
+      delete state.users[existingIndex].password;
+    }
+    userMutationRevision += 1;
+    databaseUsersSnapshot = state.users;
+    void saveUserToDatabase(state.users[existingIndex]);
     writeSharedState(state);
-    res.writeHead(200, { "Content-Type": "application/json" });
-    res.end(JSON.stringify({ ok: true, users: state.users }));
+    sendJson(res, 200, {
+      ok: true,
+      users: state.users.map(toPublicUser),
+      user: toPublicUser(state.users[existingIndex]),
+    });
     return;
   }
 
@@ -210,7 +449,7 @@ const httpServer = createServer(async (req, res) => {
   if (req.method === "GET" && url.pathname === "/social") {
     res.writeHead(200, { "Content-Type": "application/json" });
     res.end(JSON.stringify({
-      users: state.users,
+      users: (state.users || []).map(toPublicUser),
       groups: state.groups,
       friends: state.friends,
       friendRequests: state.friendRequests,
@@ -222,20 +461,21 @@ const httpServer = createServer(async (req, res) => {
   }
 
   if (req.method === "POST" && url.pathname === "/groups") {
-    const payload = await parseBody(req).catch(() => null);
-    if (!payload?.creatorId || !payload?.name) {
+    const payload = (await parseBody(req).catch(() => null)) || {};
+    if (!payload?.name) {
       res.writeHead(400, { "Content-Type": "application/json" });
       res.end(JSON.stringify({ error: "Invalid group payload" }));
       return;
     }
 
-    state.groups = removeUserFromGroups(state.groups, payload.creatorId);
+    state.groups = removeUserFromGroups(state.groups, actor.id);
     const groupId = `group-${Date.now()}`;
     const nextGroup = normalizeGroup({
       ...payload,
+      creatorId: actor.id,
       id: groupId,
-      code: generateUniqueGroupCode(state.groups, groupId),
-      members: [payload.creatorId],
+      code: generateUniqueGroupCode(state.groups),
+      members: [actor.id],
       pendingRequests: [],
       createdAt: new Date().toISOString(),
     });
@@ -247,7 +487,8 @@ const httpServer = createServer(async (req, res) => {
   }
 
   if (req.method === "POST" && url.pathname === "/groups/request") {
-    const payload = await parseBody(req).catch(() => null);
+    const payload = (await parseBody(req).catch(() => null)) || {};
+    payload.userId = actor.id;
     const group = state.groups.find((entry) => entry.id === payload?.groupId);
     if (!group || !payload?.userId) {
       res.writeHead(400, { "Content-Type": "application/json" });
@@ -285,6 +526,7 @@ const httpServer = createServer(async (req, res) => {
 
       if (!joinableGroup.members.includes(payload.userId)) {
         joinableGroup.members.push(payload.userId);
+        if (!joinableGroup.creatorId) joinableGroup.creatorId = payload.userId;
       }
       writeSharedState(state);
       res.writeHead(200, { "Content-Type": "application/json" });
@@ -303,7 +545,8 @@ const httpServer = createServer(async (req, res) => {
   }
 
   if (req.method === "POST" && url.pathname === "/groups/update") {
-    const payload = await parseBody(req).catch(() => null);
+    const payload = (await parseBody(req).catch(() => null)) || {};
+    payload.actorId = actor.id;
     const group = state.groups.find((entry) => entry.id === payload?.groupId);
     if (!group || !payload?.actorId || !payload?.updates) {
       res.writeHead(400, { "Content-Type": "application/json" });
@@ -340,7 +583,8 @@ const httpServer = createServer(async (req, res) => {
   }
 
   if (req.method === "POST" && url.pathname === "/groups/leave") {
-    const payload = await parseBody(req).catch(() => null);
+    const payload = (await parseBody(req).catch(() => null)) || {};
+    payload.userId = actor.id;
     if (!payload?.userId) {
       res.writeHead(400, { "Content-Type": "application/json" });
       res.end(JSON.stringify({ error: "Invalid leave payload" }));
@@ -356,8 +600,13 @@ const httpServer = createServer(async (req, res) => {
   }
 
   if (req.method === "POST" && url.pathname === "/groups/respond") {
-    const payload = await parseBody(req).catch(() => null);
+    const payload = (await parseBody(req).catch(() => null)) || {};
     const group = state.groups.find((entry) => entry.id === payload?.groupId);
+    if (!group || group.creatorId !== actor.id) {
+      res.writeHead(403, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ error: "Not allowed" }));
+      return;
+    }
     if (!group || !payload?.userId) {
       res.writeHead(400, { "Content-Type": "application/json" });
       res.end(JSON.stringify({ error: "Invalid respond payload" }));
@@ -379,7 +628,8 @@ const httpServer = createServer(async (req, res) => {
   }
 
   if (req.method === "POST" && url.pathname === "/groups/remove-member") {
-    const payload = await parseBody(req).catch(() => null);
+    const payload = (await parseBody(req).catch(() => null)) || {};
+    payload.actorId = actor.id;
     const group = state.groups.find((entry) => entry.id === payload?.groupId);
     if (!group || !payload?.memberId || !payload?.actorId) {
       res.writeHead(400, { "Content-Type": "application/json" });
@@ -402,7 +652,8 @@ const httpServer = createServer(async (req, res) => {
   }
 
   if (req.method === "POST" && url.pathname === "/social/friend-request") {
-    const payload = await parseBody(req).catch(() => null);
+    const payload = (await parseBody(req).catch(() => null)) || {};
+    payload.fromUserId = actor.id;
     if (!payload?.fromUserId || !payload?.toUserId) {
       res.writeHead(400, { "Content-Type": "application/json" });
       res.end(JSON.stringify({ error: "Invalid friend request payload" }));
@@ -433,9 +684,9 @@ const httpServer = createServer(async (req, res) => {
   }
 
   if (req.method === "POST" && url.pathname === "/social/friend-respond") {
-    const payload = await parseBody(req).catch(() => null);
+    const payload = (await parseBody(req).catch(() => null)) || {};
     const request = state.friendRequests.find((entry) => entry.id === payload?.requestId);
-    if (!request) {
+    if (!request || request.toUserId !== actor.id) {
       res.writeHead(404, { "Content-Type": "application/json" });
       res.end(JSON.stringify({ error: "Friend request not found" }));
       return;
@@ -454,7 +705,8 @@ const httpServer = createServer(async (req, res) => {
   }
 
   if (req.method === "POST" && url.pathname === "/social/messages") {
-    const payload = await parseBody(req).catch(() => null);
+    const payload = (await parseBody(req).catch(() => null)) || {};
+    payload.fromUserId = actor.id;
     if (!payload?.fromUserId || !payload?.toUserId || !payload?.text) {
       res.writeHead(400, { "Content-Type": "application/json" });
       res.end(JSON.stringify({ error: "Invalid message payload" }));
@@ -477,7 +729,8 @@ const httpServer = createServer(async (req, res) => {
   }
 
   if (req.method === "POST" && url.pathname === "/social/group-messages") {
-    const payload = await parseBody(req).catch(() => null);
+    const payload = (await parseBody(req).catch(() => null)) || {};
+    payload.senderId = actor.id;
     if (!payload?.groupId || !payload?.senderId || !payload?.text) {
       res.writeHead(400, { "Content-Type": "application/json" });
       res.end(JSON.stringify({ error: "Invalid group message payload" }));
@@ -500,12 +753,20 @@ const httpServer = createServer(async (req, res) => {
   }
 
   if (req.method === "POST" && url.pathname === "/social/game-invites") {
-    const payload = await parseBody(req).catch(() => null);
+    const payload = (await parseBody(req).catch(() => null)) || {};
+    payload.fromUserId = actor.id;
     if (!payload?.fromUserId || !payload?.toUserId) {
       res.writeHead(400, { "Content-Type": "application/json" });
       res.end(JSON.stringify({ error: "Invalid game invite payload" }));
       return;
     }
+
+    const gameId = payload.gameId === "dead-mans-draw" ? "dead-mans-draw" : "splendor";
+    const turnTime = normalizeTurnTimeSeconds(payload.turnTime);
+    const requestedRoomId = typeof payload.roomId === "string" ? payload.roomId.trim() : "";
+    const roomId = /^FR-[A-Z0-9]{6,32}$/.test(requestedRoomId)
+      ? requestedRoomId
+      : `FR-${Date.now().toString(36).toUpperCase()}${Math.random().toString(36).slice(2, 5).toUpperCase()}`;
 
     const exists = state.gameInvites.some(
       (invite) =>
@@ -521,6 +782,11 @@ const httpServer = createServer(async (req, res) => {
         toUserId: payload.toUserId,
         createdAt: new Date().toISOString(),
         status: "pending",
+        gameId,
+        playerCount: 2,
+        humanPlayers: 2,
+        turnTime,
+        roomId,
       });
       writeSharedState(state);
     }
@@ -531,9 +797,9 @@ const httpServer = createServer(async (req, res) => {
   }
 
   if (req.method === "POST" && url.pathname === "/social/game-invites/respond") {
-    const payload = await parseBody(req).catch(() => null);
+    const payload = (await parseBody(req).catch(() => null)) || {};
     const invite = state.gameInvites.find((entry) => entry.id === payload?.inviteId);
-    if (!invite) {
+    if (!invite || invite.toUserId !== actor.id) {
       res.writeHead(404, { "Content-Type": "application/json" });
       res.end(JSON.stringify({ error: "Game invite not found" }));
       return;
@@ -568,7 +834,18 @@ const io = new Server(httpServer, {
         /^https:\/\/.*\.trycloudflare\.com$/, // CloudFlare Tunnel
       ];
 
-      if (!origin || allowedPatterns.some((pattern) => pattern.test(origin))) {
+      const configuredOrigins = String(process.env.CLIENT_ORIGINS || "")
+        .split(",")
+        .map((entry) => entry.trim())
+        .filter(Boolean);
+      const configuredOriginAllowed = configuredOrigins.includes(origin);
+
+      if (
+        !origin ||
+        configuredOrigins.length === 0 ||
+        configuredOriginAllowed ||
+        allowedPatterns.some((pattern) => pattern.test(origin))
+      ) {
         callback(null, true);
       } else {
         callback(new Error("برای دسترسی اجازه نیست | Not allowed by CORS"));
@@ -615,7 +892,6 @@ function getOrCreateRoom(roomId) {
         endsAt: null,
         currentIndex: 0,
         durationMs: 45000,
-        missedByIndex: new Map(), // index -> missed turns due to timeout
         playersInGame: [], // ordered list used for index mapping
       },
       rematch: null,
@@ -624,7 +900,7 @@ function getOrCreateRoom(roomId) {
   return rooms.get(roomId);
 }
 
-function buildPlayerIndexMap(room) {
+function buildRoomPlayerIndexMap(room) {
   const map = {};
   if (!room?.turn?.playersInGame?.length) return map;
   room.turn.playersInGame.forEach((player, idx) => {
@@ -637,7 +913,6 @@ function buildPlayerIndexMap(room) {
 
 function resetMissedCounts(room) {
   if (!room?.turn) return;
-  room.turn.missedByIndex = new Map();
 }
 
 function removePlayerFromGame(roomId, playerIndex) {
@@ -697,7 +972,7 @@ function removePlayerFromGame(roomId, playerIndex) {
   return {
     removedPlayerMeta,
     gameState: room.gameState,
-    playerIndexMap: buildPlayerIndexMap(room),
+    playerIndexMap: buildRoomPlayerIndexMap(room),
     roomStatus: room.status,
   };
 }
@@ -790,7 +1065,7 @@ function removeDeadMansDrawPlayerFromGame(roomId, playerIndex) {
   return {
     removedPlayerMeta,
     gameState: room.gameState,
-    playerIndexMap: buildPlayerIndexMap(room),
+    playerIndexMap: buildRoomPlayerIndexMap(room),
     roomStatus: room.status,
   };
 }
@@ -834,6 +1109,12 @@ function startTurnTimer(roomId) {
   const room = rooms.get(roomId);
   if (!room || room.status !== "playing" || !room.gameState) return;
 
+  if (room.gameState.gameOver) {
+    room.status = "finished";
+    clearTurnTimer(room);
+    return;
+  }
+
   clearTurnTimer(room);
   const durationMs = normalizeTurnTimeSeconds(Math.round((room.turn?.durationMs || 45000) / 1000)) * 1000;
   room.turn.durationMs = durationMs;
@@ -842,7 +1123,9 @@ function startTurnTimer(roomId) {
   room.turn.endsAt = Date.now() + durationMs;
   io.to(roomId).emit("turn-timer-updated", {
     endsAt: room.turn.endsAt,
+    serverNow: Date.now(),
     currentPlayerIndex: room.turn.currentIndex,
+    durationMs,
   });
 
   room.turn.timer = setTimeout(() => {
@@ -854,10 +1137,15 @@ function startTurnTimer(roomId) {
 
     normalizeTimedOutPlayer(r);
 
-    // Auto-advance turn
-    const playerCount =
-      r.turn.playersInGame?.length || r.gameState.players?.length || 2;
-    r.gameState.currentPlayerIndex = (idx + 1) % Math.max(2, playerCount);
+    if (r.gameId === "dead-mans-draw") {
+      r.gameState = timeoutDeadMansDraw(r.gameState);
+    } else if (r.gameId === "totem" || r.gameId === "beasty-bar") {
+      io.to(roomId).emit("game-state-updated", r.gameState);
+      startTurnTimer(roomId);
+      return;
+    } else {
+      r.gameState = advanceSplendorTurn(r.gameState, r.targetScore || 15);
+    }
     io.to(roomId).emit("game-state-updated", r.gameState);
     startTurnTimer(roomId);
   }, durationMs);
@@ -993,7 +1281,7 @@ function tryMatchPlayers(playerCount) {
     };
   }
 
-  console.log(`   ➡️  No match possible. Queue too small.\n`);
+  console.log(`   ➡️  No match possible. Queue too small.\\n`);
   return null;
 }
 
@@ -1031,6 +1319,9 @@ io.on("connection", (socket) => {
     }
 
     // Add to matchmaking queue
+    matchmakingQueue[playerCount] = matchmakingQueue[playerCount].filter(
+      (player) => player.playerId !== playerId && player.socketId !== socket.id,
+    );
     matchmakingQueue[playerCount].push({
       socketId: socket.id,
       playerId,
@@ -1103,6 +1394,39 @@ io.on("connection", (socket) => {
     const existingRoom = rooms.get(roomId);
     const room = existingRoom || getOrCreateRoom(roomId);
     if (!room) return;
+    const isFriendInviteRoom = typeof roomId === "string" && roomId.startsWith("FR-");
+    if (isFriendInviteRoom) {
+      room.maxPlayers = 2;
+    }
+
+    const already = room.players.get(playerId);
+    if (already) {
+      clearDisconnectTimer(roomId, playerId);
+      already.socketId = socket.id;
+      already.connected = true;
+      already.name = playerName || already.name;
+      socket.join(roomId);
+      socket.emit("players-updated", {
+        players: getRoomPlayersArray(roomId),
+        roomStatus: room.status,
+      });
+      if (room.status === "playing" && room.gameState) {
+        socket.emit("game-state-updated", room.gameState);
+        socket.emit("player-index-map-updated", {
+          playerIndexMap: buildPlayerIndexMap(room.turn.playersInGame || getRoomPlayersArray(roomId)),
+          gameState: room.gameState,
+        });
+        if (Number.isFinite(room.turn?.endsAt)) {
+          socket.emit("turn-timer-updated", {
+            endsAt: room.turn.endsAt,
+            serverNow: Date.now(),
+            currentPlayerIndex: room.gameState.currentPlayerIndex || 0,
+            durationMs: room.turn.durationMs,
+          });
+        }
+      }
+      return;
+    }
 
     if (!isHost && room.status !== "waiting") {
       socket.emit("join-room-error", {
@@ -1129,11 +1453,11 @@ io.on("connection", (socket) => {
 
     // Update max players if host is setting it
     if (isHost && playerCount) {
-      room.maxPlayers = playerCount;
+      room.maxPlayers = isFriendInviteRoom ? 2 : playerCount;
       console.log(`   Max Players set to: ${playerCount}`);
     }
     if (gameId) {
-      room.gameId = gameId;
+      room.gameId = isFriendInviteRoom && gameId !== "dead-mans-draw" ? "splendor" : gameId;
     }
     if (turnTime) {
       room.turn.durationMs = normalizeTurnTimeSeconds(turnTime) * 1000;
@@ -1178,15 +1502,11 @@ io.on("connection", (socket) => {
         a.socketId.localeCompare(b.socketId),
       );
       room.turn.playersInGame = playersArray;
-      room.turn.missedByIndex = new Map();
       room.turn.durationMs = normalizeTurnTimeSeconds(turnTime) * 1000;
       room.rematch = null;
 
       // Create mapping of socket ID to player index in game
-      const playerIndexMap = {};
-      playersArray.forEach((player, idx) => {
-        playerIndexMap[player.socketId] = idx;
-      });
+      const playerIndexMap = buildPlayerIndexMap(playersArray);
 
       // Notify all players in room that game started
       io.to(roomId).emit("game-started", {
@@ -1209,9 +1529,9 @@ io.on("connection", (socket) => {
 
   // Sync game state - main action that broadcasts to all players
   socket.on("sync-game-state", (data) => {
-    const { roomId, gameState } = data;
+    const { roomId, gameState, playerId } = data;
     const room = rooms.get(roomId);
-    if (room) {
+    if (room && assertCanPublishState(socket, room, playerId || Array.from(room.players.values()).find((p) => p.socketId === socket.id)?.id)) {
       const prevIndex = room.gameState?.currentPlayerIndex;
       room.gameState = gameState;
       // Broadcast updated game state to ALL players in room (including sender)
@@ -1225,7 +1545,6 @@ io.on("connection", (socket) => {
         typeof gameState?.currentPlayerIndex === "number" &&
         gameState.currentPlayerIndex !== prevIndex
       ) {
-        room.turn.missedByIndex.set(prevIndex, 0);
       }
 
       if (
@@ -1242,7 +1561,7 @@ io.on("connection", (socket) => {
   socket.on("game-action", (data) => {
     const { roomId, playerId, gameState, timestamp } = data;
     const room = rooms.get(roomId);
-    if (room) {
+    if (room && assertCanPublishState(socket, room, playerId)) {
       const prevIndex = room.gameState?.currentPlayerIndex;
       room.gameState = gameState;
       // Broadcast to all players in room
@@ -1256,7 +1575,6 @@ io.on("connection", (socket) => {
         typeof gameState?.currentPlayerIndex === "number" &&
         gameState.currentPlayerIndex !== prevIndex
       ) {
-        room.turn.missedByIndex.set(prevIndex, 0);
       }
 
       if (
@@ -1273,7 +1591,7 @@ io.on("connection", (socket) => {
   socket.on("card-purchased", (data) => {
     const { roomId, cardId, playerIndex, playerId, gameState } = data;
     const room = rooms.get(roomId);
-    if (room && gameState) {
+    if (room && gameState && assertCanPublishState(socket, room, playerId)) {
       room.gameState = gameState;
       io.to(roomId).emit("card-purchase-action", {
         cardId,
@@ -1290,7 +1608,7 @@ io.on("connection", (socket) => {
   socket.on("tokens-taken", (data) => {
     const { roomId, gems, playerIndex, playerId, gameState } = data;
     const room = rooms.get(roomId);
-    if (room && gameState) {
+    if (room && gameState && assertCanPublishState(socket, room, playerId)) {
       room.gameState = gameState;
       io.to(roomId).emit("tokens-action", {
         gems,
@@ -1307,7 +1625,7 @@ io.on("connection", (socket) => {
   socket.on("send-chat-message", (data) => {
     const { roomId, message } = data;
     const room = rooms.get(roomId);
-    if (room) {
+    if (room && socket.rooms.has(roomId)) {
       // Broadcast message to all in room
       io.to(roomId).emit("chat-message", message);
       console.log(
@@ -1320,10 +1638,10 @@ io.on("connection", (socket) => {
   socket.on("microphone-toggled", (data) => {
     const { roomId, playerId, enabled } = data;
     const room = rooms.get(roomId);
-    if (room) {
-      // Broadcast microphone status to all in room
+    if (room && socket.rooms.has(roomId)) {
       io.to(roomId).emit("player-microphone-toggled", {
         playerId,
+        socketId: socket.id,
         enabled,
       });
       const status = enabled ? "ON 🎤" : "OFF 🔇";
@@ -1336,7 +1654,7 @@ io.on("connection", (socket) => {
   // Voice chat signaling (WebRTC)
   socket.on("voice-offer", (data) => {
     const { to, offer, roomId } = data;
-    if (to) {
+    if (to && roomId && socket.rooms.has(roomId)) {
       io.to(to).emit("voice-offer", {
         from: socket.id,
         offer,
@@ -1347,7 +1665,7 @@ io.on("connection", (socket) => {
 
   socket.on("voice-answer", (data) => {
     const { to, answer, roomId } = data;
-    if (to) {
+    if (to && roomId && socket.rooms.has(roomId)) {
       io.to(to).emit("voice-answer", {
         from: socket.id,
         answer,
@@ -1358,7 +1676,7 @@ io.on("connection", (socket) => {
 
   socket.on("voice-ice", (data) => {
     const { to, candidate, roomId } = data;
-    if (to) {
+    if (to && roomId && socket.rooms.has(roomId)) {
       io.to(to).emit("voice-ice", {
         from: socket.id,
         candidate,
@@ -1392,6 +1710,35 @@ io.on("connection", (socket) => {
         playersInRoom: getRoomPlayersArray(roomId),
       });
       console.log(`✅ [END-GAME] Game ended | بازی پایان یافت`);
+    }
+  });
+
+  socket.on("post-game-action", (data) => {
+    const { roomId, playerId, action, initialGameState } = data;
+    const room = rooms.get(roomId);
+    if (!room || !socket.rooms.has(roomId)) return;
+    if (action === "exit") return;
+    if (action === "play-again") {
+      socket.emit("request-rematch", { roomId, playerId, initialGameState });
+      if (!room.rematch) {
+        room.rematch = {
+          requestedBy: playerId,
+          acceptedBy: new Set([playerId]),
+          initialGameState,
+        };
+        socket.to(roomId).emit("rematch-requested", { playerId });
+        io.to(roomId).emit("post-game-votes", {
+          votes: Array.from(room.rematch.acceptedBy),
+        });
+        return;
+      }
+      room.rematch.acceptedBy.add(playerId);
+      io.to(roomId).emit("post-game-votes", {
+        votes: Array.from(room.rematch.acceptedBy),
+      });
+      if (room.rematch.acceptedBy.size >= room.players.size) {
+        socket.emit("respond-rematch", { roomId, playerId, accept: true });
+      }
     }
   });
 
@@ -1429,12 +1776,8 @@ io.on("connection", (socket) => {
         a.socketId.localeCompare(b.socketId),
       );
       room.turn.playersInGame = playersArray;
-      room.turn.missedByIndex = new Map();
 
-      const playerIndexMap = {};
-      playersArray.forEach((player, idx) => {
-        playerIndexMap[player.socketId] = idx;
-      });
+      const playerIndexMap = buildPlayerIndexMap(playersArray);
 
       io.to(roomId).emit("rematch-result", { accepted: true });
       io.to(roomId).emit("game-started", {
@@ -1463,6 +1806,19 @@ io.on("connection", (socket) => {
     for (const [roomId, room] of rooms.entries()) {
       const matchingPlayer = Array.from(room.players.values()).find((player) => player.socketId === socket.id);
       if (!matchingPlayer) continue;
+      if (room.status === "playing") {
+        matchingPlayer.connected = false;
+        const key = `${roomId}:${matchingPlayer.id}`;
+        clearDisconnectTimer(roomId, matchingPlayer.id);
+        disconnectTimers.set(
+          key,
+          setTimeout(() => {
+            handlePlayerDeparture(roomId, matchingPlayer.id, matchingPlayer.socketId);
+            disconnectTimers.delete(key);
+          }, RECONNECT_MS),
+        );
+        continue;
+      }
       handlePlayerDeparture(roomId, matchingPlayer.id, socket.id);
       socket.leave(roomId);
     }
@@ -1470,6 +1826,15 @@ io.on("connection", (socket) => {
 });
 
 const PORT = process.env.PORT || 3001;
+const databaseSyncRevision = userMutationRevision;
+void syncUsersWithDatabase(readSharedState().users || []).then((users) => {
+  if (databaseSyncRevision !== userMutationRevision || !Array.isArray(users)) return;
+  databaseUsersSnapshot = users;
+  const state = normalizeSocialState(readSharedState());
+  state.users = users;
+  writeSharedState(state);
+});
+
 httpServer.listen(PORT, () => {
   console.log(
     `\n🎮 [SERVER] Splendor Server running on http://localhost:${PORT}`,

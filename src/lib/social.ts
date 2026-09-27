@@ -84,8 +84,7 @@ export interface GameInvite {
   roomId: string;
 }
 
-const REMOTE_RETRY_COOLDOWN_MS = 30_000;
-let remoteDisabledUntil = 0;
+const REMOTE_REQUEST_TIMEOUT_MS = 5_000;
 
 interface SocialStore {
   friends: Record<string, string[]>;
@@ -109,6 +108,13 @@ const DEFAULT_STORE: SocialStore = {
 
 const MAX_SAVED_MESSAGES = 100;
 
+const DEFAULT_PLAYERS = Array.from({ length: 10 }, (_, index) => ({
+  id: `default-player-${index + 1}`,
+  username: `Player ${index + 1}`,
+  email: "",
+  createdAt: "2026-01-01T00:00:00.000Z",
+}));
+
 function normalizeGroup(entry: Partial<GroupEntry> & { id: string; creatorId: string; name: string }): GroupEntry {
   const visibility =
     entry.visibility === "private" || entry.visibility === "closed"
@@ -130,16 +136,16 @@ function normalizeGroup(entry: Partial<GroupEntry> & { id: string; creatorId: st
 }
 
 function normalizeGameInvite(invite: Partial<GameInvite> & Pick<GameInvite, "id" | "fromUserId" | "toUserId" | "createdAt" | "status">): GameInvite {
-  const playerCount = normalizePlayerCount(Number(invite.playerCount) || 2);
+  const gameId = invite.gameId === "dead-mans-draw" ? "dead-mans-draw" : "splendor";
   return {
     id: invite.id,
     fromUserId: invite.fromUserId,
     toUserId: invite.toUserId,
     createdAt: invite.createdAt,
     status: invite.status,
-    gameId: typeof invite.gameId === "string" && invite.gameId ? invite.gameId : "splendor",
-    playerCount,
-    humanPlayers: normalizeHumanPlayers(Number(invite.humanPlayers) || playerCount, playerCount),
+    gameId,
+    playerCount: 2,
+    humanPlayers: 2,
     turnTime: normalizeTurnTime(Number(invite.turnTime) || 15),
     roomId: typeof invite.roomId === "string" && invite.roomId ? invite.roomId : `FR-${invite.id.slice(-6).toUpperCase()}`,
   };
@@ -199,18 +205,25 @@ function mergeStore(partial: Partial<SocialStore>) {
 }
 
 function generateGroupCode(seed?: string) {
-  const base = `${seed || Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`
-    .replace(/[^a-z0-9]/gi, "")
-    .toUpperCase();
-  return `GRP-${base.slice(0, 6).padEnd(6, "X")}`;
+  const space = 36 ** 6;
+  let value = Math.floor(Math.random() * space);
+  if (seed) {
+    value = 0;
+    for (const character of seed) value = (Math.imul(value, 31) + character.charCodeAt(0)) >>> 0;
+  }
+  return `GRP-${(value % space).toString(36).toUpperCase().padStart(6, "0")}`;
 }
 
 function generateUniqueGroupCode(groups: GroupEntry[], seed?: string) {
-  let nextCode = generateGroupCode(seed);
-  while (groups.some((group) => group.code === nextCode)) {
-    nextCode = generateGroupCode(`${seed || Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`);
+  const used = new Set(groups.map((group) => group.code));
+  const space = 36 ** 6;
+  let value = parseInt(generateGroupCode(seed).slice(4), 36);
+  for (let attempts = 0; attempts < space; attempts += 1) {
+    const nextCode = `GRP-${value.toString(36).toUpperCase().padStart(6, "0")}`;
+    if (!used.has(nextCode)) return nextCode;
+    value = (value + 1) % space;
   }
-  return nextCode;
+  throw new Error("Group code space exhausted");
 }
 
 function removeUserFromGroups(store: SocialStore, userId: string) {
@@ -232,37 +245,42 @@ function removeUserFromGroups(store: SocialStore, userId: string) {
 }
 
 async function fetchRemoteJson<T>(url: string, init?: RequestInit): Promise<T | null> {
-  if (Date.now() < remoteDisabledUntil) {
-    return null;
-  }
-
+  const controller = new AbortController();
+  const timeout = window.setTimeout(() => controller.abort(), REMOTE_REQUEST_TIMEOUT_MS);
   try {
     const headers = new Headers(init?.headers);
+    const token =
+      sessionStorage.getItem("splendor_session_token") ||
+      localStorage.getItem("splendor_session_token");
+    if (token) headers.set("Authorization", `Bearer ${token}`);
     const hasBody = init?.body !== undefined && init?.body !== null;
 
     if (!hasBody) {
       headers.delete("Content-Type");
     } else if (!headers.has("Content-Type")) {
-      headers.set("Content-Type", "text/plain;charset=UTF-8");
+      headers.set("Content-Type", "application/json");
     }
 
     const response = await fetch(url, {
       mode: "cors",
       ...init,
       headers,
+      signal: controller.signal,
     });
 
     if (!response.ok) return null;
     return (await response.json()) as T;
   } catch {
-    remoteDisabledUntil = Date.now() + REMOTE_RETRY_COOLDOWN_MS;
     return null;
+  } finally {
+    window.clearTimeout(timeout);
   }
 }
 
 async function postRemote(url: string, payload: Record<string, unknown>) {
   return fetchRemoteJson<{ ok?: boolean }>(`${API_SERVER_URL}${url}`, {
     method: "POST",
+    keepalive: true,
     body: JSON.stringify(payload),
   });
 }
@@ -444,18 +462,8 @@ type SendGameInviteInput = {
   fromUserId: string;
   toUserId: string;
   gameId: string;
-  playerCount: number;
-  humanPlayers: number;
   turnTime: 15 | 30 | 45 | 60;
 };
-
-function normalizePlayerCount(playerCount: number) {
-  return Math.max(2, Math.min(4, Math.floor(playerCount || 2)));
-}
-
-function normalizeHumanPlayers(humanPlayers: number, playerCount: number) {
-  return Math.max(1, Math.min(playerCount, Math.floor(humanPlayers || 2)));
-}
 
 function normalizeTurnTime(turnTime: number): 15 | 30 | 45 | 60 {
   return turnTime === 15 || turnTime === 30 || turnTime === 45 || turnTime === 60 ? turnTime : 15;
@@ -464,32 +472,36 @@ function normalizeTurnTime(turnTime: number): 15 | 30 | 45 | 60 {
 export function sendGameInvite(input: SendGameInviteInput) {
   const { fromUserId, toUserId, gameId } = input;
   const store = readStore();
-  const playerCount = normalizePlayerCount(input.playerCount);
-  const humanPlayers = normalizeHumanPlayers(input.humanPlayers, playerCount);
+  const safeGameId = gameId === "dead-mans-draw" ? "dead-mans-draw" : "splendor";
+  const playerCount = 2;
+  const humanPlayers = 2;
   const turnTime = normalizeTurnTime(input.turnTime);
-  const exists = store.gameInvites.some(
+  const existingInvite = store.gameInvites.find(
     (invite) =>
       invite.status === "pending" &&
       ((invite.fromUserId === fromUserId && invite.toUserId === toUserId) ||
         (invite.fromUserId === toUserId && invite.toUserId === fromUserId)),
   );
-  if (exists) return false;
+  if (existingInvite) {
+    return existingInvite.fromUserId === fromUserId ? normalizeGameInvite(existingInvite) : null;
+  }
   const roomId = `FR-${Date.now().toString(36).toUpperCase()}${Math.random().toString(36).slice(2, 5).toUpperCase()}`;
-  store.gameInvites.unshift({
+  const invite: GameInvite = {
     id: `invite-${Date.now()}-${fromUserId}-${toUserId}`,
     fromUserId,
     toUserId,
     createdAt: new Date().toISOString(),
     status: "pending",
-    gameId: gameId || "splendor",
+    gameId: safeGameId,
     playerCount,
     humanPlayers,
     turnTime,
     roomId,
-  });
+  };
+  store.gameInvites.unshift(invite);
   persistStore(store);
-  postRemote("/social/game-invites", { fromUserId, toUserId, gameId, playerCount, humanPlayers, turnTime, roomId }).then(() => syncSocialStateRemote());
-  return true;
+  postRemote("/social/game-invites", { fromUserId, toUserId, gameId: safeGameId, playerCount, humanPlayers, turnTime, roomId }).then(() => syncSocialStateRemote());
+  return invite;
 }
 
 export function respondToGameInvite(inviteId: string, accept: boolean) {
@@ -528,7 +540,9 @@ export async function getGroupsRemote() {
   if (Array.isArray(data?.groups)) {
     const store = readStore();
     store.groups = data.groups.map((group) => normalizeGroup(group as any));
-    persistStore(store);
+    // This is a read/hydration path. Emitting a social-change event here makes
+    // the Groups page request groups again from its own event listener.
+    writeStore(store);
     return store.groups;
   }
   return getGroups();
@@ -538,17 +552,17 @@ export function createGroup(group: Omit<GroupEntry, "id" | "code" | "members" | 
   const store = readStore();
   removeUserFromGroups(store, group.creatorId);
   const id = `group-${Date.now()}`;
-  store.groups.unshift(
-    normalizeGroup({
-      ...group,
-      id,
-      code: generateUniqueGroupCode(store.groups, id),
-      members: [group.creatorId],
-      pendingRequests: [],
-      createdAt: new Date().toISOString(),
-    }),
-  );
+  const created = normalizeGroup({
+    ...group,
+    id,
+    code: generateUniqueGroupCode(store.groups, id),
+    members: [group.creatorId],
+    pendingRequests: [],
+    createdAt: new Date().toISOString(),
+  });
+  store.groups.unshift(created);
   persistStore(store);
+  return created;
 }
 
 export async function createGroupRemote(group: Omit<GroupEntry, "id" | "code" | "members" | "pendingRequests" | "createdAt">) {
@@ -556,12 +570,11 @@ export async function createGroupRemote(group: Omit<GroupEntry, "id" | "code" | 
     method: "POST",
     body: JSON.stringify(group),
   });
-  if (Array.isArray(data?.groups)) {
-    const store = readStore();
-    store.groups = data.groups.map((entry) => normalizeGroup(entry as any));
-    persistStore(store);
-  }
-  return data?.group ? normalizeGroup(data.group as any) : null;
+  if (!data?.group || !Array.isArray(data.groups)) return null;
+  const store = readStore();
+  store.groups = data.groups.map((entry) => normalizeGroup(entry as any));
+  persistStore(store);
+  return normalizeGroup(data.group as any);
 }
 
 export function updateGroup(groupId: string, actorId: string, updates: Partial<Pick<GroupEntry, "name" | "description" | "flag" | "minScore" | "visibility">>) {
@@ -750,7 +763,8 @@ export function getGroupMembersInfo(groupId: string): GroupMemberInfo[] {
 }
 
 export function getRankedPlayers(): RankedPlayerInfo[] {
-  return getRegisteredUsers()
+  const users = getRegisteredUsers();
+  return (users.length ? users : DEFAULT_PLAYERS)
     .map((user: any) => {
       const progress = readProgress(user.id);
       const extras = readPlayerExtras(user.id);
@@ -788,7 +802,9 @@ export function sendGroupMessage(groupId: string, senderId: string, text: string
     .slice(-MAX_SAVED_MESSAGES);
   store.groupMessages = [...otherGroups, ...latestGroupMessages];
   persistStore(store);
-  postRemote("/social/group-messages", { groupId, senderId, text }).then(() => syncSocialStateRemote());
+  // The local event above renders the message immediately. The server write is
+  // fire-and-forget so every message does not trigger a second full social sync.
+  void postRemote("/social/group-messages", { groupId, senderId, text });
 }
 
 export function syncSelectedAvatar(userId: string | undefined, selectedAvatar: string) {

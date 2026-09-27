@@ -276,7 +276,7 @@ export default function SplendorIntroTutorial() {
               <Button
                 size="lg"
                 onClick={() => {
-                  navigate("/games");
+                  navigate("/menu");
                 }}
                 className="w-full"
               >

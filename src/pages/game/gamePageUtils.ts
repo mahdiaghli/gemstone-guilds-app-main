@@ -39,6 +39,7 @@ export interface GameProps {
   playerNamesList?: string[];
   socket?: Socket | null;
   serverGameState?: GameState | null;
+  turnTimerEndsAt?: number | null;
   onGameStateChange?: (state: GameState) => void;
   onGameEnd?: () => void;
   gameOverActions?: PostGameActionButton[];

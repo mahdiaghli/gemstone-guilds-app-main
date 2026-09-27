@@ -12,6 +12,14 @@ type GameRouterViewProps = GameProps & {
 export default function GameRouterView({ gameId, ...props }: GameRouterViewProps) {
   const selectedGame = getGameById(gameId);
 
+  if (!selectedGame.playable) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-black px-6 text-center text-amber-100">
+        Coming soon
+      </div>
+    );
+  }
+
   if (selectedGame.id === "dead-mans-draw") {
     return (
       <DeadMansDrawGame
@@ -29,6 +37,13 @@ export default function GameRouterView({ gameId, ...props }: GameRouterViewProps
   }
 
   if (selectedGame.id === "beasty-bar") {
+    if (props.mode === "online") {
+      return (
+        <div className="flex min-h-screen items-center justify-center bg-black px-6 text-center text-amber-100">
+          Coming soon
+        </div>
+      );
+    }
     return <BeastyBarGame />;
   }
 

@@ -10,24 +10,27 @@ import type {
   DeadMansDrawPendingDrawerProps,
   DeadMansDrawSummaryModalProps,
 } from "./types";
-import {
-  type DeadMansDrawTutorialTitleKey,
-} from "./shared";
 
 export function DeadMansDrawSummaryModal({
   open,
   dir,
   t,
-  tutorialSteps,
-  tutorialStep,
-  onNext,
-  onPrev,
   onClose,
 }: DeadMansDrawSummaryModalProps) {
   if (!open) return null;
-  const currentStep = tutorialSteps[tutorialStep] ?? tutorialSteps[0];
-
   const isRTL = dir === "rtl";
+  const cardPowers = [
+    ["deadMansDrawSuitAstrolabe", "deadMansDrawSuitHelpAstrolabe"],
+    ["deadMansDrawSuitPistol", "deadMansDrawSuitHelpPistol"],
+    ["deadMansDrawSuitDagger", "deadMansDrawSuitHelpDagger"],
+    ["deadMansDrawSuitCarpet", "deadMansDrawSuitHelpCarpet"],
+    ["deadMansDrawSuitSnake", "deadMansDrawSuitHelpSnake"],
+    ["deadMansDrawSuitCoin", "deadMansDrawSuitHelpCoin"],
+    ["deadMansDrawSuitHorseshoe", "deadMansDrawSuitHelpHorseshoe"],
+    ["deadMansDrawSuitMap", "deadMansDrawSuitHelpMap"],
+    ["deadMansDrawSuitChest", "deadMansDrawSuitHelpChest"],
+    ["deadMansDrawSuitKey", "deadMansDrawSuitHelpKey"],
+  ] as const;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-sm" onClick={onClose}>
@@ -35,7 +38,7 @@ export function DeadMansDrawSummaryModal({
         initial={{ opacity: 0, y: 18, scale: 0.96 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         dir={dir}
-        className="relative w-full max-w-lg rounded-[32px] border border-teal-300/25 bg-cover bg-center p-6 shadow-[0_24px_80px_rgba(2,6,23,0.7)]"
+        className="relative max-h-[70dvh] w-full max-w-lg overflow-y-auto rounded-[28px] border border-teal-300/25 bg-cover bg-center p-4 shadow-[0_24px_80px_rgba(2,6,23,0.7)]"
         style={{
           backgroundImage: `linear-gradient(rgba(2,6,23,0.9), rgba(2,6,23,0.93)), url(${zirkhakiBackground})`,
         }}
@@ -51,24 +54,22 @@ export function DeadMansDrawSummaryModal({
         >
           x
         </button>
-        <p className={cn("text-xs uppercase tracking-[0.35em] text-teal-100/55", isRTL ? "font-persian text-right" : "font-cinzel")}>
-          {t("deadMansDrawWalkthroughProgress", {
-            current: tutorialStep + 1,
-            total: tutorialSteps.length,
-          })}
-        </p>
-        <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-slate-700">
-          <div className="h-full rounded-full bg-teal-300 transition-all" style={{ width: `${((tutorialStep + 1) / tutorialSteps.length) * 100}%` }} />
-        </div>
-        <h2 className="mt-4 font-cinzel text-3xl text-white">
-          {t(`deadMansDrawTutorialStep${currentStep}Title` as DeadMansDrawTutorialTitleKey)}
+        <h2 className={cn("mt-2 pr-10 text-xl font-bold text-teal-100", isRTL && "text-right font-persian")}>
+          {t("deadMansDrawSummaryTitle")}
         </h2>
-        <p className="mt-3 text-sm leading-6 text-slate-200/85">
-          {t(`deadMansDrawTutorialStep${currentStep}Body` as any)}
+        <p className={cn("mt-2 whitespace-pre-line text-sm leading-5 text-slate-200/85", isRTL && "text-right font-persian")}>
+          {t("deadMansDrawTutorialSummaryIntro")}
         </p>
-        <div className={cn("mt-6 flex flex-wrap gap-3", isRTL && "flex-row-reverse")}>
-          <Button variant="outline" onClick={onPrev} disabled={tutorialStep === 0}>{t("tutorialPrev")}</Button>
-          <Button variant="game" onClick={onNext} disabled={tutorialStep === tutorialSteps.length - 1}>{t("tutorialNext")}</Button>
+        <div className="mt-3">
+          <h3 className={cn("text-base font-semibold text-teal-100", isRTL && "text-right")}>
+            {t("deadMansDrawCardPowersLabel")}
+          </h3>
+          <p className={cn("mt-2 whitespace-pre-line text-sm leading-6 text-slate-200/85", isRTL && "text-right")}>
+            {cardPowers.map(([nameKey, abilityKey]) => `${t(nameKey)}: ${t(abilityKey)}`).join("\n")}
+          </p>
+        </div>
+        <div className={cn("mt-3 flex", isRTL ? "justify-start" : "justify-end")}>
+          <Button variant="game" onClick={onClose}>{t("quickRulesClose")}</Button>
         </div>
       </motion.div>
     </div>
@@ -93,9 +94,9 @@ export function DeadMansDrawExitModal({
           <AlertDialogTitle>{t("leaveGameTitle")}</AlertDialogTitle>
         </AlertDialogHeader>
         <p className={cn("mt-2 text-sm text-slate-200/85", isRTL && "font-persian")}>{t("leaveGameDescription")}</p>
-        <AlertDialogFooter className={cn("mt-4", isRTL && "flex-row-reverse") }>
-          <AlertDialogCancel onClick={onClose}>{t("stay")}</AlertDialogCancel>
-          <AlertDialogAction onClick={onLeave}>{t("leaveGameAction")}</AlertDialogAction>
+        <AlertDialogFooter className={cn("mt-4 gap-3 sm:justify-end", isRTL && "flex-row-reverse")}>
+          <AlertDialogCancel className="h-11 min-w-[120px] px-5" onClick={onClose}>{t("stay")}</AlertDialogCancel>
+          <AlertDialogAction className="h-11 min-w-[120px] px-5" onClick={onLeave}>{t("leaveGameAction")}</AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>

@@ -14,7 +14,7 @@ import {
   PREMIUM_PLANS,
   SHOP_SECTIONS,
   WEEKLY_REWARDS,
-  applyOfferPurchase,
+  purchaseShopOffer,
   claimWeeklyReward,
   formatTomans,
   getCurrentRewardState,
@@ -44,19 +44,17 @@ import merchantTwoImage from "@/assets/merchant2.webp";
 import merchantGirlTwoImage from "@/assets/merchant girl2.webp";
 import merchantThreeImage from "@/assets/merchant3.webp";
 import merchantGirlThreeImage from "@/assets/merchant girl3.webp";
-import fireImage from "@/assets/fire.webp";
 
 const sectionParamMap: Record<string, ShopSection["id"]> = {
   coins: "coins",
   diamonds: "diamonds",
-  stickers: "stickers",
   avatars: "avatars",
+  backgrounds: "backgrounds",
 };
 
 const rewardImageMap = {
   coins: coinImage,
   gems: diamondImage,
-  sticker: fireImage,
   avatar: merchantImage,
 };
 
@@ -77,7 +75,6 @@ const offerImageMap: Record<ShopSection["id"], string[]> = {
     diamondComboImage,
     diamondDoubleChestImage,
   ],
-  stickers: [fireImage, fireImage, fireImage, fireImage, fireImage, fireImage],
   avatars: [
     merchantImage,
     merchantGirlImage,
@@ -85,6 +82,14 @@ const offerImageMap: Record<ShopSection["id"], string[]> = {
     merchantGirlTwoImage,
     merchantThreeImage,
     merchantGirlThreeImage,
+  ],
+  backgrounds: [
+    new URL("../assets/back-ground1.webp", import.meta.url).href,
+    new URL("../assets/back-ground2.webp", import.meta.url).href,
+    new URL("../assets/back-ground3.webp", import.meta.url).href,
+    new URL("../assets/back-ground4.webp", import.meta.url).href,
+    new URL("../assets/back-ground5.webp", import.meta.url).href,
+    new URL("../assets/back-ground6.webp", import.meta.url).href,
   ],
 };
 
@@ -128,12 +133,22 @@ export default function Shop() {
     );
   }, [isFa, searchParams]);
 
-  const handleOfferPurchase = (
+  const handleOfferPurchase = async (
     sectionId: ShopSection["id"],
     offerId: string
   ) => {
-    applyOfferPurchase(user?.id, sectionId, offerId);
-    setMessage(t("purchaseSuccess"));
+    if (isProcessingPurchase) return;
+    setIsProcessingPurchase(true);
+    try {
+      const result = await purchaseShopOffer(user?.id, sectionId, offerId, availableProviders[0]);
+      setMessage(result.ok ? t("purchaseSuccess") : (isFa
+        ? "پرداخت درون‌برنامه‌ای هنوز به بازار/مایکت و تأیید سرور متصل نشده است؛ مبلغی از شما گرفته نشد."
+        : "Store billing and server verification are not configured yet. You were not charged."));
+    } catch {
+      setMessage(isFa ? "خرید انجام نشد و آیتمی اضافه نشد." : "Purchase failed; no item was granted.");
+    } finally {
+      setIsProcessingPurchase(false);
+    }
   };
 
   const handleClaimReward = () => {
@@ -209,13 +224,20 @@ export default function Shop() {
     index: number
   ) => {
     const image =
-      offerImageMap[sectionId][index] || rewardImageMap[offer.rewardType];
-    const amountLabel =
-      sectionId === "avatars" ? t(avatarNameKeys[index]) : `${offer.amount}`;
+      offerImageMap[sectionId][index] || rewardImageMap[offer.rewardType as keyof typeof rewardImageMap];
+    const amountLabel = sectionId === "backgrounds"
+      ? ""
+      : sectionId === "avatars"
+      ? t(avatarNameKeys[index])
+        : `${offer.amount}`;
     const costLabel =
-      offer.price === 0 ? t("watchAd") : formatTomans(offer.price);
+      offer.price === 0
+        ? t("watchAd")
+        : offer.currency === "gems"
+          ? `${offer.price} 💎`
+          : formatTomans(offer.price);
 
-    const hasDiscount = offer.discount && offer.discount > 0;
+    const hasDiscount = offer.discount > 0;
 
     return (
       <motion.button
@@ -225,6 +247,7 @@ export default function Shop() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: index * 0.04 }}
         onClick={() => handleOfferPurchase(sectionId, offer.id)}
+        disabled={isProcessingPurchase}
         className={[
           "group relative flex flex-col items-center justify-between",
           // نسبت نزدیک به مربعی (کمی پهن‌تر برای زیبایی)
@@ -251,23 +274,27 @@ export default function Shop() {
           </div>
         )}
 
-        {/* مقدار / نام آواتار */}
-        <div className="mt-1 text-sm font-bold text-primary">
-          {amountLabel}
+        {/* مقدار، نام آواتار یا نام پس‌زمینه */}
+        <div className="mt-1 min-h-5 text-sm font-bold text-primary">
+          {sectionId === "backgrounds" ? t(offer.titleKey) : amountLabel}
         </div>
 
         {/* تصویر - کمی کوچک‌تر نسبت به قبل */}
-        <div className="flex flex-1 items-center justify-center py-2">
-          <img
-            src={image}
-            alt={amountLabel}
-            className={[
-              "object-contain drop-shadow-[0_10px_26px_rgba(0,0,0,0.35)]",
-              sectionId === "avatars"
-                ? "h-20 w-16 rounded-2xl"
-                : "h-16 w-16",
-            ].join(" ")}
-          />
+        <div className="flex min-h-24 flex-1 w-full items-center justify-center py-2">
+          <div className={sectionId === "backgrounds" ? "h-24 w-full overflow-hidden rounded-2xl" : "flex items-center justify-center"}>
+            <img
+              src={image}
+              alt={amountLabel || t("backgroundsLabel")}
+              className={[
+                "object-contain drop-shadow-[0_10px_26px_rgba(0,0,0,0.35)]",
+                sectionId === "backgrounds"
+                  ? `block h-full w-full object-cover object-center ${index === 0 ? "translate-y-1" : ""}`
+                  : sectionId === "avatars"
+                  ? "h-20 w-16 rounded-2xl"
+                  : "h-16 w-16",
+              ].join(" ")}
+            />
+          </div>
         </div>
 
         {/* دکمه قیمت ؛ ارتفاع کم‌تر */}
@@ -372,71 +399,6 @@ const renderRewardCard = (
   return (
     <AppPageShell currentPath="/shop" showHeader={false} backgroundImage={shellBackgrounds.shop}>
       <div className="space-y-6 pt-2" dir={dir}>
-        <div className="rounded-[32px] bg-[radial-gradient(circle_at_top_right,rgba(107,216,255,0.18),transparent_34%),linear-gradient(145deg,rgba(14,26,52,0.96),rgba(12,20,40,0.92))] p-5 shadow-2xl">
-          <div className="relative mb-5 overflow-hidden rounded-3xl">
-            <img
-              src={bannerImage}
-              alt={isFa ? "اشتراک پرمیوم" : "Premium Subscription"}
-              className="h-28 w-full object-cover"
-            />
-            <div className="absolute inset-0 bg-slate-950/60" />
-            <div className="absolute inset-0 flex flex-col items-center justify-center px-5 text-center text-primary">
-              <h2 className="font-cinzel text-xl">
-                {isFa ? "اشتراک پرمیوم" : "Premium Subscription"}
-              </h2>
-              <p className="mt-2 text-xs text-slate-100/85">
-                {isFa
-                  ? "برای شروع بازی محلی یا آنلاین باید اول اشتراک فعال داشته باشید. با هر خرید، ۲۰ الماس اضافه هم می‌گیرید."
-                  : "Local and online play require an active subscription. Every purchase also grants 20 bonus diamonds."}
-              </p>
-              <p className="mt-1 text-[11px] text-slate-200/70">
-                {isFa
-                  ? nativePlatform === "ios"
-                    ? "در آیفون پرداخت از طریق App Store انجام می‌شود."
-                    : nativePlatform === "android"
-                      ? "در اندروید پرداخت از طریق بازار یا مایکت انجام می‌شود."
-                      : "برای تست وب، هر سه درگاه به‌صورت شبیه‌سازی‌شده در دسترس هستند."
-                  : nativePlatform === "ios"
-                    ? "On iPhone, purchases go through the App Store."
-                    : nativePlatform === "android"
-                      ? "On Android, purchases go through Cafe Bazaar or Myket."
-                      : "In web testing, all providers remain available as simulated options."}
-              </p>
-            </div>
-          </div>
-
-          <div className="mb-4 rounded-3xl border border-primary/20 bg-background/30 px-4 py-3 text-sm text-slate-100/90">
-            {premiumStatus.active
-              ? isFa
-                ? `اشتراک فعال است. ${premiumStatus.remainingDays} روز دیگر باقی مانده است.`
-                : `Premium is active. ${premiumStatus.remainingDays} day(s) remaining.`
-              : isFa
-                ? "هنوز اشتراک فعالی ندارید."
-                : "No active premium subscription yet."}
-          </div>
-
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-            {PREMIUM_PLANS.map((plan) => {
-              const copy = getPremiumPlanText(plan.id);
-              return (
-                <button
-                  key={plan.id}
-                  type="button"
-                  onClick={() => setSelectedPlan(plan.id)}
-                  className="rounded-[28px] border border-primary/25 bg-[linear-gradient(160deg,rgba(255,255,255,0.08),rgba(255,255,255,0.02))] p-4 text-center shadow-lg transition-all hover:-translate-y-1 hover:border-primary/50"
-                >
-                  <div className="mb-2 text-lg font-bold text-primary">{copy.title}</div>
-                  <div className="mb-1 text-sm text-slate-100">{copy.subtitle}</div>
-                  <div className="text-xs text-slate-300">{copy.duration}</div>
-                  <div className="mt-4 rounded-2xl border border-emerald-400/20 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-200">
-                    {isFa ? "۲۰ الماس جایزه" : "20 bonus diamonds"}
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
         {SHOP_SECTIONS.map((section) => (
           <div
             key={section.id}

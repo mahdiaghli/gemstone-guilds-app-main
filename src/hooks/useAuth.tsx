@@ -1,25 +1,40 @@
 import { useState, useEffect, createContext, useContext, ReactNode } from "react";
 import { API_SERVER_URL } from "@/lib/socketConfig";
+import { toPublicUser, type PublicUser } from "@/lib/userPublic";
+import {
+  clearSession,
+  readSessionToken,
+  saveSession,
+  USER_STORAGE_KEY,
+} from "@/lib/authStorage";
 
-interface User {
-  id: string;
-  username: string;
-  email?: string;
-  createdAt: string;
-}
+type User = PublicUser;
+type AuthFailureReason =
+  | "invalid_credentials"
+  | "username_exists"
+  | "phone_exists"
+  | "account_not_found"
+  | "invalid_code"
+  | "invalid_input"
+  | "server_unavailable";
+type AuthResult = { ok: true } | { ok: false; reason: AuthFailureReason };
+type OtpResult =
+  | { ok: true; retryAfterSeconds: number; devCode?: string }
+  | { ok: false; reason: "invalid_input" | "server_unavailable"; message?: string };
 
 interface AuthContextType {
   user: User | null;
-  login: (username: string, password: string, rememberMe?: boolean) => Promise<boolean>;
-  register: (username: string, email: string, password: string, rememberMe?: boolean) => Promise<boolean>;
+  requestOtp: (phone: string) => Promise<OtpResult>;
+  login: (phone: string, code: string, rememberMe?: boolean) => Promise<AuthResult>;
+  register: (username: string, phone: string, code: string, rememberMe?: boolean) => Promise<AuthResult>;
   updateProfile: (updates: { username: string; email?: string }) => Promise<boolean>;
   logout: () => void;
   isLoading: boolean;
 }
 
-const USER_STORAGE_KEY = "splendor_user";
 const MAX_USERNAME_LENGTH = 15;
-// فعلاً مقدار پیش‌فرض undefined برای جلوگیری از استفاده خارج از Provider
+const AUTH_REQUEST_TIMEOUT_MS = 4_000;
+const OTP_REQUEST_TIMEOUT_MS = 12_000;
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function useAuth() {
@@ -30,181 +45,184 @@ export function useAuth() {
   return context;
 }
 
-interface AuthProviderProps {
-  children: ReactNode;
+const isUsernameValid = (username: string) =>
+  username.trim().length > 0 && username.trim().length <= MAX_USERNAME_LENGTH;
+
+async function authRequest(path: string, init?: RequestInit, timeoutMs = AUTH_REQUEST_TIMEOUT_MS) {
+  const headers = new Headers(init?.headers);
+  if (init?.body && !headers.has("Content-Type")) {
+    headers.set("Content-Type", "application/json");
+  }
+  const token = readSessionToken();
+  if (token) headers.set("Authorization", `Bearer ${token}`);
+  const controller = new AbortController();
+  const timeout = window.setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const response = await fetch(`${API_SERVER_URL}${path}`, {
+      ...init,
+      headers,
+      signal: controller.signal,
+    });
+    const data = await response.json().catch(() => null);
+    return { ok: response.ok, status: response.status, data };
+  } finally {
+    window.clearTimeout(timeout);
+  }
 }
 
-export function AuthProvider({ children }: AuthProviderProps) {
+export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // بررسی نشست قبلی
   useEffect(() => {
-    try {
-      const savedUser =
-        localStorage.getItem(USER_STORAGE_KEY) ||
-        sessionStorage.getItem(USER_STORAGE_KEY);
-      if (savedUser) {
-        setUser(JSON.parse(savedUser));
+    const hydrate = async () => {
+      const token = readSessionToken();
+      if (!token) {
+        setIsLoading(false);
+        return;
       }
-    } catch {
-      localStorage.removeItem(USER_STORAGE_KEY);
-      sessionStorage.removeItem(USER_STORAGE_KEY);
-    } finally {
-      setIsLoading(false);
-    }
-
-    // دریافت لیست کاربران از سرور (غیر بحرانی)
-    fetch(`${API_SERVER_URL}/users`)
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data) => {
-        if (data && Array.isArray(data.users)) {
-          localStorage.setItem("splendor_users", JSON.stringify(data.users));
+      try {
+        const { ok, data } = await authRequest("/auth/me");
+        if (ok && data?.user) {
+          setUser(toPublicUser(data.user));
+        } else {
+          clearSession();
+          setUser(null);
         }
-      })
-      .catch(() => {});
+      } catch {
+        const saved =
+          localStorage.getItem(USER_STORAGE_KEY) ||
+          sessionStorage.getItem(USER_STORAGE_KEY);
+        if (saved) {
+          try {
+            setUser(JSON.parse(saved));
+          } catch {
+            clearSession();
+          }
+        }
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    hydrate();
   }, []);
 
-  // ورود کاربر
   const login = async (
-    username: string,
-    password: string,
-    _rememberMe = false,
-  ): Promise<boolean> => {
-    setIsLoading(true);
+    phone: string,
+    code: string,
+    rememberMe = false,
+  ): Promise<AuthResult> => {
     try {
-      const localUsersRaw = localStorage.getItem("splendor_users");
-      const users = localUsersRaw ? JSON.parse(localUsersRaw) : [];
-
-      const foundUser = users.find(
-        (u: any) => u.username === username && u.password === password
-      );
-
-      if (foundUser) {
-        const userSession: User = {
-          id: foundUser.id,
-          username: foundUser.username,
-          email: foundUser.email,
-          createdAt: foundUser.createdAt,
+      const { ok, status, data } = await authRequest("/auth/login", {
+        method: "POST",
+        body: JSON.stringify({ phone, code }),
+      });
+      if (!ok || !data?.token || !data?.user) {
+        return {
+          ok: false,
+          reason:
+            status === 404 || data?.error === "ACCOUNT_NOT_FOUND"
+              ? "account_not_found"
+              : status === 400
+              ? "invalid_input"
+              : status === 401
+                ? "invalid_code"
+                : "server_unavailable",
         };
-        setUser(userSession);
-        localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(userSession));
-        sessionStorage.setItem(USER_STORAGE_KEY, JSON.stringify(userSession));
-        return true;
       }
-      return false;
+      const sessionUser = toPublicUser(data.user);
+      setUser(sessionUser);
+      saveSession(data.token, sessionUser, rememberMe);
+      return { ok: true };
     } catch (error) {
       console.error(error);
-      return false;
-    } finally {
-      setIsLoading(false);
+      return { ok: false, reason: "server_unavailable" };
     }
   };
 
-  // ثبت‌نام کاربر جدید
   const register = async (
     username: string,
-    email: string,
-    password: string,
-    _rememberMe = false,
-  ): Promise<boolean> => {
-    setIsLoading(true);
+    phone: string,
+    code: string,
+    rememberMe = false,
+  ): Promise<AuthResult> => {
     try {
-      if (!isUsernameValid(username)) {
-        return false;
+      if (!isUsernameValid(username) || !phone || !/^\d{6}$/.test(code)) {
+        return { ok: false, reason: "invalid_input" };
       }
-
-      const localUsersRaw = localStorage.getItem("splendor_users");
-      const users = localUsersRaw ? JSON.parse(localUsersRaw) : [];
-
-      if (users.some((u: any) => u.username === username)) {
-        // نام کاربری تکراری
-        return false;
-      }
-
-      const newUser = {
-        id: Date.now().toString(),
-        username,
-        email,
-        password,
-        createdAt: new Date().toISOString(),
-      };
-
-      const nextUsers = [...users, newUser];
-      localStorage.setItem("splendor_users", JSON.stringify(nextUsers));
-
-      // ارسال به سرور برای همگام‌سازی (غیر بحرانی)
-      fetch(`${API_SERVER_URL}/users`, {
+      const { ok, status, data } = await authRequest("/auth/register", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(newUser),
-      }).catch(() => {});
-
-      // ایجاد نشست و ذخیره
-      const userSession: User = {
-        id: newUser.id,
-        username: newUser.username,
-        email: newUser.email,
-        createdAt: newUser.createdAt,
-      };
-      setUser(userSession);
-      localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(userSession));
-      sessionStorage.setItem(USER_STORAGE_KEY, JSON.stringify(userSession));
+        body: JSON.stringify({ username: username.trim(), phone, code }),
+      });
+      if (!ok || !data?.token || !data?.user) {
+        return {
+          ok: false,
+          reason:
+            status === 409 && data?.error === "Phone already exists"
+              ? "phone_exists"
+              : status === 409
+                ? "username_exists"
+                : status === 401
+                  ? "invalid_code"
+                  : status === 400
+                    ? "invalid_input"
+                    : "server_unavailable",
+        };
+      }
+      const sessionUser = toPublicUser(data.user);
+      setUser(sessionUser);
+      saveSession(data.token, sessionUser, rememberMe);
       localStorage.setItem("splendor-needs-tutorial", "true");
-
-      return true;
+      return { ok: true };
     } catch (error) {
       console.error(error);
-      return false;
-    } finally {
-      setIsLoading(false);
+      return { ok: false, reason: "server_unavailable" };
     }
   };
 
-  // به‌روزرسانی پروفایل
+  const requestOtp = async (phone: string): Promise<OtpResult> => {
+    try {
+      const { ok, status, data } = await authRequest("/auth/otp/request", {
+        method: "POST",
+        body: JSON.stringify({ phone }),
+      }, OTP_REQUEST_TIMEOUT_MS);
+      if (!ok) {
+        return {
+          ok: false,
+          reason: status === 400 ? "invalid_input" : "server_unavailable",
+          message: typeof data?.error === "string" ? data.error : undefined,
+        };
+      }
+      return {
+        ok: true,
+        retryAfterSeconds: Number(data?.retryAfterSeconds) || 60,
+        devCode: typeof data?.devCode === "string" ? data.devCode : undefined,
+      };
+    } catch (error) {
+      console.error(error);
+      return { ok: false, reason: "server_unavailable" };
+    }
+  };
+
   const updateProfile = async (updates: {
     username: string;
     email?: string;
   }): Promise<boolean> => {
     if (!user) return false;
-
     try {
-      if (!isUsernameValid(updates.username)) {
-        return false;
-      }
-
-      const localUsersRaw = localStorage.getItem("splendor_users");
-      const users = localUsersRaw ? JSON.parse(localUsersRaw) : [];
-
-      const nameTaken = users.some(
-        (u: any) => u.id !== user.id && u.username === updates.username
-      );
-      if (nameTaken) return false;
-
-      const nextUsers = users.map((u: any) =>
-        u.id === user.id
-          ? { ...u, username: updates.username, email: updates.email || "" }
-          : u
-      );
-      localStorage.setItem("splendor_users", JSON.stringify(nextUsers));
-
-      const nextUser: User = {
-        ...user,
-        username: updates.username,
-        email: updates.email || "",
-      };
-      setUser(nextUser);
-      localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(nextUser));
-      sessionStorage.setItem(USER_STORAGE_KEY, JSON.stringify(nextUser));
-
-      fetch(`${API_SERVER_URL}/users`, {
+      if (!isUsernameValid(updates.username)) return false;
+      const { ok, data } = await authRequest("/users", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(
-          nextUsers.find((u: any) => u.id === user.id)
-        ),
-      }).catch(() => {});
-
+        body: JSON.stringify({
+          username: updates.username,
+          email: updates.email || "",
+        }),
+      });
+      if (!ok || !data?.user) return false;
+      const nextUser = toPublicUser(data.user);
+      setUser(nextUser);
+      saveSession(readSessionToken(), nextUser, localStorage.getItem("splendor-remember-me") === "true");
       return true;
     } catch (error) {
       console.error(error);
@@ -212,23 +230,15 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   };
 
-  // خروج از حساب
   const logout = () => {
+    authRequest("/auth/logout", { method: "POST" }).catch(() => {});
     setUser(null);
-    localStorage.removeItem(USER_STORAGE_KEY);
-    sessionStorage.removeItem(USER_STORAGE_KEY);
+    clearSession();
   };
 
-  const value: AuthContextType = {
-    user,
-    login,
-    register,
-    updateProfile,
-    logout,
-    isLoading,
-  };
-
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider value={{ user, requestOtp, login, register, updateProfile, logout, isLoading }}>
+      {children}
+    </AuthContext.Provider>
+  );
 }
-  const isUsernameValid = (username: string) =>
-    username.trim().length > 0 && username.trim().length <= MAX_USERNAME_LENGTH;

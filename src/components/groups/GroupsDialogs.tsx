@@ -87,7 +87,7 @@ export default function GroupsDialogs({
       </Dialog>
 
       <Dialog open={Boolean(infoGroup)} onOpenChange={(open) => !open && setGroupInfoId(null)}>
-        <DialogContent className="max-w-lg rounded-[28px]" dir={dir}>
+        <DialogContent className="w-[calc(100vw-1rem)] max-w-lg max-h-[90dvh] overflow-y-auto rounded-[28px] p-3 sm:p-6" dir={dir}>
           {infoGroup && (
             <>
               <DialogHeader className={dir === "rtl" ? "text-right" : ""}>
@@ -113,7 +113,7 @@ export default function GroupsDialogs({
       </Dialog>
 
       <Dialog open={editGroupOpen} onOpenChange={setEditGroupOpen}>
-        <DialogContent className="max-w-lg rounded-[28px]" dir={dir}>
+        <DialogContent className="w-[calc(100vw-1rem)] max-w-lg max-h-[90dvh] overflow-y-auto rounded-[28px] p-3 sm:p-6" dir={dir}>
           <DialogHeader className={dir === "rtl" ? "text-right" : ""}>
             <DialogTitle>{t("editGroupSettings")}</DialogTitle>
           </DialogHeader>

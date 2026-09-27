@@ -1,21 +1,21 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useLanguage } from "@/hooks/useLanguage";
 import { useAuth } from "@/hooks/useAuth";
-import { getGameEntryFee, payGameEntryFee } from "@/lib/progression";
 import { hasActivePremium } from "@/lib/shop";
+import { requirePremium } from "@/lib/featureFlags";
 import { AIDifficulty } from "@/lib/aiPlayer";
 import { Button } from "@/components/ui/button";
 import PageTopBar from "@/components/game/PageTopBar";
 import easyIcon from "@/assets/easy game.webp";
 import mediumIcon from "@/assets/medium game.webp";
 import hardIcon from "@/assets/hard game.webp";
-import manualRoomIcon from "@/assets/manual.webp";
-import matchmakingIcon from "@/assets/internet.webp";
 import { getGameById } from "@/lib/gameCatalog";
 import { getPageBackground } from "@/lib/pageBackgrounds";
+import { prepareOnlineMatchmaking } from "@/lib/onlineMatchmakingStart";
 
 type GameMode = "ai" | "local" | "online";
 
@@ -25,11 +25,8 @@ export default function ModeSetup() {
   const { t, dir } = useLanguage();
   const { user } = useAuth();
 
-  const [onlineMode, setOnlineMode] = useState<"manual" | "matchmaking" | null>(
-    null,
-  );
   const [difficulty, setDifficulty] = useState<AIDifficulty>("medium");
-  const [entryError, setEntryError] = useState("");
+  const onlineStartedRef = useRef(false);
 
   // LOCAL
   const [localPlayerCount, setLocalPlayerCount] = useState(2);
@@ -45,7 +42,7 @@ export default function ModeSetup() {
     () => (searchParams.get("mode") || "local") as GameMode,
     [searchParams],
   );
-  const premiumRequired = (mode === "local" || mode === "online") && !hasActivePremium(user?.id);
+  const premiumRequired = requirePremium() && (mode === "local" || mode === "online") && !hasActivePremium(user?.id);
 
   const selectedGame = useMemo(
     () => getGameById(searchParams.get("game")),
@@ -53,6 +50,7 @@ export default function ModeSetup() {
   );
 
   const isDeadMansDraw = selectedGame.id === "dead-mans-draw";
+  const isSplendor = selectedGame.id === "splendor";
 
   const pageBackground = useMemo(
     () => getPageBackground(selectedGame.id, "mode-setup"),
@@ -71,6 +69,24 @@ export default function ModeSetup() {
     }
   }, [navigate, premiumRequired]);
 
+  useEffect(() => {
+    if (mode !== "online" || premiumRequired || onlineStartedRef.current) return;
+    onlineStartedRef.current = true;
+
+    const result = prepareOnlineMatchmaking(user?.id, selectedGame.id);
+    if (!result.ok) {
+      toast.error(
+        dir === "rtl"
+          ? `برای بازی آنلاین به ${result.required} سکه نیاز دارید.`
+          : `You need ${result.required} coins to play online.`,
+      );
+      navigate(`/menu/${selectedGame.id}`, { replace: true });
+      return;
+    }
+
+    navigate(result.path, { replace: true });
+  }, [dir, mode, navigate, premiumRequired, selectedGame.id, user?.id]);
+
   const difficultyOptions: {
     id: AIDifficulty;
     label: string;
@@ -80,57 +96,6 @@ export default function ModeSetup() {
     { id: "medium", label: t("medium"), emoji: mediumIcon },
     { id: "hard", label: t("hard"), emoji: hardIcon },
   ];
-
-  const startOnline = (
-    selectedPlayers: number,
-    selectedOnlineMode: "manual" | "matchmaking",
-  ) => {
-    const feeMode =
-      selectedOnlineMode === "matchmaking" ? "onlineMatchmaking" : "onlineManual";
-    const feeResult = payGameEntryFee(user?.id, feeMode);
-    if (!feeResult.ok) {
-      setEntryError(
-        `You need ${feeResult.required} coins to enter online play.`,
-      );
-      return;
-    }
-
-    sessionStorage.setItem(
-      "splendor-online-entry-fee",
-      JSON.stringify({
-        charged: feeResult.charged,
-        feeMode,
-        refunded: false,
-      }),
-    );
-    setEntryError("");
-
-    if (selectedOnlineMode === "manual") {
-      navigate(
-        `/online-lobby?players=${selectedPlayers}${
-          isDeadMansDraw ? "" : "&turnTime=15"
-        }&game=${selectedGame.id}`,
-      );
-      return;
-    }
-
-    sessionStorage.setItem("matchmaking-players", selectedPlayers.toString());
-    if (isDeadMansDraw) {
-      sessionStorage.removeItem("matchmaking-turnTime");
-    } else {
-      sessionStorage.setItem("matchmaking-turnTime", "15");
-    }
-    sessionStorage.setItem("matchmaking-game", selectedGame.id);
-
-    navigate(`/online-matchmaking?game=${selectedGame.id}`);
-  };
-
-  // فقط برای ONLINE
-  const handlePlayerSelectOnline = (selectedPlayers: number) => {
-    if (mode === "online" && onlineMode) {
-      startOnline(selectedPlayers, onlineMode);
-    }
-  };
 
   const handleLocalPlayerCountSelect = (selectedPlayers: number) => {
     setLocalPlayerCount(selectedPlayers);
@@ -147,14 +112,8 @@ export default function ModeSetup() {
         `&mode=local` +
         `&humans=${localHumanPlayers}` +
         difficultyParam +
-        (isDeadMansDraw ? "" : `&turnTime=${turnTime}`),
+        (isDeadMansDraw || isSplendor ? "" : `&turnTime=${turnTime}`),
     );
-  };
-
-  const handleOnlineModeSelect = (
-    selectedOnlineMode: "manual" | "matchmaking",
-  ) => {
-    setOnlineMode(selectedOnlineMode);
   };
 
   const botCount = localPlayerCount - localHumanPlayers;
@@ -167,6 +126,8 @@ export default function ModeSetup() {
       }`,
     );
   };
+
+  if (mode === "online") return null;
 
   return (
     <div
@@ -301,89 +262,6 @@ export default function ModeSetup() {
           </div>
         )}
 
-        {/* ONLINE MODE – ... (بدون تغییر نسبت به قبلی) */}
-        {mode === "online" && (
-          <div className="space-y-6 mt-4">
-            <div className="space-y-2 mb-2">
-              <p className="text-xs text-muted-foreground font-cinzel tracking-widest">
-                Online Mode
-              </p>
-              <button
-                onClick={() => handleOnlineModeSelect("manual")}
-                className={cn(
-                  "w-full flex items-center gap-3 p-3 rounded-lg border-2 transition-all",
-                  dir === "rtl" ? "flex-row-reverse text-right" : "text-left",
-                  onlineMode === "manual"
-                    ? "border-primary bg-primary/10 shadow-lg shadow-primary/20"
-                    : " bg-card/60 hover:border-primary/80",
-                )}
-              >
-                <img
-                  src={manualRoomIcon}
-                  alt="manual"
-                  className="h-8 w-8 object-contain"
-                />
-                <span className="flex-1 font-cinzel">Manual Room</span>
-              </button>
-              <button
-                onClick={() => handleOnlineModeSelect("matchmaking")}
-                className={cn(
-                  "w-full flex items-center gap-3 p-3 rounded-lg border-2 transition-all",
-                  dir === "rtl" ? "flex-row-reverse text-right" : "text-left",
-                  onlineMode === "matchmaking"
-                    ? "border-primary bg-primary/10 shadow-lg shadow-primary/20"
-                    : " bg-card/60 hover:border-primary/80",
-                )}
-              >
-                <img
-                  src={matchmakingIcon}
-                  alt="online"
-                  className="h-8 w-8 object-contain"
-                />
-                <span className="flex-1 font-cinzel">Find Match</span>
-              </button>
-              <p className="text-xs text-muted-foreground">
-                Online entry fee: {getGameEntryFee("onlineManual")} coins
-              </p>
-              {entryError ? (
-                <p className="text-sm text-red-300">{entryError}</p>
-              ) : null}
-            </div>
-
-            <div className="space-y-3">
-              <p className="text-xs text-muted-foreground font-cinzel tracking-widest">
-                {t("numberOfPlayers") ?? "Number of players"}
-              </p>
-              <div className="flex gap-3 justify-center">
-                {[2, 3, 4].map((count) => {
-                  const disabled = !onlineMode;
-                  return (
-                    <button
-                      key={count}
-                      onClick={() => handlePlayerSelectOnline(count)}
-                      disabled={disabled}
-                      className={cn(
-                        "w-14 h-14 rounded-xl border-2 font-cinzel text-lg transition-all",
-                        disabled
-                          ? "border-border/30 text-muted-foreground/50 cursor-not-allowed"
-                          : "border-primary/60 bg-card/75 text-foreground shadow-md shadow-black/10 hover:border-primary hover:bg-primary/10",
-                      )}
-                    >
-                      {count}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {!isDeadMansDraw && (
-              <div className="mt-4 rounded-xl border border-primary/20 bg-card/50 px-4 py-3 text-sm text-muted-foreground">
-                {t("turnTimeLimit") ?? "Turn Time Limit"}: 15s
-              </div>
-            )}
-          </div>
-        )}
-
         {/* LOCAL MODE – ... (فقط offset بالایی کمی تغییر کرده) */}
         {mode === "local" && (
           <div className="space-y-5 mt-4">
@@ -481,7 +359,7 @@ export default function ModeSetup() {
             </AnimatePresence>
 
             {/* Turn Time – بالای دکمه شروع */}
-            {!isDeadMansDraw && (
+            {!isDeadMansDraw && !isSplendor && (
               <div className="space-y-3">
                 <p className="text-xs text-muted-foreground font-cinzel tracking-widest">
                   {t("turnTimeLimit") ?? "Turn Time Limit"}

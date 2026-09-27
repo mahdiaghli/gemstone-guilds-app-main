@@ -84,6 +84,7 @@ export type DeadMansDrawBonusPreviewViewProps = {
 
 export type DeadMansDrawBoardViewProps = {
   dir: "ltr" | "rtl";
+  backgroundImage: string;
   t: Translate;
   currentState: DeadMansDrawState;
   canReveal: boolean;

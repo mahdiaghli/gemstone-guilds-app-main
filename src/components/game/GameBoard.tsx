@@ -1,4 +1,4 @@
-import { AnimatePresence, motion } from "framer-motion";
+﻿import { AnimatePresence, motion } from "framer-motion";
 
 import CardDisplay from "@/components/game/CardDisplay";
 import GemToken from "@/components/game/GemToken";
@@ -130,7 +130,7 @@ export default function GameBoard({
             {state.visibleCards[level].map((card, index) =>
               card ? (
                 <CardDisplay
-                  key={card.id}
+                  key={`${card.id}-${level}-${index}`}
                   card={card}
                   onClick={() => handleCardClick(card)}
                   affordable={canPlayerAffordCard(currentPlayer, card)}
@@ -252,3 +252,5 @@ export default function GameBoard({
     </>
   );
 }
+
+

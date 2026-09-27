@@ -111,10 +111,11 @@ function getAIActionEasy(state: GameState): AIAction {
   // 2. تصادفی توکن بگیر - Take random available tokens
   const available = GEM_TYPES.filter(g => state.tokenPool[g] > 0);
   if (available.length >= 3) {
-    const selected = [];
-    for (let i = 0; i < 3; i++) {
-      const idx = Math.floor(Math.random() * available.length);
-      selected.push(available[idx]);
+    const pool = [...available];
+    const selected: GemType[] = [];
+    for (let i = 0; i < 3 && pool.length; i++) {
+      const idx = Math.floor(Math.random() * pool.length);
+      selected.push(pool.splice(idx, 1)[0]);
     }
     return { type: 'takeTokens', gems: selected };
   }

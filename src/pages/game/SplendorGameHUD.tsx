@@ -13,6 +13,7 @@ export default function SplendorGameHUD(props: Pick<
   | "currentPlayer"
   | "humanPlayerCount"
   | "turnSecondsLeft"
+  | "turnDurationSeconds"
   | "getPlayerDisplayName"
   | "isCurrentPlayerMe"
   | "isAIPlayer"
@@ -61,6 +62,7 @@ export default function SplendorGameHUD(props: Pick<
         stateCurrentPlayerIndex={props.state.currentPlayerIndex}
         humanPlayerCount={props.humanPlayerCount}
         turnSecondsLeft={props.turnSecondsLeft}
+        turnDurationSeconds={props.turnDurationSeconds}
         getPlayerDisplayName={props.getPlayerDisplayName}
         isCurrentPlayerMe={props.isCurrentPlayerMe}
         isAIPlayer={props.isAIPlayer}

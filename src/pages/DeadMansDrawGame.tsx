@@ -26,6 +26,7 @@ import {
 import { chooseDeadMansDrawAIAction } from "@/lib/deadMansDrawAI";
 import { getGameMenuPath } from "@/lib/gameCatalog";
 import { recordFinishedGame } from "@/lib/playerAnalytics";
+import { getSelectedBackground } from "@/lib/pageBackgrounds";
 
 import { DeadMansDrawBoardView } from "./dead-mans-draw/DeadMansDrawBoardView";
 import {
@@ -605,6 +606,7 @@ export default function DeadMansDrawGame(props: DeadMansDrawGameProps = {}) {
     <>
       <DeadMansDrawBoardView
         dir={dir}
+        backgroundImage={getSelectedBackground(user?.id)}
         t={t}
         currentState={currentState}
         canReveal={canReveal}

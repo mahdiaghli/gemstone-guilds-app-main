@@ -4,6 +4,7 @@ import PageTopBar from "@/components/game/PageTopBar";
 import AppBottomNav from "@/components/game/AppBottomNav";
 import { useLanguage } from "@/hooks/useLanguage";
 import heroImage from "@/assets/hero-gems.jpg";
+import { getSelectedBackground } from "@/lib/pageBackgrounds";
 
 interface AppPageShellProps {
   currentPath: string;
@@ -23,12 +24,13 @@ export default function AppPageShell({
   children,
 }: AppPageShellProps) {
   const { dir } = useLanguage();
+  const selectedBackground = getSelectedBackground() || backgroundImage;
 
   return (
     <div dir={dir} className="relative min-h-screen overflow-hidden text-foreground">
       <div
         className="absolute inset-0 bg-cover bg-center"
-        style={{ backgroundImage: `url(${backgroundImage})` }}
+        style={{ backgroundImage: `url(${selectedBackground})` }}
       />
       <div className="absolute inset-0 bg-gradient-to-t from-background via-background/90 to-background/70" />
       <PageTopBar />
