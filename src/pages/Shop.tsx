@@ -237,7 +237,7 @@ export default function Shop() {
           ? `${offer.price} 💎`
           : formatTomans(offer.price);
 
-    const hasDiscount = offer.discount && offer.discount > 0;
+    const hasDiscount = offer.discount > 0;
 
     return (
       <motion.button

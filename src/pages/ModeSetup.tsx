@@ -227,7 +227,7 @@ export default function ModeSetup() {
             </div>
 
             {/* Turn Time – بالای دکمه شروع */}
-            {!isDeadMansDraw && !isSplendor && (
+            {!isDeadMansDraw && (
               <div className="space-y-3">
                 <p className="text-xs text-muted-foreground font-cinzel tracking-widest">
                   {t("turnTimeLimit") ?? "Turn Time Limit"}
@@ -359,7 +359,7 @@ export default function ModeSetup() {
             </AnimatePresence>
 
             {/* Turn Time – بالای دکمه شروع */}
-            {!isDeadMansDraw && (
+            {!isDeadMansDraw && !isSplendor && (
               <div className="space-y-3">
                 <p className="text-xs text-muted-foreground font-cinzel tracking-widest">
                   {t("turnTimeLimit") ?? "Turn Time Limit"}
