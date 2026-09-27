@@ -27,6 +27,7 @@ node_modules
 dist
 build
 .env
+.env.*
 /server-data/
 npm-debug.log*
 yarn-debug.log*
@@ -43,7 +44,7 @@ yarn-error.log*
 /android/
 docs/
 
-.env.example
-
 .gitignore
 SKILLS.md
+ios/
+.gitignore
