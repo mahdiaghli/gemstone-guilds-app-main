@@ -7,12 +7,12 @@ import merchantTwoImage from "@/assets/merchant2.webp";
 import merchantGirlTwoImage from "@/assets/merchant girl2.webp";
 import merchantThreeImage from "@/assets/merchant3.webp";
 import merchantGirlThreeImage from "@/assets/merchant girl3.webp";
-import background1 from "@/assets/back-ground1.png";
-import background2 from "@/assets/back-ground2.png";
-import background3 from "@/assets/back-ground3.png";
-import background4 from "@/assets/back-ground4.png";
-import background5 from "@/assets/back-ground5.png";
-import background6 from "@/assets/back-ground6.png";
+import background1 from "@/assets/back-ground1.webp";
+import background2 from "@/assets/back-ground2.webp";
+import background3 from "@/assets/back-ground3.webp";
+import background4 from "@/assets/back-ground4.webp";
+import background5 from "@/assets/back-ground5.webp";
+import background6 from "@/assets/back-ground6.webp";
 
 export interface ShopOffer {
   id: string;

@@ -84,12 +84,12 @@ const offerImageMap: Record<ShopSection["id"], string[]> = {
     merchantGirlThreeImage,
   ],
   backgrounds: [
-    new URL("../assets/back-ground1.png", import.meta.url).href,
-    new URL("../assets/back-ground2.png", import.meta.url).href,
-    new URL("../assets/back-ground3.png", import.meta.url).href,
-    new URL("../assets/back-ground4.png", import.meta.url).href,
-    new URL("../assets/back-ground5.png", import.meta.url).href,
-    new URL("../assets/back-ground6.png", import.meta.url).href,
+    new URL("../assets/back-ground1.webp", import.meta.url).href,
+    new URL("../assets/back-ground2.webp", import.meta.url).href,
+    new URL("../assets/back-ground3.webp", import.meta.url).href,
+    new URL("../assets/back-ground4.webp", import.meta.url).href,
+    new URL("../assets/back-ground5.webp", import.meta.url).href,
+    new URL("../assets/back-ground6.webp", import.meta.url).href,
   ],
 };
 

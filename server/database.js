@@ -25,12 +25,15 @@ export async function initDatabase() {
       username TEXT NOT NULL,
       username_normalized TEXT NOT NULL UNIQUE,
       email TEXT NOT NULL DEFAULT '',
+      phone TEXT NOT NULL DEFAULT '',
       created_at TIMESTAMPTZ NOT NULL,
       salt TEXT NOT NULL,
       password_hash TEXT NOT NULL,
       profile JSONB NOT NULL DEFAULT '{}'::jsonb
     )
   `);
+  await pool.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS phone TEXT NOT NULL DEFAULT ''");
+  await pool.query("CREATE UNIQUE INDEX IF NOT EXISTS users_phone_unique ON users (phone) WHERE phone <> ''");
   initialized = true;
   return true;
 }
@@ -41,6 +44,7 @@ function rowToUser(row) {
     id: row.id,
     username: row.username,
     email: row.email,
+    phone: row.phone,
     createdAt: new Date(row.created_at).toISOString(),
     salt: row.salt,
     passwordHash: row.password_hash,
@@ -78,16 +82,18 @@ export async function saveUserToDatabase(user) {
     delete profile.id;
     delete profile.username;
     delete profile.email;
+    delete profile.phone;
     delete profile.createdAt;
     delete profile.salt;
     delete profile.passwordHash;
     await pool.query(
-      `INSERT INTO users (id, username, username_normalized, email, created_at, salt, password_hash, profile)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8::jsonb)
+      `INSERT INTO users (id, username, username_normalized, email, phone, created_at, salt, password_hash, profile)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9::jsonb)
        ON CONFLICT (id) DO UPDATE SET
          username = EXCLUDED.username,
          username_normalized = EXCLUDED.username_normalized,
          email = EXCLUDED.email,
+         phone = EXCLUDED.phone,
          salt = EXCLUDED.salt,
          password_hash = EXCLUDED.password_hash,
          profile = EXCLUDED.profile`,
@@ -96,6 +102,7 @@ export async function saveUserToDatabase(user) {
         user.username,
         String(user.username).trim().toLocaleLowerCase("en-US"),
         user.email || "",
+        user.phone || "",
         user.createdAt || new Date().toISOString(),
         user.salt,
         user.passwordHash,

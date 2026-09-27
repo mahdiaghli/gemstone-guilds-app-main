@@ -12,14 +12,21 @@ type User = PublicUser;
 type AuthFailureReason =
   | "invalid_credentials"
   | "username_exists"
+  | "phone_exists"
+  | "account_not_found"
+  | "invalid_code"
   | "invalid_input"
   | "server_unavailable";
 type AuthResult = { ok: true } | { ok: false; reason: AuthFailureReason };
+type OtpResult =
+  | { ok: true; retryAfterSeconds: number; devCode?: string }
+  | { ok: false; reason: "invalid_input" | "server_unavailable"; message?: string };
 
 interface AuthContextType {
   user: User | null;
-  login: (username: string, password: string, rememberMe?: boolean) => Promise<AuthResult>;
-  register: (username: string, email: string, password: string, rememberMe?: boolean) => Promise<AuthResult>;
+  requestOtp: (phone: string) => Promise<OtpResult>;
+  login: (phone: string, code: string, rememberMe?: boolean) => Promise<AuthResult>;
+  register: (username: string, phone: string, code: string, rememberMe?: boolean) => Promise<AuthResult>;
   updateProfile: (updates: { username: string; email?: string }) => Promise<boolean>;
   logout: () => void;
   isLoading: boolean;
@@ -27,6 +34,7 @@ interface AuthContextType {
 
 const MAX_USERNAME_LENGTH = 15;
 const AUTH_REQUEST_TIMEOUT_MS = 4_000;
+const OTP_REQUEST_TIMEOUT_MS = 12_000;
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function useAuth() {
@@ -40,7 +48,7 @@ export function useAuth() {
 const isUsernameValid = (username: string) =>
   username.trim().length > 0 && username.trim().length <= MAX_USERNAME_LENGTH;
 
-async function authRequest(path: string, init?: RequestInit) {
+async function authRequest(path: string, init?: RequestInit, timeoutMs = AUTH_REQUEST_TIMEOUT_MS) {
   const headers = new Headers(init?.headers);
   if (init?.body && !headers.has("Content-Type")) {
     headers.set("Content-Type", "application/json");
@@ -48,7 +56,7 @@ async function authRequest(path: string, init?: RequestInit) {
   const token = readSessionToken();
   if (token) headers.set("Authorization", `Bearer ${token}`);
   const controller = new AbortController();
-  const timeout = window.setTimeout(() => controller.abort(), AUTH_REQUEST_TIMEOUT_MS);
+  const timeout = window.setTimeout(() => controller.abort(), timeoutMs);
   try {
     const response = await fetch(`${API_SERVER_URL}${path}`, {
       ...init,
@@ -101,20 +109,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const login = async (
-    username: string,
-    password: string,
+    phone: string,
+    code: string,
     rememberMe = false,
   ): Promise<AuthResult> => {
-    setIsLoading(true);
     try {
       const { ok, status, data } = await authRequest("/auth/login", {
         method: "POST",
-        body: JSON.stringify({ username, password }),
+        body: JSON.stringify({ phone, code }),
       });
       if (!ok || !data?.token || !data?.user) {
         return {
           ok: false,
-          reason: status === 401 ? "invalid_credentials" : "server_unavailable",
+          reason:
+            status === 404 || data?.error === "ACCOUNT_NOT_FOUND"
+              ? "account_not_found"
+              : status === 400
+              ? "invalid_input"
+              : status === 401
+                ? "invalid_code"
+                : "server_unavailable",
         };
       }
       const sessionUser = toPublicUser(data.user);
@@ -124,30 +138,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch (error) {
       console.error(error);
       return { ok: false, reason: "server_unavailable" };
-    } finally {
-      setIsLoading(false);
     }
   };
 
   const register = async (
     username: string,
-    email: string,
-    password: string,
+    phone: string,
+    code: string,
     rememberMe = false,
   ): Promise<AuthResult> => {
-    setIsLoading(true);
     try {
-      if (!isUsernameValid(username) || !password) {
+      if (!isUsernameValid(username) || !phone || !/^\d{6}$/.test(code)) {
         return { ok: false, reason: "invalid_input" };
       }
       const { ok, status, data } = await authRequest("/auth/register", {
         method: "POST",
-        body: JSON.stringify({ username: username.trim(), email, password }),
+        body: JSON.stringify({ username: username.trim(), phone, code }),
       });
       if (!ok || !data?.token || !data?.user) {
         return {
           ok: false,
-          reason: status === 409 ? "username_exists" : status === 400 ? "invalid_input" : "server_unavailable",
+          reason:
+            status === 409 && data?.error === "Phone already exists"
+              ? "phone_exists"
+              : status === 409
+                ? "username_exists"
+                : status === 401
+                  ? "invalid_code"
+                  : status === 400
+                    ? "invalid_input"
+                    : "server_unavailable",
         };
       }
       const sessionUser = toPublicUser(data.user);
@@ -158,8 +178,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch (error) {
       console.error(error);
       return { ok: false, reason: "server_unavailable" };
-    } finally {
-      setIsLoading(false);
+    }
+  };
+
+  const requestOtp = async (phone: string): Promise<OtpResult> => {
+    try {
+      const { ok, status, data } = await authRequest("/auth/otp/request", {
+        method: "POST",
+        body: JSON.stringify({ phone }),
+      }, OTP_REQUEST_TIMEOUT_MS);
+      if (!ok) {
+        return {
+          ok: false,
+          reason: status === 400 ? "invalid_input" : "server_unavailable",
+          message: typeof data?.error === "string" ? data.error : undefined,
+        };
+      }
+      return {
+        ok: true,
+        retryAfterSeconds: Number(data?.retryAfterSeconds) || 60,
+        devCode: typeof data?.devCode === "string" ? data.devCode : undefined,
+      };
+    } catch (error) {
+      console.error(error);
+      return { ok: false, reason: "server_unavailable" };
     }
   };
 
@@ -195,7 +237,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, register, updateProfile, logout, isLoading }}>
+    <AuthContext.Provider value={{ user, requestOtp, login, register, updateProfile, logout, isLoading }}>
       {children}
     </AuthContext.Provider>
   );

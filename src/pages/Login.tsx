@@ -1,206 +1,120 @@
-﻿import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import AuthLanguageSwitcher from "@/components/auth/AuthLanguageSwitcher";
 import { useAuth } from "@/hooks/useAuth";
 import { useLanguage } from "@/hooks/useLanguage";
-
-/* === IMPORT ALL IMAGES HERE === */
 import backgroundImg from "@/assets/background.png";
-// import backCardImg from "@/assets/backcard1.webp"; // Ø§Ú¯Ø± Ù†ÛŒØ§Ø² Ø¯Ø§Ø±ÛŒ Ø¯Ø± Ú©Ø§Ø±Øª Ø§Ø³ØªÙØ§Ø¯Ù‡ Ø´ÙˆØ¯
+import phoneIcon from "@/assets/user.webp";
+import codeIcon from "@/assets/lock.webp";
 
-import gemRed from "@/assets/lock.webp";
-// import gemBlue from "@/assets/gem-blue.webp";
-// // import gemGreen from "@/assets/gem-green.webp";
-import gemEmeraldBig from "@/assets/user.webp";
-// import gemDiamond from "@/assets/gem-diamond.webp";
-/* ================================= */
+const otpDigits = (value: string) =>
+  value
+    .replace(/[۰-۹]/g, (digit) => String("۰۱۲۳۴۵۶۷۸۹".indexOf(digit)))
+    .replace(/[٠-٩]/g, (digit) => String("٠١٢٣٤٥٦٧٨٩".indexOf(digit)))
+    .replace(/\D/g, "")
+    .slice(0, 6);
 
 export default function Login() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { dir, t } = useLanguage();
-  const { login, isLoading } = useAuth();
-
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
-  const [rememberMe, setRememberMe] = useState(
-    () => localStorage.getItem("splendor-remember-me") === "true",
-  );
+  const { dir, lang, t } = useLanguage();
+  const { login, requestOtp } = useAuth();
+  const [phone, setPhone] = useState("");
+  const [code, setCode] = useState("");
+  const [codeSent, setCodeSent] = useState(false);
+  const [cooldown, setCooldown] = useState(0);
+  const [isSendingCode, setIsSendingCode] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [info, setInfo] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [rememberMe, setRememberMe] = useState(() => localStorage.getItem("splendor-remember-me") === "true");
+  const redirectTo = useMemo(() => (location.state as { from?: { pathname?: string } } | null)?.from?.pathname || "/", [location.state]);
 
-  const redirectTo = useMemo(
-    () =>
-      (location.state as { from?: { pathname?: string } } | null)?.from?.pathname ||
-      "/",
-    [location.state]
-  );
+  useEffect(() => {
+    if (cooldown <= 0) return;
+    const timer = window.setInterval(() => setCooldown((value) => Math.max(0, value - 1)), 1000);
+    return () => window.clearInterval(timer);
+  }, [cooldown]);
 
-  const handleLogin = async (event?: React.FormEvent<HTMLFormElement>) => {
+  const handleSendCode = async (event?: React.MouseEvent<HTMLButtonElement>) => {
     event?.preventDefault();
+    if (cooldown > 0 || isSendingCode) return;
     setError(null);
-    const result = await login(username.trim(), password, rememberMe);
-    if (!result.ok) {
-      setError(t(result.reason === "server_unavailable" ? "serverNotAvailable" : "invalidCredentials"));
-      return;
+    setInfo(null);
+    setIsSendingCode(true);
+    try {
+      const result = await requestOtp(phone);
+      if (!result.ok) {
+        setError(result.reason === "invalid_input" ? (lang === "fa" ? "شماره موبایل معتبر نیست." : "Enter a valid Iranian mobile number.") : (lang === "fa" ? "ارسال کد انجام نشد. اتصال سرور را بررسی کنید." : "Could not send the code. Check the server connection."));
+        return;
+      }
+      setCodeSent(true);
+      setCooldown(result.retryAfterSeconds);
+      setInfo(result.devCode ? `${lang === "fa" ? "کد توسعه" : "Development code"}: ${result.devCode}` : (lang === "fa" ? "کد تأیید برای شما پیامک شد." : "A verification code was sent to you."));
+    } finally {
+      setIsSendingCode(false);
     }
-    navigate(redirectTo === "/" ? "/menu" : redirectTo, { replace: true });
+  };
+
+  const handleLogin = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setError(null);
+    setIsSubmitting(true);
+    try {
+      const result = await login(phone, code, rememberMe);
+      if (!result.ok) {
+        if (result.reason === "account_not_found") {
+          setError(lang === "fa" ? "حسابی با این شماره پیدا نشد؛ ابتدا ثبت‌نام کنید." : "No account was found for this number. Please sign up first.");
+        } else {
+          setError(result.reason === "server_unavailable" ? t("serverNotAvailable") : (lang === "fa" ? "شماره موبایل یا کد تأیید نادرست است." : "The mobile number or verification code is invalid."));
+        }
+        return;
+      }
+      navigate(redirectTo === "/" ? "/menu" : redirectTo, { replace: true });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
-    <div
-      dir={dir}
-      className="relative min-h-screen flex items-center justify-center overflow-hidden"
-    >
-      {/* BACKGROUND */}
-      <div
-        className="absolute inset-0 bg-cover bg-center"
-        style={{ backgroundImage: `url(${backgroundImg})` }}
-      />
+    <div dir={dir} className="relative flex min-h-screen items-center justify-center overflow-x-hidden overflow-y-auto pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)] pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
+      <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url(${backgroundImg})` }} />
       <div className="absolute inset-0 bg-black/40" />
-
-      {/* OUTER GEM DECORATIONS */}
-      {/* <img
-        // src={gemRed}
-        alt=""
-        className="absolute left-6 top-32 w-20 md:w-24 pointer-events-none select-none drop-shadow-[0_0_30px_rgba(0,0,0,0.8)]"
-      />
-      <img
-        // src={gemBlue}
-        alt=""
-        className="absolute right-6 top-40 w-24 md:w-28 pointer-events-none select-none drop-shadow-[0_0_30px_rgba(0,0,0,0.8)]"
-      />
-      <img
-        // src={gemEmeraldBig}
-        alt=""
-        className="absolute left-0 bottom-6 w-32 md:w-40 pointer-events-none select-none drop-shadow-[0_0_40px_rgba(0,0,0,0.9)]"
-      />
-      <img
-        // src={gemDiamond}
-        alt=""
-        className="absolute right-4 bottom-4 w-28 md:w-32 pointer-events-none select-none drop-shadow-[0_0_40px_rgba(0,0,0,0.9)]"
-      /> */}
-
-      {/* CENTER CARD */}
-      <motion.div
-        initial={{ opacity: 0, y: 25 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6 }}
-        className="relative z-10 w-full max-w-xl px-4"
-      >
-        <div className="mx-auto max-w-xl relative">
-
-          <div
-            className="
-              relative 
-              bg-gradient-to-b from-[#1f2937]/95 via-[#151b24]/95 to-[#0e1218]/95
-              px-8 py-10
-              rounded-[26px]
-              border border-[#cfa85b]/70
-              shadow-[0_0_50px_rgba(0,0,0,0.9)]
-            "
-          >
-            <div className="absolute inset-0 border border-yellow-400/40 rounded-[26px] pointer-events-none" />
-
-            {/* TOP BAR */}
-            <div className="mb-8 flex items-center justify-between gap-4">
-              <h1 className="text-4xl font-cinzel font-bold text-[#f5d47a] drop-shadow-[0_0_10px_rgba(0,0,0,0.8)]">
-                Swift
-              </h1>
-
-              <div className="flex items-center gap-4 text-sm text-gray-300/90">
-                <AuthLanguageSwitcher />
-              </div>
-            </div>
-
-            {/* FORM */}
-            <form className="space-y-5" onSubmit={handleLogin}>
-              {/* Username */}
-              <div className="flex items-center gap-3 bg-black/30 border border-[#e7c474]/35 rounded-md px-4 py-3">
-                <img src={gemEmeraldBig} className="w-6 h-6" alt="" />
-                <input
-                  type="text"
-                  placeholder={t("enterUsername")}
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  className="flex-1 bg-transparent text-gray-100 placeholder:text-gray-300 outline-none text-base"
-                  autoComplete="username"
-                />
-              </div>
-
-              {/* Password */}
-              <div className="flex items-center gap-3 bg-black/30 border border-[#e7c474]/35 rounded-md px-4 py-3">
-                <img src={gemRed} className="w-6 h-6" alt="" />
-                <input
-                  type="password"
-                  placeholder={t("enterPassword")}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="flex-1 bg-transparent text-gray-100 placeholder:text-gray-300 outline-none text-base"
-                  autoComplete="current-password"
-                />
-              </div>
-
-              {error && <p className="text-red-300 text-sm px-1">{error}</p>}
-
-              <label className="flex items-center gap-2 px-1 text-sm text-[#f3d79a]">
-                <input
-                  type="checkbox"
-                  checked={rememberMe}
-                  onChange={(e) => setRememberMe(e.target.checked)}
-                  className="h-4 w-4 rounded border border-[#e7c474]/50 bg-transparent"
-                />
-                <span>Remember me</span>
-              </label>
-
-              {/* LOGIN BUTTON */}
-              <Button
-                type="submit"
-                disabled={isLoading || !username.trim() || !password}
-                className="
-                  w-full 
-                  bg-gradient-to-b from-[#f4d68b] via-[#e4b44c] to-[#b57d1b]
-                  text-[#432b0d]
-                  text-lg font-semibold
-                  border border-[#f4e0a7]/70
-                  rounded-md
-                  shadow-[0_0_25px_rgba(0,0,0,0.9)]
-                  hover:brightness-110 hover:shadow-[0_0_35px_rgba(248,231,160,0.9)]
-                  transition
-                "
-              >
-                {t("loginTitle")}
-              </Button>
-
-              {/* Create Account */}
-              <button
-                type="button"
-                onClick={() => navigate("/signup")}
-                className="w-full text-center text-[#f3d79a] text-base hover:text-[#fff2c0] transition mt-1"
-              >
-                {t("createAccount")}
-              </button>
-            </form>
-
-            {/* FOOTER LINKS */}
-            <div className="mt-10 border-t border-[#f5d47a]/40 pt-4">
-              <div className="flex justify-center items-center gap-4 text-xs text-gray-300/90">
-                <button className="hover:text-white transition">
-                  Terms of Service
-                </button>
-                <span className="text-gray-400">â€¢</span>
-                <button className="hover:text-white transition">
-                  Privacy Policy
-                </button>
-              </div>
-            </div>
+      <motion.div initial={{ opacity: 0, y: 25 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }} className="relative z-10 w-full max-w-xl px-3 py-4 sm:px-4">
+        <div className="relative mx-auto rounded-[26px] border border-[#cfa85b]/70 bg-gradient-to-b from-[#1f2937]/95 via-[#151b24]/95 to-[#0e1218]/95 px-5 py-7 shadow-[0_0_50px_rgba(0,0,0,0.9)] sm:px-8 sm:py-10">
+          <div className="pointer-events-none absolute inset-0 rounded-[26px] border border-yellow-400/40" />
+          <div className="relative mb-7 flex items-center justify-between gap-4">
+            <h1 className="font-cinzel text-4xl font-bold text-[#f5d47a] drop-shadow-[0_0_10px_rgba(0,0,0,0.8)]">Swift</h1>
           </div>
-
+          <p className="relative mb-5 text-sm italic text-[#f3d79a]">{t("loginSubtitle")}</p>
+          <form className="relative space-y-4" onSubmit={handleLogin}>
+            <label className="flex min-h-12 items-center gap-3 rounded-md border border-[#e7c474]/35 bg-black/30 px-4">
+              <img src={phoneIcon} className="h-7 w-7" alt="" />
+              <input type="tel" dir="ltr" inputMode="tel" autoComplete="tel" aria-label={lang === "fa" ? "شماره موبایل" : "Mobile number"} placeholder={lang === "fa" ? "شماره موبایل (09xxxxxxxxx)" : "Mobile number (09xxxxxxxxx)"} value={phone} onChange={(event) => { setPhone(event.target.value); setCodeSent(false); setCode(""); }} className="min-w-0 flex-1 bg-transparent text-left text-base text-gray-100 outline-none placeholder:text-gray-300" />
+            </label>
+            <div className="flex gap-2">
+              <label className="flex min-h-12 min-w-0 flex-1 items-center gap-3 rounded-md border border-[#e7c474]/35 bg-black/30 px-4">
+                <img src={codeIcon} className="h-7 w-7" alt="" />
+                <input type="text" dir="ltr" inputMode="numeric" autoComplete="one-time-code" maxLength={6} aria-label={lang === "fa" ? "کد تأیید" : "Verification code"} placeholder={lang === "fa" ? "کد تأیید" : "Verification code"} value={code} onChange={(event) => setCode(otpDigits(event.target.value))} className="min-w-0 flex-1 bg-transparent text-left text-base text-gray-100 outline-none placeholder:text-gray-300" />
+              </label>
+              <button type="button" onClick={handleSendCode} disabled={isSendingCode || cooldown > 0 || !phone.trim()} className="min-h-12 min-w-[112px] rounded-md border border-[#f5d47a]/60 px-3 text-xs font-semibold text-[#f5d47a] transition hover:bg-[#f5d47a]/10 active:scale-[.98] disabled:cursor-not-allowed disabled:opacity-50">
+                {isSendingCode ? (lang === "fa" ? "در حال ارسال..." : "Sending...") : cooldown > 0 ? `${lang === "fa" ? "ارسال مجدد" : "Resend"} (${cooldown})` : lang === "fa" ? "دریافت کد" : "Send code"}
+              </button>
+            </div>
+            {info && <p role="status" className="rounded-md border border-emerald-500/30 bg-emerald-900/20 px-3 py-2 text-sm text-emerald-200">{info}</p>}
+            {error && <p role="alert" className="rounded-md border border-red-500/40 bg-red-900/30 px-3 py-2 text-sm text-red-300">{error}</p>}
+            <label className="flex min-h-11 items-center gap-2 px-1 text-sm text-[#f3d79a]">
+              <input type="checkbox" checked={rememberMe} onChange={(event) => setRememberMe(event.target.checked)} className="h-5 w-5 rounded border border-[#e7c474]/50 bg-transparent" />
+              <span>{lang === "fa" ? "مرا به خاطر بسپار" : "Remember me"}</span>
+            </label>
+            <Button type="submit" disabled={isSubmitting || !codeSent || code.length !== 6} className="min-h-12 w-full rounded-md border border-[#f4e0a7]/70 bg-gradient-to-b from-[#f4d68b] via-[#e4b44c] to-[#b57d1b] text-lg font-semibold text-[#432b0d] shadow-[0_0_25px_rgba(0,0,0,0.9)] transition hover:brightness-110 disabled:opacity-50">
+              {isSubmitting ? (lang === "fa" ? "کمی صبر کنید..." : "Please wait...") : (lang === "fa" ? "ورود با کد تأیید" : "Sign in with code")}
+            </Button>
+            <button type="button" onClick={() => navigate("/signup")} className="min-h-11 w-full text-center text-base text-[#f3d79a] transition hover:text-[#fff2c0]">{t("createAccount")}</button>
+          </form>
         </div>
       </motion.div>
     </div>
   );
 }
-
-

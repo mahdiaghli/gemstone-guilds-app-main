@@ -16,6 +16,12 @@ import {
 } from "./server/splendorTurn.js";
 import { syncUsersWithDatabase, saveUserToDatabase } from "./server/database.js";
 import { ensureDefaultGroups, generateUniqueGroupCode, repairDuplicateGroupCodes } from "./server/defaultGroups.js";
+import {
+  consumePhoneOtp,
+  isIranianMobile,
+  normalizePhone,
+  requestPhoneOtp,
+} from "./server/phoneAuth.js";
 
 const sessions = new Map();
 const disconnectTimers = new Map();
@@ -23,6 +29,9 @@ let databaseUsersSnapshot = null;
 let userMutationRevision = 0;
 const RECONNECT_MS = 60_000;
 const AUTH_SECRET = process.env.AUTH_SECRET || "dev-only-change-this-auth-secret";
+const OTP_IP_WINDOW_MS = 10 * 60 * 1000;
+const OTP_IP_MAX_REQUESTS = 10;
+const otpIpWindows = new Map();
 
 const DATA_DIR = path.resolve(process.env.SPLENDOR_DATA_DIR || "./server-data");
 const STATE_FILE = path.join(DATA_DIR, "shared-state.json");
@@ -115,6 +124,21 @@ function sendJson(res, status, body) {
 
 function unauthorized(res) {
   sendJson(res, 401, { error: "Unauthorized" });
+}
+
+function allowOtpRequestFromIp(req) {
+  const ip = req.socket?.remoteAddress || "unknown";
+  const now = Date.now();
+  const recent = (otpIpWindows.get(ip) || []).filter(
+    (timestamp) => timestamp > now - OTP_IP_WINDOW_MS,
+  );
+  if (recent.length >= OTP_IP_MAX_REQUESTS) {
+    otpIpWindows.set(ip, recent);
+    return false;
+  }
+  recent.push(now);
+  otpIpWindows.set(ip, recent);
+  return true;
 }
 
 function buildPlayerIndexMap(playersArray) {
@@ -279,12 +303,27 @@ const httpServer = createServer(async (req, res) => {
     return;
   }
 
+  if (req.method === "POST" && url.pathname === "/auth/otp/request") {
+    if (!allowOtpRequestFromIp(req)) {
+      sendJson(res, 429, { error: "Too many verification-code requests" });
+      return;
+    }
+    const payload = (await parseBody(req).catch(() => null)) || {};
+    const result = await requestPhoneOtp(payload?.phone);
+    if (!result.ok) {
+      sendJson(res, result.status || 503, { error: result.error });
+      return;
+    }
+    sendJson(res, 200, result);
+    return;
+  }
+
   if (req.method === "POST" && url.pathname === "/auth/register") {
     const payload = (await parseBody(req).catch(() => null)) || {};
     const username = String(payload?.username || "").trim();
-    const email = String(payload?.email || "").trim();
-    const password = String(payload?.password || "");
-    if (!username || username.length > 15 || !password) {
+    const phone = normalizePhone(payload?.phone);
+    const code = String(payload?.code || "").trim();
+    if (!username || username.length > 15 || !isIranianMobile(phone) || !/^\d{6}$/.test(code)) {
       sendJson(res, 400, { error: "Invalid registration payload" });
       return;
     }
@@ -292,11 +331,20 @@ const httpServer = createServer(async (req, res) => {
       sendJson(res, 409, { error: "Username already exists" });
       return;
     }
-    const { salt, hash } = hashPassword(password);
+    if (state.users.some((user) => normalizePhone(user.phone) === phone)) {
+      sendJson(res, 409, { error: "Phone already exists" });
+      return;
+    }
+    if (!consumePhoneOtp(phone, code)) {
+      sendJson(res, 401, { error: "Invalid or expired verification code" });
+      return;
+    }
+    const { salt, hash } = hashPassword(randomBytes(32).toString("hex"));
     const user = {
       id: Date.now().toString(),
       username,
-      email,
+      email: "",
+      phone,
       createdAt: new Date().toISOString(),
       salt,
       passwordHash: hash,
@@ -313,11 +361,19 @@ const httpServer = createServer(async (req, res) => {
 
   if (req.method === "POST" && url.pathname === "/auth/login") {
     const payload = (await parseBody(req).catch(() => null)) || {};
-    const username = String(payload?.username || "").trim();
-    const password = String(payload?.password || "");
-    const user = state.users.find((entry) => entry.username.toLocaleLowerCase("en-US") === username.toLocaleLowerCase("en-US"));
-    if (!user || !verifyPassword(password, user.salt, user.passwordHash)) {
-      sendJson(res, 401, { error: "Invalid username or password" });
+    const phone = normalizePhone(payload?.phone);
+    const code = String(payload?.code || "").trim();
+    if (!isIranianMobile(phone) || !/^\d{6}$/.test(code)) {
+      sendJson(res, 400, { error: "Invalid login payload" });
+      return;
+    }
+    const user = state.users.find((entry) => normalizePhone(entry.phone) === phone);
+    if (!user) {
+      sendJson(res, 404, { error: "ACCOUNT_NOT_FOUND" });
+      return;
+    }
+    if (!consumePhoneOtp(phone, code)) {
+      sendJson(res, 401, { error: "Invalid phone number or verification code" });
       return;
     }
     const token = createSessionToken(user.id);

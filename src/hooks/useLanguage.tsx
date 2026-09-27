@@ -168,9 +168,9 @@ const translations = {
     en: "Play with players worldwide",
   },
        "loginSubtitle":{ fa:"به انجمن بازرگانان خوش آمدید", en: "welcome to the splendor guilds"},
-    signupSubtitle: {
-    fa: "به انجمن بازرگانان ملحق شو و شهرتت را بساز.",
-    en: "Join the guild of merchants and build your prestige.",
+  signupSubtitle: {
+    fa: "به جمع بازرگانان بپیوند و مسیر افتخارت را بساز.",
+    en: "Join the merchants' guild and shape your legacy.",
   },
   passwordsDoNotMatch: {
     fa: "رمزهای عبور یکسان نیستند.",
