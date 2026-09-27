@@ -6,6 +6,7 @@ import { useLanguage } from '@/hooks/useLanguage';
 import { io, Socket } from 'socket.io-client';
 import { useAuth } from '@/hooks/useAuth';
 import { SOCKET_SERVER_URL } from '@/lib/socketConfig';
+import { readSessionToken } from '@/lib/authStorage';
 import PageTopBar from '@/components/game/PageTopBar';
 import { getGameById, getGameMenuPath } from '@/lib/gameCatalog';
 import { refundPendingEntryFee } from '@/lib/onlineEntryFee';
@@ -94,6 +95,7 @@ export default function OnlineMatchmaking() {
       });
 
       const socket = io(SOCKET_SERVER_URL, {
+        auth: { token: readSessionToken() },
         reconnection: true,
         reconnectionDelay: 500,
         reconnectionDelayMax: 3000,
@@ -172,6 +174,14 @@ export default function OnlineMatchmaking() {
           position: `${currentPlayers}/${count}`,
         });
         setSearching(true);
+      });
+
+      socket.on('match-error', (data: { message?: string }) => {
+        socket.disconnect();
+        setSearching(false);
+        setError(dir === 'rtl'
+          ? 'ابتدا بازی فعلی خود را تمام کنید، سپس دوباره دنبال حریف بگردید.'
+          : data?.message || 'Finish your current game before finding another match.');
       });
 
       socket.on('match-found', (data: { roomId: string; players: MatchedPlayer[] }) => {

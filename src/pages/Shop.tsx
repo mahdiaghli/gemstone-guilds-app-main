@@ -141,9 +141,12 @@ export default function Shop() {
     setIsProcessingPurchase(true);
     try {
       const result = await purchaseShopOffer(user?.id, sectionId, offerId, availableProviders[0]);
-      setMessage(result.ok ? t("purchaseSuccess") : (isFa
-        ? "پرداخت درون‌برنامه‌ای هنوز به بازار/مایکت و تأیید سرور متصل نشده است؛ مبلغی از شما گرفته نشد."
-        : "Store billing and server verification are not configured yet. You were not charged."));
+      const isAd = offerId === "coins-ad" || offerId === "diamonds-ad";
+      setMessage(result.ok ? t("purchaseSuccess") : isAd
+        ? (isFa ? "پاداش تبلیغاتی تا زمان اتصال تأیید تبلیغ غیرفعال است." : "Rewarded ads are unavailable until ad verification is configured.")
+        : (isFa
+          ? "پرداخت درون‌برنامه‌ای هنوز به بازار/مایکت و تأیید سرور متصل نشده است؛ مبلغی از شما گرفته نشد."
+          : "Store billing and server verification are not configured yet. You were not charged."));
     } catch {
       setMessage(isFa ? "خرید انجام نشد و آیتمی اضافه نشد." : "Purchase failed; no item was granted.");
     } finally {
@@ -230,7 +233,10 @@ export default function Shop() {
       : sectionId === "avatars"
       ? t(avatarNameKeys[index])
         : `${offer.amount}`;
-    const costLabel =
+    const isAdUnavailable = offer.id === "coins-ad" || offer.id === "diamonds-ad";
+    const costLabel = isAdUnavailable
+      ? (isFa ? "فعلاً غیرفعال" : "Unavailable")
+      :
       offer.price === 0
         ? t("watchAd")
         : offer.currency === "gems"
@@ -247,7 +253,7 @@ export default function Shop() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: index * 0.04 }}
         onClick={() => handleOfferPurchase(sectionId, offer.id)}
-        disabled={isProcessingPurchase}
+        disabled={isProcessingPurchase || isAdUnavailable}
         className={[
           "group relative flex flex-col items-center justify-between",
           // نسبت نزدیک به مربعی (کمی پهن‌تر برای زیبایی)
@@ -256,6 +262,7 @@ export default function Shop() {
           "bg-[linear-gradient(155deg,rgba(255,255,255,0.08),rgba(255,255,255,0.02))]",
           "p-3.5 text-center shadow-lg",
           "transition-all hover:-translate-y-1 hover:border-primary/40",
+          isAdUnavailable ? "cursor-not-allowed opacity-50" : "",
         ].join(" ")}
       >
         {/* نوار نور بالا */}

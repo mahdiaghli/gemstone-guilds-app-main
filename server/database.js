@@ -6,7 +6,7 @@ const pool = connectionString
   ? new Pool({
       connectionString,
       connectionTimeoutMillis: 3000,
-      ssl: process.env.PGSSL === "true" ? { rejectUnauthorized: false } : undefined,
+      ssl: process.env.PGSSL === "true" ? { rejectUnauthorized: true } : undefined,
     })
   : null;
 
@@ -34,6 +34,13 @@ export async function initDatabase() {
   `);
   await pool.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS phone TEXT NOT NULL DEFAULT ''");
   await pool.query("CREATE UNIQUE INDEX IF NOT EXISTS users_phone_unique ON users (phone) WHERE phone <> ''");
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS shared_state (
+      id INTEGER PRIMARY KEY CHECK (id = 1),
+      data JSONB NOT NULL,
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    )
+  `);
   initialized = true;
   return true;
 }
@@ -52,6 +59,9 @@ function rowToUser(row) {
 }
 
 function disableDatabase(message, error) {
+  if (process.env.NODE_ENV === "production") {
+    throw error instanceof Error ? error : new Error(String(error));
+  }
   databaseDisabled = true;
   console.error(message, error instanceof Error ? error.message : error);
 }
@@ -61,10 +71,12 @@ export async function syncUsersWithDatabase(fallbackUsers = []) {
   try {
     await initDatabase();
     const current = await pool.query("SELECT * FROM users ORDER BY created_at ASC");
-    if (current.rows.length > 0) return current.rows.map(rowToUser);
-
+    const existing = new Map(current.rows.map((row) => [row.id, rowToUser(row)]));
     for (const user of fallbackUsers) {
-      await saveUserToDatabase(user);
+      const stored = existing.get(user.id);
+      if (!stored || (user.updatedAt && new Date(user.updatedAt).getTime() > new Date(stored.updatedAt || stored.createdAt).getTime())) {
+        await saveUserToDatabase(user);
+      }
     }
     const migrated = await pool.query("SELECT * FROM users ORDER BY created_at ASC");
     return migrated.rows.map(rowToUser);
@@ -114,6 +126,30 @@ export async function saveUserToDatabase(user) {
     disableDatabase("Could not persist user to PostgreSQL; local JSON remains active:", error);
     return false;
   }
+}
+
+export async function loadSharedStateFromDatabase(fallbackState) {
+  if (!pool) return fallbackState;
+  await initDatabase();
+  const result = await pool.query("SELECT data FROM shared_state WHERE id = 1");
+  if (result.rows.length) return result.rows[0].data;
+  await pool.query(
+    "INSERT INTO shared_state (id, data) VALUES (1, $1::jsonb) ON CONFLICT (id) DO NOTHING",
+    [JSON.stringify(fallbackState)],
+  );
+  const inserted = await pool.query("SELECT data FROM shared_state WHERE id = 1");
+  return inserted.rows[0].data;
+}
+
+export async function saveSharedStateToDatabase(state) {
+  if (!pool) return false;
+  await initDatabase();
+  await pool.query(
+    `INSERT INTO shared_state (id, data, updated_at) VALUES (1, $1::jsonb, now())
+     ON CONFLICT (id) DO UPDATE SET data = EXCLUDED.data, updated_at = EXCLUDED.updated_at`,
+    [JSON.stringify(state)],
+  );
+  return true;
 }
 
 export async function closeDatabase() {

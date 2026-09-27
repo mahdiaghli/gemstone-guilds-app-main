@@ -13,6 +13,13 @@ describe("canGrantPaidReward", () => {
 });
 
 describe("paid shop purchases", () => {
+  it("does not award repeatable currency without an ad verification", async () => {
+    const userId = "unverified-rewarded-ad";
+    const gemsBefore = readPlayerExtras(userId).gems;
+    expect((await purchaseShopOffer(userId, "diamonds", "diamonds-ad", "myket")).ok).toBe(false);
+    expect(applyOfferPurchase(userId, "diamonds", "diamonds-ad").ok).toBe(false);
+    expect(readPlayerExtras(userId).gems).toBe(gemsBefore);
+  });
   it("does not deliver a paid offer without server receipt verification", async () => {
     const userId = "unverified-shop-purchase";
     const gemsBefore = readPlayerExtras(userId).gems;

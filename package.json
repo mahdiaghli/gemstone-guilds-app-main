@@ -8,6 +8,7 @@
     "dev:client": "vite",
     "dev:server": "node --env-file-if-exists=.env server.js",
     "build": "vite build",
+    "build:mobile": "node scripts/check-mobile-config.mjs && vite build --mode mobile",
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
     "preview": "vite preview",

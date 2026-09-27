@@ -1,5 +1,4 @@
 import { useEffect } from "react";
-import { useNavigate } from "react-router-dom";
 
 interface SplendorSocketProps {
   socket: any;
@@ -15,7 +14,6 @@ interface SplendorSocketProps {
 }
 
 export function useSplendorSocket(props: SplendorSocketProps) {
-  const navigate = useNavigate();
 
   // Game state updates
   useEffect(() => {
@@ -72,9 +70,6 @@ export function useSplendorSocket(props: SplendorSocketProps) {
       if (props.onRematchResult) {
         props.onRematchResult(data);
       }
-      if (data?.accepted) {
-        navigate(props.menuPath);
-      }
     };
 
     props.socket.on("turn-timer-updated", onTurnTimer);
@@ -86,5 +81,5 @@ export function useSplendorSocket(props: SplendorSocketProps) {
       props.socket?.off("rematch-requested", onRematchRequested);
       props.socket?.off("rematch-result", onRematchResult);
     };
-  }, [props.gameMode, props.menuPath, navigate, props.socket, props.onTurnTimerUpdated, props.onRematchRequested, props.onRematchResult]);
+  }, [props.gameMode, props.socket, props.onTurnTimerUpdated, props.onRematchRequested, props.onRematchResult]);
 }

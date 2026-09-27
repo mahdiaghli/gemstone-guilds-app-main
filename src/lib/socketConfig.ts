@@ -28,7 +28,9 @@ function shouldFollowBrowserHost(configuredUrl: string) {
   if (!configuredUrl || typeof window === "undefined" || isNativeApp()) return false;
   try {
     const configuredHost = new URL(configuredUrl).hostname;
-    return isLocalNetworkHost(configuredHost) && isLocalNetworkHost(window.location.hostname);
+    // A development URL must never send production-browser traffic to the
+    // visitor's own localhost or private LAN.
+    return isLocalNetworkHost(configuredHost);
   } catch {
     return false;
   }

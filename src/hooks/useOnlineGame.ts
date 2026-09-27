@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { io, Socket } from "socket.io-client";
 import { GameState } from "@/lib/gameData";
 import { SOCKET_SERVER_URL } from "@/lib/socketConfig";
+import { readSessionToken } from "@/lib/authStorage";
 
 function createTabPlayerId(): string {
   const key = "splendor_tab_player_id";
@@ -58,6 +59,7 @@ export function useOnlineGame(
 
     try {
       const socket = io(SOCKET_SERVER_URL, {
+        auth: { token: readSessionToken() },
         reconnection: true,
         reconnectionDelay: 500,
         reconnectionDelayMax: 3000,
@@ -72,6 +74,14 @@ export function useOnlineGame(
 
       socket.on("connect", () => {
         setError(null);
+        if (joinedRef.current) {
+          socket.emit("join-room", {
+            roomId,
+            playerId: effectivePlayerId,
+            playerName,
+            isHost: false,
+          });
+        }
         if (playerName) {
           setLoading(false);
         }
@@ -166,10 +176,6 @@ export function useOnlineGame(
         setError("Disconnected from server. Trying to reconnect to your game...");
       });
 
-      socket.on("reconnect", () => {
-        setError(null);
-      });
-
       return () => {
         joinedRef.current = false;
         socket.disconnect();
@@ -212,13 +218,14 @@ export function useOnlineGame(
   }, [roomId, effectivePlayerId]);
 
   const startGame = useCallback(
-    (initialGameState: GameState, turnTime: number = 45) => {
+    (initialGameState: GameState, turnTime: number = 45, targetScore: number = 15) => {
       if (!socketRef.current) return;
 
       socketRef.current.emit("start-game", {
         roomId,
         gameState: initialGameState,
         turnTime,
+        targetScore,
       });
     },
     [roomId],

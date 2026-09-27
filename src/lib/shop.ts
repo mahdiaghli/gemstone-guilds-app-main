@@ -260,6 +260,9 @@ export async function purchaseShopOffer(
   const section = SHOP_SECTIONS.find((entry) => entry.id === sectionId);
   const offer = section?.offers.find((entry) => entry.id === offerId);
   if (!offer) return { ok: false as const };
+  if (offerId === "coins-ad" || offerId === "diamonds-ad") {
+    return { ok: false as const, message: "Verified rewarded ads are not configured." };
+  }
   if (offer.rewardType === "background") return applyOfferPurchase(userId, sectionId, offerId);
   if (offer.price > 0) {
     return { ok: false as const, message: "Verified in-app billing is not configured." };
@@ -275,6 +278,9 @@ export function applyOfferPurchase(
   const section = SHOP_SECTIONS.find((entry) => entry.id === sectionId);
   const offer = section?.offers.find((entry) => entry.id === offerId);
   if (!offer) return { ok: false as const };
+  if (offerId === "coins-ad" || offerId === "diamonds-ad") {
+    return { ok: false as const, message: "Verified rewarded ads are not configured." };
+  }
 
   if (offer.rewardType === "background") {
     const image = backgroundOfferMap[offer.id as keyof typeof backgroundOfferMap];

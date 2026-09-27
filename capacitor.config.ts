@@ -2,7 +2,7 @@ import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
   appId: 'com.expert.boardgames',
-  appName: 'Swift',
+  appName: 'Gemstone Guilds',
   webDir: 'dist',
   ios: {
     contentInset: 'automatic',

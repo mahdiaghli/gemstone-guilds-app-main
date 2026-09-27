@@ -20,7 +20,6 @@ export function toPublicUser(user: {
     id: user.id,
     username: user.username,
     email: user.email,
-    phone: user.phone,
     createdAt: user.createdAt,
   };
 }

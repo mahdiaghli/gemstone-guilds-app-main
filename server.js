@@ -1,7 +1,8 @@
-import { createServer } from "http";
-import { createHmac, randomBytes, timingSafeEqual } from "crypto";
+﻿import { createServer } from "http";
+import { createHmac, randomBytes, randomUUID, timingSafeEqual } from "crypto";
 import fs from "fs";
 import path from "path";
+import { isIP } from "net";
 import { Server } from "socket.io";
 import {
   hashPassword,
@@ -14,7 +15,14 @@ import {
   advanceSplendorTurn,
   timeoutDeadMansDraw,
 } from "./server/splendorTurn.js";
-import { syncUsersWithDatabase, saveUserToDatabase } from "./server/database.js";
+import {
+  syncUsersWithDatabase,
+  saveUserToDatabase,
+  loadSharedStateFromDatabase,
+  saveSharedStateToDatabase,
+} from "./server/database.js";
+import { isValidInitialSplendorState, isValidSplendorTransition } from "./server/splendorValidation.js";
+import { isValidDeadMansDrawState, isValidInitialDeadMansDrawState } from "./server/deadMansDrawValidation.js";
 import { ensureDefaultGroups, generateUniqueGroupCode, repairDuplicateGroupCodes } from "./server/defaultGroups.js";
 import {
   consumePhoneOtp,
@@ -23,12 +31,18 @@ import {
   requestPhoneOtp,
 } from "./server/phoneAuth.js";
 
-const sessions = new Map();
 const disconnectTimers = new Map();
 let databaseUsersSnapshot = null;
+let sharedStateSnapshot = null;
+let sharedStateWriteQueue = Promise.resolve();
+let sharedStateRevision = 0;
 let userMutationRevision = 0;
 const RECONNECT_MS = 60_000;
-const AUTH_SECRET = process.env.AUTH_SECRET || "dev-only-change-this-auth-secret";
+const AUTH_SECRET = process.env.AUTH_SECRET || (process.env.NODE_ENV === "production" ? "" : "dev-only-change-this-auth-secret");
+if (!AUTH_SECRET || (process.env.NODE_ENV === "production" && AUTH_SECRET.length < 32)) {
+  throw new Error("AUTH_SECRET must be set to at least 32 characters in production.");
+}
+const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 const OTP_IP_WINDOW_MS = 10 * 60 * 1000;
 const OTP_IP_MAX_REQUESTS = 10;
 const otpIpWindows = new Map();
@@ -58,7 +72,11 @@ function ensureStateFile() {
 }
 
 function readSharedState() {
-  ensureStateFile();
+  if (sharedStateSnapshot) return structuredClone(sharedStateSnapshot);
+  if (process.env.NODE_ENV === "production" && !fs.existsSync(STATE_FILE)) {
+    return { users: [], groups: ensureDefaultGroups([]), friends: {}, friendRequests: [], messages: [], groupMessages: [], gameInvites: [] };
+  }
+  if (process.env.NODE_ENV !== "production") ensureStateFile();
   try {
     const parsed = JSON.parse(fs.readFileSync(STATE_FILE, "utf8"));
     const users = Array.isArray(parsed.users) ? parsed.users.map(migrateUserRecord) : [];
@@ -66,9 +84,10 @@ function readSharedState() {
     const migrated = { ...parsed, users, groups };
     const changed = JSON.stringify(parsed.users) !== JSON.stringify(users) ||
       JSON.stringify(parsed.groups) !== JSON.stringify(groups);
-    if (changed) writeSharedState(migrated);
+    if (changed && process.env.NODE_ENV !== "production") void writeSharedState(migrated);
     return migrated;
-  } catch {
+  } catch (error) {
+    if (process.env.NODE_ENV === "production") throw error;
     return {
       users: [],
       groups: [],
@@ -85,11 +104,9 @@ function signSessionPayload(payload) {
   return createHmac("sha256", AUTH_SECRET).update(payload).digest("base64url");
 }
 
-function createSessionToken(userId) {
-  const payload = `${userId}.${randomBytes(16).toString("base64url")}`;
-  const token = `${payload}.${signSessionPayload(payload)}`;
-  sessions.set(token, { userId, createdAt: Date.now() });
-  return token;
+function createSessionToken(user) {
+  const payload = `${user.id}.${Date.now()}.${randomBytes(16).toString("base64url")}.${user.authVersion || "0"}`;
+  return `${payload}.${signSessionPayload(payload)}`;
 }
 
 function tokenFromReq(req) {
@@ -97,23 +114,22 @@ function tokenFromReq(req) {
   return header.startsWith("Bearer ") ? header.slice(7) : "";
 }
 
+function userFromToken(token, state) {
+  if (!token || typeof token !== "string") return null;
+  const parts = token.split(".");
+  if (parts.length !== 5) return null;
+  const payload = parts.slice(0, 4).join(".");
+  const actual = Buffer.from(parts[4]);
+  const expected = Buffer.from(signSessionPayload(payload));
+  if (actual.length !== expected.length || !timingSafeEqual(actual, expected)) return null;
+  const issuedAt = Number(parts[1]);
+  if (!Number.isSafeInteger(issuedAt) || issuedAt > Date.now() || Date.now() - issuedAt > SESSION_TTL_MS) return null;
+  const user = (state.users || []).find((entry) => entry.id === parts[0]);
+  return user && (user.authVersion || "0") === parts[3] ? user : null;
+}
+
 function userFromRequest(req, state) {
-  const token = tokenFromReq(req);
-  let session = sessions.get(token);
-  if (!session && token) {
-    const parts = token.split(".");
-    if (parts.length === 3) {
-      const payload = `${parts[0]}.${parts[1]}`;
-      const actual = Buffer.from(parts[2]);
-      const expected = Buffer.from(signSessionPayload(payload));
-      if (actual.length === expected.length && timingSafeEqual(actual, expected)) {
-        session = { userId: parts[0], createdAt: Date.now() };
-        sessions.set(token, session);
-      }
-    }
-  }
-  if (!session) return null;
-  return (state.users || []).find((user) => user.id === session.userId) || null;
+  return userFromToken(tokenFromReq(req), state);
 }
 
 
@@ -127,8 +143,19 @@ function unauthorized(res) {
 }
 
 function allowOtpRequestFromIp(req) {
-  const ip = req.socket?.remoteAddress || "unknown";
+  const peerIp = req.socket?.remoteAddress || "unknown";
+  const trustedProxy = process.env.TRUST_PROXY === "1" &&
+    ["127.0.0.1", "::1", "::ffff:127.0.0.1"].includes(peerIp);
+  const forwardedIp = trustedProxy
+    ? String(req.headers["x-forwarded-for"] || "").split(",")[0].trim()
+    : "";
+  const ip = isIP(forwardedIp) ? forwardedIp : peerIp;
   const now = Date.now();
+  if (otpIpWindows.size > 10_000) {
+    for (const [key, timestamps] of otpIpWindows) {
+      if (!timestamps.some((timestamp) => timestamp > now - OTP_IP_WINDOW_MS)) otpIpWindows.delete(key);
+    }
+  }
   const recent = (otpIpWindows.get(ip) || []).filter(
     (timestamp) => timestamp > now - OTP_IP_WINDOW_MS,
   );
@@ -152,11 +179,20 @@ function buildPlayerIndexMap(playersArray) {
 
 function assertCanPublishState(socket, room, playerId) {
   const member = room.players.get(playerId);
-  if (!member || member.socketId !== socket.id) return false;
+  if (!member || member.socketId !== socket.id || member.accountId !== socket.data.userId) return false;
   if (room.gameId === "totem" || room.gameId === "beasty-bar") return true;
-  const idx = room.gameState?.currentPlayerIndex;
+  const idx = room.gameId === "dead-mans-draw"
+    ? room.gameState?.powerTargetSelection?.playerIndex ??
+      room.gameState?.ringSelectionIndex ?? room.gameState?.currentPlayerIndex
+    : room.gameState?.currentPlayerIndex;
   const seated = room.turn.playersInGame?.[idx];
   return Boolean(seated && seated.id === playerId);
+}
+
+function activeTurnIndex(room, state) {
+  return room.gameId === "dead-mans-draw"
+    ? state?.powerTargetSelection?.playerIndex ?? state?.ringSelectionIndex ?? state?.currentPlayerIndex
+    : state?.currentPlayerIndex;
 }
 
 function clearDisconnectTimer(roomId, playerId) {
@@ -168,9 +204,32 @@ function clearDisconnectTimer(roomId, playerId) {
   }
 }
 
-function writeSharedState(state) {
+async function writeSharedState(state) {
+  if (process.env.NODE_ENV === "production") {
+    const previousState = sharedStateSnapshot;
+    sharedStateSnapshot = structuredClone(state);
+    const pendingState = structuredClone(state);
+    const revision = ++sharedStateRevision;
+    sharedStateWriteQueue = sharedStateWriteQueue.catch(() => {}).then(async () => {
+      try {
+        await saveSharedStateToDatabase(pendingState);
+      } catch (error) {
+        if (sharedStateRevision === revision) sharedStateSnapshot = previousState;
+        throw error;
+      }
+    });
+    await sharedStateWriteQueue;
+    return;
+  }
   ensureStateFile();
-  fs.writeFileSync(STATE_FILE, JSON.stringify(state, null, 2), "utf8");
+  const temporaryFile = `${STATE_FILE}.${process.pid}.${randomBytes(6).toString("hex")}.tmp`;
+  try {
+    fs.writeFileSync(temporaryFile, JSON.stringify(state, null, 2), "utf8");
+    fs.renameSync(temporaryFile, STATE_FILE);
+  } catch (error) {
+    if (fs.existsSync(temporaryFile)) fs.unlinkSync(temporaryFile);
+    throw error;
+  }
 }
 
 function normalizeTurnTimeSeconds(value) {
@@ -186,7 +245,7 @@ function normalizeGroup(entry) {
     ...entry,
     code: entry.code || generateUniqueGroupCode([]),
     description: entry.description || "",
-    flag: entry.flag || "🏳️",
+    flag: entry.flag || "ðŸ³ï¸",
     minScore: Number(entry.minScore) || 0,
     visibility,
     members: Array.isArray(entry.members) ? entry.members : [entry.creatorId],
@@ -241,8 +300,12 @@ function trimGroupMessages(messages, groupId) {
   return [...rest, ...latest];
 }
 
-function withCors(res) {
-  res.setHeader("Access-Control-Allow-Origin", "*");
+function withCors(req, res) {
+  const origin = req.headers.origin;
+  const allowed = String(process.env.CLIENT_ORIGINS || "").split(",").map((value) => value.trim()).filter(Boolean);
+  if (origin && (process.env.NODE_ENV !== "production" || allowed.includes(origin))) {
+    res.setHeader("Access-Control-Allow-Origin", origin);
+  }
   res.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
   res.setHeader(
     "Access-Control-Allow-Headers",
@@ -250,7 +313,7 @@ function withCors(res) {
   );
   res.setHeader("Access-Control-Max-Age", "86400");
   res.setHeader("Vary", "Origin, Access-Control-Request-Method, Access-Control-Request-Headers");
-  res.setHeader("Access-Control-Allow-Private-Network", "true");
+  if (process.env.NODE_ENV !== "production") res.setHeader("Access-Control-Allow-Private-Network", "true");
 }
 
 function parseBody(req) {
@@ -275,7 +338,7 @@ function parseBody(req) {
 }
 
 const httpServer = createServer(async (req, res) => {
-  withCors(res);
+  withCors(req, res);
 
   if (req.method === "OPTIONS") {
     res.writeHead(204, { "Content-Type": "application/json" });
@@ -341,7 +404,7 @@ const httpServer = createServer(async (req, res) => {
     }
     const { salt, hash } = hashPassword(randomBytes(32).toString("hex"));
     const user = {
-      id: Date.now().toString(),
+      id: randomUUID(),
       username,
       email: "",
       phone,
@@ -352,9 +415,9 @@ const httpServer = createServer(async (req, res) => {
     state.users.push(user);
     userMutationRevision += 1;
     databaseUsersSnapshot = state.users;
-    void saveUserToDatabase(user);
-    writeSharedState(state);
-    const token = createSessionToken(user.id);
+    await saveUserToDatabase(user);
+    await writeSharedState(state);
+    const token = createSessionToken(user);
     sendJson(res, 200, { ok: true, token, user: toPublicUser(user) });
     return;
   }
@@ -376,7 +439,7 @@ const httpServer = createServer(async (req, res) => {
       sendJson(res, 401, { error: "Invalid phone number or verification code" });
       return;
     }
-    const token = createSessionToken(user.id);
+    const token = createSessionToken(user);
     sendJson(res, 200, { ok: true, token, user: toPublicUser(user) });
     return;
   }
@@ -392,7 +455,18 @@ const httpServer = createServer(async (req, res) => {
   }
 
   if (req.method === "POST" && url.pathname === "/auth/logout") {
-    sessions.delete(tokenFromReq(req));
+    const user = userFromRequest(req, state);
+    if (user) {
+      user.authVersion = randomBytes(16).toString("hex");
+      user.updatedAt = new Date().toISOString();
+      userMutationRevision += 1;
+      databaseUsersSnapshot = state.users;
+      await saveUserToDatabase(user);
+      await writeSharedState(state);
+      for (const connected of io.sockets.sockets.values()) {
+        if (connected.data.userId === user.id) connected.disconnect(true);
+      }
+    }
     sendJson(res, 200, { ok: true });
     return;
   }
@@ -430,8 +504,9 @@ const httpServer = createServer(async (req, res) => {
     }
     userMutationRevision += 1;
     databaseUsersSnapshot = state.users;
-    void saveUserToDatabase(state.users[existingIndex]);
-    writeSharedState(state);
+    state.users[existingIndex].updatedAt = new Date().toISOString();
+    await saveUserToDatabase(state.users[existingIndex]);
+    await writeSharedState(state);
     sendJson(res, 200, {
       ok: true,
       users: state.users.map(toPublicUser),
@@ -441,21 +516,46 @@ const httpServer = createServer(async (req, res) => {
   }
 
   if (req.method === "GET" && url.pathname === "/groups") {
+    const reader = userFromRequest(req, state);
+    if (!reader) {
+      unauthorized(res);
+      return;
+    }
     res.writeHead(200, { "Content-Type": "application/json" });
-    res.end(JSON.stringify({ groups: state.groups }));
+    res.end(JSON.stringify({ groups: state.groups.map((group) => ({
+      ...group,
+      pendingRequests: group.creatorId === reader.id
+        ? group.pendingRequests
+        : group.pendingRequests.filter((id) => id === reader.id),
+    })) }));
     return;
   }
 
   if (req.method === "GET" && url.pathname === "/social") {
+    const reader = userFromRequest(req, state);
+    if (!reader) {
+      unauthorized(res);
+      return;
+    }
+    const memberGroupIds = new Set(state.groups
+      .filter((group) => group.members.includes(reader.id))
+      .map((group) => group.id));
     res.writeHead(200, { "Content-Type": "application/json" });
     res.end(JSON.stringify({
       users: (state.users || []).map(toPublicUser),
-      groups: state.groups,
-      friends: state.friends,
-      friendRequests: state.friendRequests,
-      messages: state.messages,
-      groupMessages: state.groupMessages,
-      gameInvites: state.gameInvites,
+      groups: state.groups.map((group) => ({
+        ...group,
+        pendingRequests: group.creatorId === reader.id
+          ? group.pendingRequests
+          : group.pendingRequests.filter((id) => id === reader.id),
+      })),
+      friends: { [reader.id]: state.friends[reader.id] || [] },
+      friendRequests: state.friendRequests.filter((request) =>
+        request.fromUserId === reader.id || request.toUserId === reader.id),
+      messages: state.messages.filter((message) => message.participants.includes(reader.id)),
+      groupMessages: state.groupMessages.filter((message) => memberGroupIds.has(message.groupId)),
+      gameInvites: state.gameInvites.filter((invite) =>
+        invite.fromUserId === reader.id || invite.toUserId === reader.id),
     }));
     return;
   }
@@ -480,7 +580,7 @@ const httpServer = createServer(async (req, res) => {
       createdAt: new Date().toISOString(),
     });
     state.groups.unshift(nextGroup);
-    writeSharedState(state);
+    await writeSharedState(state);
     res.writeHead(200, { "Content-Type": "application/json" });
     res.end(JSON.stringify({ ok: true, group: nextGroup, groups: state.groups }));
     return;
@@ -528,7 +628,7 @@ const httpServer = createServer(async (req, res) => {
         joinableGroup.members.push(payload.userId);
         if (!joinableGroup.creatorId) joinableGroup.creatorId = payload.userId;
       }
-      writeSharedState(state);
+      await writeSharedState(state);
       res.writeHead(200, { "Content-Type": "application/json" });
       res.end(JSON.stringify({ ok: true, status: "joined", group: joinableGroup, groups: state.groups }));
       return;
@@ -536,7 +636,7 @@ const httpServer = createServer(async (req, res) => {
 
     if (!freshGroup.members.includes(payload.userId) && !freshGroup.pendingRequests.includes(payload.userId)) {
       freshGroup.pendingRequests.push(payload.userId);
-      writeSharedState(state);
+      await writeSharedState(state);
     }
 
     res.writeHead(200, { "Content-Type": "application/json" });
@@ -576,7 +676,7 @@ const httpServer = createServer(async (req, res) => {
       group.visibility = payload.updates.visibility;
     }
 
-    writeSharedState(state);
+    await writeSharedState(state);
     res.writeHead(200, { "Content-Type": "application/json" });
     res.end(JSON.stringify({ ok: true, group, groups: state.groups }));
     return;
@@ -593,7 +693,7 @@ const httpServer = createServer(async (req, res) => {
 
     const currentGroup = state.groups.find((entry) => entry.members.includes(payload.userId));
     state.groups = removeUserFromGroups(state.groups, payload.userId);
-    writeSharedState(state);
+    await writeSharedState(state);
     res.writeHead(200, { "Content-Type": "application/json" });
     res.end(JSON.stringify({ ok: true, groupId: currentGroup?.id || null, groups: state.groups }));
     return;
@@ -621,7 +721,7 @@ const httpServer = createServer(async (req, res) => {
         freshGroup.members.push(payload.userId);
       }
     }
-    writeSharedState(state);
+    await writeSharedState(state);
     res.writeHead(200, { "Content-Type": "application/json" });
     res.end(JSON.stringify({ ok: true, group, groups: state.groups }));
     return;
@@ -644,7 +744,7 @@ const httpServer = createServer(async (req, res) => {
     }
 
     state.groups = removeUserFromGroups(state.groups, payload.memberId);
-    writeSharedState(state);
+    await writeSharedState(state);
 
     res.writeHead(200, { "Content-Type": "application/json" });
     res.end(JSON.stringify({ ok: true, groups: state.groups }));
@@ -675,7 +775,7 @@ const httpServer = createServer(async (req, res) => {
         createdAt: new Date().toISOString(),
         status: "pending",
       });
-      writeSharedState(state);
+      await writeSharedState(state);
     }
 
     res.writeHead(200, { "Content-Type": "application/json" });
@@ -697,7 +797,7 @@ const httpServer = createServer(async (req, res) => {
       state.friends[request.fromUserId] = Array.from(new Set([...(state.friends[request.fromUserId] || []), request.toUserId]));
       state.friends[request.toUserId] = Array.from(new Set([...(state.friends[request.toUserId] || []), request.fromUserId]));
     }
-    writeSharedState(state);
+    await writeSharedState(state);
 
     res.writeHead(200, { "Content-Type": "application/json" });
     res.end(JSON.stringify({ ok: true }));
@@ -721,7 +821,7 @@ const httpServer = createServer(async (req, res) => {
       createdAt: new Date().toISOString(),
     });
     state.messages = trimConversationMessages(state.messages, [payload.fromUserId, payload.toUserId]);
-    writeSharedState(state);
+    await writeSharedState(state);
 
     res.writeHead(200, { "Content-Type": "application/json" });
     res.end(JSON.stringify({ ok: true }));
@@ -745,7 +845,7 @@ const httpServer = createServer(async (req, res) => {
       createdAt: new Date().toISOString(),
     });
     state.groupMessages = trimGroupMessages(state.groupMessages, payload.groupId);
-    writeSharedState(state);
+    await writeSharedState(state);
 
     res.writeHead(200, { "Content-Type": "application/json" });
     res.end(JSON.stringify({ ok: true }));
@@ -788,7 +888,7 @@ const httpServer = createServer(async (req, res) => {
         turnTime,
         roomId,
       });
-      writeSharedState(state);
+      await writeSharedState(state);
     }
 
     res.writeHead(200, { "Content-Type": "application/json" });
@@ -806,7 +906,7 @@ const httpServer = createServer(async (req, res) => {
     }
 
     invite.status = payload.accept ? "accepted" : "declined";
-    writeSharedState(state);
+    await writeSharedState(state);
 
     res.writeHead(200, { "Content-Type": "application/json" });
     res.end(JSON.stringify({ ok: true }));
@@ -818,11 +918,16 @@ const httpServer = createServer(async (req, res) => {
 });
 
 const io = new Server(httpServer, {
+  maxHttpBufferSize: 256 * 1024,
+  connectionStateRecovery: {
+    maxDisconnectionDuration: RECONNECT_MS,
+    skipMiddlewares: false,
+  },
   cors: {
     origin: function (origin, callback) {
-      // ✅ اجازه دسترسی به localhost، 127.0.0.1، و IP‌های محلی
-      // ✅ Allow localhost, 127.0.0.1, and local network IPs
-      // ✅ ریق ngrok و CloudFlare Tunnel را هم اضافه کنیم
+      // âœ… Ø§Ø¬Ø§Ø²Ù‡ Ø¯Ø³ØªØ±Ø³ÛŒ Ø¨Ù‡ localhostØŒ 127.0.0.1ØŒ Ùˆ IPâ€ŒÙ‡Ø§ÛŒ Ù…Ø­Ù„ÛŒ
+      // âœ… Allow localhost, 127.0.0.1, and local network IPs
+      // âœ… Ø±ÛŒÙ‚ ngrok Ùˆ CloudFlare Tunnel Ø±Ø§ Ù‡Ù… Ø§Ø¶Ø§ÙÙ‡ Ú©Ù†ÛŒÙ…
       const allowedPatterns = [
         /^http:\/\/localhost/,
         /^http:\/\/127\.0\.0\.1/,
@@ -840,19 +945,26 @@ const io = new Server(httpServer, {
         .filter(Boolean);
       const configuredOriginAllowed = configuredOrigins.includes(origin);
 
-      if (
-        !origin ||
-        configuredOrigins.length === 0 ||
-        configuredOriginAllowed ||
-        allowedPatterns.some((pattern) => pattern.test(origin))
-      ) {
+      if (!origin || configuredOriginAllowed ||
+        (process.env.NODE_ENV !== "production" &&
+          (configuredOrigins.length === 0 || allowedPatterns.some((pattern) => pattern.test(origin))))) {
         callback(null, true);
       } else {
-        callback(new Error("برای دسترسی اجازه نیست | Not allowed by CORS"));
+        callback(new Error("Ø¨Ø±Ø§ÛŒ Ø¯Ø³ØªØ±Ø³ÛŒ Ø§Ø¬Ø§Ø²Ù‡ Ù†ÛŒØ³Øª | Not allowed by CORS"));
       }
     },
     methods: ["GET", "POST"],
   },
+});
+
+io.use((socket, next) => {
+  const state = normalizeSocialState(readSharedState());
+  if (Array.isArray(databaseUsersSnapshot)) state.users = databaseUsersSnapshot;
+  const user = userFromToken(socket.handshake.auth?.token, state);
+  if (!user) return next(new Error("Unauthorized"));
+  socket.data.userId = user.id;
+  socket.data.username = user.username;
+  next();
 });
 
 // In-memory room storage
@@ -886,6 +998,7 @@ function getOrCreateRoom(roomId) {
       gameId: null,
       status: "waiting",
       maxPlayers: 4,
+      hostAccountId: null,
       createdAt: Date.now(),
       turn: {
         timer: null,
@@ -1119,7 +1232,10 @@ function startTurnTimer(roomId) {
   const durationMs = normalizeTurnTimeSeconds(Math.round((room.turn?.durationMs || 45000) / 1000)) * 1000;
   room.turn.durationMs = durationMs;
 
-  room.turn.currentIndex = room.gameState.currentPlayerIndex || 0;
+  room.turn.currentIndex = room.gameId === "dead-mans-draw"
+    ? room.gameState.powerTargetSelection?.playerIndex ??
+      room.gameState.ringSelectionIndex ?? room.gameState.currentPlayerIndex ?? 0
+    : room.gameState.currentPlayerIndex || 0;
   room.turn.endsAt = Date.now() + durationMs;
   io.to(roomId).emit("turn-timer-updated", {
     endsAt: room.turn.endsAt,
@@ -1132,8 +1248,8 @@ function startTurnTimer(roomId) {
     const r = rooms.get(roomId);
     if (!r || r.status !== "playing" || !r.gameState) return;
 
-    const idx = r.gameState.currentPlayerIndex || 0;
-    console.log(`⏱️  [TURN] Timeout in room ${roomId} | playerIndex=${idx}`);
+    const idx = r.turn.currentIndex;
+    console.log(`â±ï¸  [TURN] Timeout in room ${roomId} | playerIndex=${idx}`);
 
     normalizeTimedOutPlayer(r);
 
@@ -1202,7 +1318,11 @@ function handlePlayerDeparture(roomId, playerId, socketId = null) {
 
 // Helper function to generate random room ID
 function generateRoomId() {
-  return "MM-" + Math.random().toString(36).substring(2, 8).toUpperCase();
+  let roomId;
+  do {
+    roomId = `MM-${randomBytes(12).toString("hex").toUpperCase()}`;
+  } while (rooms.has(roomId));
+  return roomId;
 }
 
 // Helper function to match players from queue
@@ -1215,7 +1335,7 @@ function tryMatchPlayers(playerCount) {
   console.log(`   Queue length: ${queue.length}`);
   console.log(`   Required: ${playerCount}`);
   console.log(
-    `   Can match: ${queue.length >= playerCount ? "YES ✅" : "NO ❌"}`,
+    `   Can match: ${queue.length >= playerCount ? "YES âœ…" : "NO âŒ"}`,
   );
 
   const groupedByGame = new Map();
@@ -1227,11 +1347,19 @@ function tryMatchPlayers(playerCount) {
     groupedByGame.get(key).push(player);
   });
 
-  const eligibleGroup = Array.from(groupedByGame.values()).find((group) => group.length >= playerCount);
+  const eligibleGroup = Array.from(groupedByGame.values()).find((group) =>
+    new Set(group.map((player) => player.accountId)).size >= playerCount);
 
   if (eligibleGroup) {
     // Match found! Take playerCount players from the same game
-    const matchedPlayers = eligibleGroup.slice(0, playerCount);
+    const matchedPlayers = [];
+    const matchedAccounts = new Set();
+    for (const player of eligibleGroup) {
+      if (matchedAccounts.has(player.accountId)) continue;
+      matchedPlayers.push(player);
+      matchedAccounts.add(player.accountId);
+      if (matchedPlayers.length === playerCount) break;
+    }
     const matchedIds = new Set(matchedPlayers.map((player) => player.playerId));
     matchmakingQueue[playerCount] = queue.filter((player) => !matchedIds.has(player.playerId));
 
@@ -1240,10 +1368,11 @@ function tryMatchPlayers(playerCount) {
     const room = getOrCreateRoom(roomId);
     room.maxPlayers = playerCount;
     room.gameId = matchedPlayers[0]?.gameId || null;
+    room.hostAccountId = matchedPlayers[0]?.accountId || null;
     room.turn.durationMs = normalizeTurnTimeSeconds(matchedPlayers[0]?.turnTime) * 1000;
 
     console.log(`\n${"#".repeat(60)}`);
-    console.log(`🎮 MATCH CREATED: ${roomId}`);
+    console.log(`ðŸŽ® MATCH CREATED: ${roomId}`);
     console.log(`${"#".repeat(60)}`);
 
     // Add players to room
@@ -1253,6 +1382,7 @@ function tryMatchPlayers(playerCount) {
         id: player.playerId,
         name: player.playerName,
         socketId: player.socketId,
+        accountId: player.accountId,
         connected: true,
         joinedAt: Date.now(),
       });
@@ -1260,17 +1390,17 @@ function tryMatchPlayers(playerCount) {
       console.log(`   [${idx + 1}] ${player.playerName} (${player.socketId})`);
     });
 
-    console.log(`\nℹ️  Notifying ${playerCount} players about match...`);
+    console.log(`\nâ„¹ï¸  Notifying ${playerCount} players about match...`);
 
     // Notify all matched players that game is ready
     matchedPlayers.forEach((player, idx) => {
-      console.log(`   📤 Sending 'match-found' to ${player.playerName}...`);
+      console.log(`   ðŸ“¤ Sending 'match-found' to ${player.playerName}...`);
       io.to(player.socketId).emit("match-found", {
         roomId,
         players: Array.from(room.players.values()),
         turnTime: room.turn.durationMs / 1000,
       });
-      console.log(`   ✅ Sent to ${player.playerName}`);
+      console.log(`   âœ… Sent to ${player.playerName}`);
     });
 
     console.log(`\n${"#".repeat(60)}\n`);
@@ -1281,7 +1411,7 @@ function tryMatchPlayers(playerCount) {
     };
   }
 
-  console.log(`   ➡️  No match possible. Queue too small.\\n`);
+  console.log(`   âž¡ï¸  No match possible. Queue too small.\\n`);
   return null;
 }
 
@@ -1292,22 +1422,56 @@ function getRoomPlayersArray(roomId) {
   return Array.from(room.players.values());
 }
 
+function startRematch(roomId, room) {
+  if (!room.rematch || room.status !== "finished") return;
+  room.status = "playing";
+  room.gameState = room.rematch.initialGameState;
+  const playersArray = Array.from(room.players.values()).sort((a, b) =>
+    a.socketId.localeCompare(b.socketId),
+  );
+  room.turn.playersInGame = playersArray;
+  room.rematch = null;
+  io.to(roomId).emit("rematch-result", { accepted: true });
+  io.to(roomId).emit("game-started", {
+    gameState: room.gameState,
+    playersInGame: playersArray,
+    playerIndexMap: buildPlayerIndexMap(playersArray),
+  });
+  startTurnTimer(roomId);
+}
+
+function isValidInitialRoomState(room, state) {
+  if (!state || !Array.isArray(state.players) || state.players.length !== room.players.size) return false;
+  if (room.gameId === "splendor") return isValidInitialSplendorState(state, room.players.size);
+  if (room.gameId === "dead-mans-draw") return isValidInitialDeadMansDrawState(state, room.players.size);
+  return false;
+}
+
 io.on("connection", (socket) => {
   console.log(
-    `✅ [CONNECTION] Player connected | بازیکن متصل شد: ${socket.id}`,
+    `âœ… [CONNECTION] Player connected | Ø¨Ø§Ø²ÛŒÚ©Ù† Ù…ØªØµÙ„ Ø´Ø¯: ${socket.id}`,
   );
-  console.log(`📱 Client address: ${socket.handshake.address}`);
-  console.log(`🌍 Headers:`, {
+  console.log(`ðŸ“± Client address: ${socket.handshake.address}`);
+  console.log(`ðŸŒ Headers:`, {
     agent: socket.handshake.headers["user-agent"]?.substring(0, 50),
     origin: socket.handshake.headers["origin"],
   });
 
   // Matchmaking: Find a match for this player
   socket.on("find-match", (data) => {
-    const { playerCount, playerName, playerId, turnTime, gameId } = data;
+    if (!data || typeof data !== "object") return;
+    const { playerCount, playerId, turnTime, gameId } = data;
+    if (![2, 3, 4].includes(playerCount) || !["splendor", "dead-mans-draw"].includes(gameId) ||
+      typeof playerId !== "string" || !/^[a-zA-Z0-9-]{8,80}$/.test(playerId)) return;
+    if (Array.from(rooms.values()).some((room) => room.status === "playing" &&
+      Array.from(room.players.values()).some((player) => player.accountId === socket.data.userId))) {
+      socket.emit("match-error", { message: "Finish your current game before finding another match." });
+      return;
+    }
+    const playerName = socket.data.username;
     console.log(`\n${"=".repeat(60)}`);
     console.log(
-      `🔍 [MATCHMAKING] ${playerName} searching for ${playerCount}-player game`,
+      `ðŸ” [MATCHMAKING] ${playerName} searching for ${playerCount}-player game`,
     );
     console.log(`   Player ID: ${playerId}`);
     console.log(`   Socket ID: ${socket.id}`);
@@ -1319,19 +1483,23 @@ io.on("connection", (socket) => {
     }
 
     // Add to matchmaking queue
-    matchmakingQueue[playerCount] = matchmakingQueue[playerCount].filter(
-      (player) => player.playerId !== playerId && player.socketId !== socket.id,
-    );
+    for (const count of [2, 3, 4]) {
+      matchmakingQueue[count] = matchmakingQueue[count].filter(
+        (player) => player.accountId !== socket.data.userId && player.socketId !== socket.id,
+      );
+      broadcastQueueStatus(count);
+    }
     matchmakingQueue[playerCount].push({
       socketId: socket.id,
       playerId,
       playerName,
+      accountId: socket.data.userId,
       gameId,
       turnTime: normalizeTurnTimeSeconds(turnTime),
       timestamp: Date.now(),
     });
 
-    console.log(`📊 [QUEUE] Current ${playerCount}-player queue:`);
+    console.log(`ðŸ“Š [QUEUE] Current ${playerCount}-player queue:`);
     console.log(
       `   Total players waiting: ${matchmakingQueue[playerCount].length}/${playerCount}`,
     );
@@ -1345,7 +1513,7 @@ io.on("connection", (socket) => {
     if (matchmakingQueue[playerCount].length >= playerCount) {
       console.log(`\n${"*".repeat(60)}`);
       console.log(
-        `🎉 MATCH FOUND! Attempting to match ${playerCount} players...`,
+        `ðŸŽ‰ MATCH FOUND! Attempting to match ${playerCount} players...`,
       );
       console.log(`${"*".repeat(60)}\n`);
     }
@@ -1353,29 +1521,31 @@ io.on("connection", (socket) => {
     // Try to match players
     const matchResult = tryMatchPlayers(playerCount);
     if (matchResult) {
-      console.log(`✅ [MATCH SUCCESS] Room created: ${matchResult.roomId}`);
+      console.log(`âœ… [MATCH SUCCESS] Room created: ${matchResult.roomId}`);
       broadcastQueueStatus(playerCount);
       // Match found, players will be notified via 'match-found' event
     } else {
-      console.log(`⏳ [WAITING] Not enough players yet. Broadcasting queue count...`);
+      console.log(`â³ [WAITING] Not enough players yet. Broadcasting queue count...`);
       broadcastQueueStatus(playerCount);
     }
   });
 
   // Cancel matchmaking
   socket.on("cancel-match", (data) => {
+    if (!data || typeof data !== "object") return;
     const { playerCount, playerId } = data;
+    if (![2, 3, 4].includes(playerCount)) return;
     console.log(
-      `❌ [MATCHMAKING] Player ${playerId} cancelled search for ${playerCount}-player game`,
+      `âŒ [MATCHMAKING] Player ${playerId} cancelled search for ${playerCount}-player game`,
     );
 
     // Remove from queue
     const queue = matchmakingQueue[playerCount];
-    const index = queue.findIndex((p) => p.playerId === playerId);
+    const index = queue.findIndex((p) => p.playerId === playerId && p.socketId === socket.id);
     if (index !== -1) {
       queue.splice(index, 1);
       console.log(
-        `📊 [MATCHMAKING] Queue for ${playerCount}-player games: ${queue.length} player(s)`,
+        `ðŸ“Š [MATCHMAKING] Queue for ${playerCount}-player games: ${queue.length} player(s)`,
       );
     }
 
@@ -1385,13 +1555,24 @@ io.on("connection", (socket) => {
 
   // Join room
   socket.on("join-room", (data) => {
-    const { roomId, playerId, playerName, playerCount, isHost, turnTime, gameId } = data;
+    if (!data || typeof data !== "object") return;
+    const { roomId, playerId, playerCount, isHost, turnTime, gameId } = data;
+    if (typeof roomId !== "string" || !/^[A-Za-z0-9-]{4,40}$/.test(roomId) ||
+      typeof playerId !== "string" || !/^[a-zA-Z0-9-]{8,80}$/.test(playerId)) {
+      socket.emit("join-room-error", { message: "Invalid room or player ID." });
+      return;
+    }
+    const playerName = socket.data.username;
     console.log(
-      `👤 [JOIN-ROOM] ${playerName} (Tab-ID: ${playerId}) joining room ${roomId}`,
+      `ðŸ‘¤ [JOIN-ROOM] ${playerName} (Tab-ID: ${playerId}) joining room ${roomId}`,
     );
-    console.log(`   Socket ID: ${socket.id} | نام: ${playerName}`);
+    console.log(`   Socket ID: ${socket.id} | Ù†Ø§Ù…: ${playerName}`);
 
     const existingRoom = rooms.get(roomId);
+    if (!existingRoom && !isHost) {
+      socket.emit("join-room-error", { message: "Room not found." });
+      return;
+    }
     const room = existingRoom || getOrCreateRoom(roomId);
     if (!room) return;
     const isFriendInviteRoom = typeof roomId === "string" && roomId.startsWith("FR-");
@@ -1401,11 +1582,21 @@ io.on("connection", (socket) => {
 
     const already = room.players.get(playerId);
     if (already) {
+      if (already.accountId !== socket.data.userId) {
+        socket.emit("join-room-error", { message: "This seat belongs to another player." });
+        return;
+      }
+      const oldSocketId = already.socketId;
       clearDisconnectTimer(roomId, playerId);
       already.socketId = socket.id;
       already.connected = true;
       already.name = playerName || already.name;
       socket.join(roomId);
+      if (oldSocketId !== socket.id) io.sockets.sockets.get(oldSocketId)?.disconnect(true);
+      io.to(roomId).emit("players-updated", {
+        players: getRoomPlayersArray(roomId),
+        roomStatus: room.status,
+      });
       socket.emit("players-updated", {
         players: getRoomPlayersArray(roomId),
         roomStatus: room.status,
@@ -1428,6 +1619,12 @@ io.on("connection", (socket) => {
       return;
     }
 
+    if (room.status !== "waiting" || room.players.size >= room.maxPlayers ||
+      Array.from(room.players.values()).some((player) => player.accountId === socket.data.userId)) {
+      socket.emit("join-room-error", { message: "Room is full or already started." });
+      return;
+    }
+
     if (!isHost && room.status !== "waiting") {
       socket.emit("join-room-error", {
         message: "Game already started in this room.",
@@ -1447,19 +1644,23 @@ io.on("connection", (socket) => {
       id: playerId,
       name: playerName,
       socketId: socket.id,
+      accountId: socket.data.userId,
       connected: true,
       joinedAt: Date.now(),
     });
 
     // Update max players if host is setting it
     if (isHost && playerCount) {
-      room.maxPlayers = isFriendInviteRoom ? 2 : playerCount;
+      if (!room.hostAccountId) room.hostAccountId = socket.data.userId;
+      if (room.hostAccountId === socket.data.userId) {
+        room.maxPlayers = isFriendInviteRoom ? 2 : [2, 3, 4].includes(playerCount) ? playerCount : 2;
+      }
       console.log(`   Max Players set to: ${playerCount}`);
     }
-    if (gameId) {
+    if (gameId && !room.gameId && ["splendor", "dead-mans-draw"].includes(gameId)) {
       room.gameId = isFriendInviteRoom && gameId !== "dead-mans-draw" ? "splendor" : gameId;
     }
-    if (turnTime) {
+    if (turnTime && room.hostAccountId === socket.data.userId) {
       room.turn.durationMs = normalizeTurnTimeSeconds(turnTime) * 1000;
     }
 
@@ -1473,15 +1674,18 @@ io.on("connection", (socket) => {
     });
 
     console.log(
-      `📊 [PLAYERS] Room ${roomId} now has ${room.players.size} players | تعداد بازیکنان: ${room.players.size}`,
+      `ðŸ“Š [PLAYERS] Room ${roomId} now has ${room.players.size} players | ØªØ¹Ø¯Ø§Ø¯ Ø¨Ø§Ø²ÛŒÚ©Ù†Ø§Ù†: ${room.players.size}`,
     );
   });
 
   // Leave room
   socket.on("leave-room", (data) => {
+    if (!data || typeof data !== "object") return;
     const { roomId, playerId } = data;
+    const member = rooms.get(roomId)?.players.get(playerId);
+    if (!member || member.socketId !== socket.id || member.accountId !== socket.data.userId) return;
     console.log(
-      `👋 [LEAVE-ROOM] Player ${playerId} leaving room ${roomId} | بازیکن ترک اتاق`,
+      `ðŸ‘‹ [LEAVE-ROOM] Player ${playerId} leaving room ${roomId} | Ø¨Ø§Ø²ÛŒÚ©Ù† ØªØ±Ú© Ø§ØªØ§Ù‚`,
     );
     handlePlayerDeparture(roomId, playerId, socket.id);
     socket.leave(roomId);
@@ -1489,13 +1693,27 @@ io.on("connection", (socket) => {
 
   // Start game
   socket.on("start-game", (data) => {
-    const { roomId, gameState, turnTime } = data;
-    console.log(`🎮 [START-GAME] Starting game in room ${roomId} | شروع بازی`);
+    if (!data || typeof data !== "object") return;
+    const { roomId, gameState, turnTime, targetScore } = data;
+    console.log(`ðŸŽ® [START-GAME] Starting game in room ${roomId} | Ø´Ø±ÙˆØ¹ Ø¨Ø§Ø²ÛŒ`);
 
     const room = rooms.get(roomId);
-    if (room && room.players.size >= 2 && (!room.maxPlayers || room.players.size === room.maxPlayers)) {
+    const isMember = Array.from(room?.players.values() || []).some((member) =>
+      member.socketId === socket.id && member.accountId === socket.data.userId);
+    const mayStart = roomId.startsWith("MM-")
+      ? isMember
+      : room?.hostAccountId === socket.data.userId && isMember;
+    if (room && room.status === "waiting" && mayStart &&
+      ["splendor", "dead-mans-draw"].includes(room.gameId) &&
+      room.players.size >= 2 && room.players.size === room.maxPlayers &&
+      gameState && Array.isArray(gameState.players) &&
+      gameState.players.length === room.players.size &&
+      gameState.currentPlayerIndex === 0 && gameState.gameOver === false &&
+      (room.gameId !== "splendor" || isValidInitialSplendorState(gameState, room.players.size)) &&
+      (room.gameId !== "dead-mans-draw" || isValidInitialDeadMansDrawState(gameState, room.players.size))) {
       room.status = "playing";
       room.gameState = gameState;
+      room.targetScore = Number.isInteger(targetScore) && targetScore >= 10 && targetScore <= 30 ? targetScore : 15;
 
       // Get players in a consistent order (sorted by socket ID to ensure consistency)
       const playersArray = Array.from(room.players.values()).sort((a, b) =>
@@ -1515,146 +1733,161 @@ io.on("connection", (socket) => {
         playerIndexMap, // Map socket ID to game index
       });
       console.log(
-        `✅ [START-GAME] Game started with ${room.players.size} players | بازی آغاز شد`,
+        `âœ… [START-GAME] Game started with ${room.players.size} players | Ø¨Ø§Ø²ÛŒ Ø¢ØºØ§Ø² Ø´Ø¯`,
       );
 
       // Start turn timer (30s per turn)
       startTurnTimer(roomId);
     } else {
       console.log(
-        `❌ [START-GAME] Not enough players (${room?.players.size || 0}/2)`,
+        `âŒ [START-GAME] Not enough players (${room?.players.size || 0}/2)`,
       );
     }
   });
 
   // Sync game state - main action that broadcasts to all players
   socket.on("sync-game-state", (data) => {
+    if (!data || typeof data !== "object") return;
     const { roomId, gameState, playerId } = data;
     const room = rooms.get(roomId);
-    if (room && assertCanPublishState(socket, room, playerId || Array.from(room.players.values()).find((p) => p.socketId === socket.id)?.id)) {
-      const prevIndex = room.gameState?.currentPlayerIndex;
+    if (room?.status === "playing" && gameState && assertCanPublishState(socket, room, playerId) &&
+      (room.gameId !== "splendor" || isValidSplendorTransition(room.gameState, gameState, room.targetScore)) &&
+      (room.gameId !== "dead-mans-draw" || isValidDeadMansDrawState(gameState, room.players.size))) {
+      const prevIndex = activeTurnIndex(room, room.gameState);
       room.gameState = gameState;
       // Broadcast updated game state to ALL players in room (including sender)
       io.to(roomId).emit("game-state-updated", gameState);
       console.log(
-        `📡 [SYNC] Game state synced in room ${roomId} | وضعیت بروزرسانی شد`,
+        `ðŸ“¡ [SYNC] Game state synced in room ${roomId} | ÙˆØ¶Ø¹ÛŒØª Ø¨Ø±ÙˆØ²Ø±Ø³Ø§Ù†ÛŒ Ø´Ø¯`,
       );
 
       if (
-        typeof prevIndex === "number" &&
-        typeof gameState?.currentPlayerIndex === "number" &&
-        gameState.currentPlayerIndex !== prevIndex
-      ) {
-      }
-
-      if (
         room.status === "playing" &&
-        typeof gameState?.currentPlayerIndex === "number" &&
-        gameState.currentPlayerIndex !== prevIndex
+        typeof activeTurnIndex(room, gameState) === "number" &&
+        activeTurnIndex(room, gameState) !== prevIndex
       ) {
         startTurnTimer(roomId);
       }
+    } else if (room?.status === "playing" && room.players.get(playerId)?.socketId === socket.id) {
+      socket.emit("game-state-updated", room.gameState);
     }
   });
 
   // Handle general game actions - broadcasts to all players
   socket.on("game-action", (data) => {
+    if (!data || typeof data !== "object") return;
     const { roomId, playerId, gameState, timestamp } = data;
     const room = rooms.get(roomId);
-    if (room && assertCanPublishState(socket, room, playerId)) {
-      const prevIndex = room.gameState?.currentPlayerIndex;
+    if (room?.status === "playing" && gameState && assertCanPublishState(socket, room, playerId) &&
+      (room.gameId !== "splendor" || isValidSplendorTransition(room.gameState, gameState, room.targetScore)) &&
+      (room.gameId !== "dead-mans-draw" || isValidDeadMansDrawState(gameState, room.players.size))) {
+      const prevIndex = activeTurnIndex(room, room.gameState);
       room.gameState = gameState;
       // Broadcast to all players in room
       io.to(roomId).emit("game-state-updated", gameState);
       console.log(
-        `⚡ [ACTION] Game action from ${playerId} in room ${roomId} | عملیات بازی`,
+        `âš¡ [ACTION] Game action from ${playerId} in room ${roomId} | Ø¹Ù…Ù„ÛŒØ§Øª Ø¨Ø§Ø²ÛŒ`,
       );
 
       if (
-        typeof prevIndex === "number" &&
-        typeof gameState?.currentPlayerIndex === "number" &&
-        gameState.currentPlayerIndex !== prevIndex
-      ) {
-      }
-
-      if (
         room.status === "playing" &&
-        typeof gameState?.currentPlayerIndex === "number" &&
-        gameState.currentPlayerIndex !== prevIndex
+        typeof activeTurnIndex(room, gameState) === "number" &&
+        activeTurnIndex(room, gameState) !== prevIndex
       ) {
         startTurnTimer(roomId);
       }
+    } else if (room?.status === "playing" && room.players.get(playerId)?.socketId === socket.id) {
+      socket.emit("game-state-updated", room.gameState);
     }
   });
 
   // Card purchase action
   socket.on("card-purchased", (data) => {
-    const { roomId, cardId, playerIndex, playerId, gameState } = data;
+    if (!data || typeof data !== "object") return;
+    const { roomId, cardId, playerIndex, playerId } = data;
     const room = rooms.get(roomId);
-    if (room && gameState && assertCanPublishState(socket, room, playerId)) {
-      room.gameState = gameState;
+    if (room?.status === "playing" && assertCanPublishState(socket, room, playerId) &&
+      room.turn.playersInGame[playerIndex]?.id === playerId) {
       io.to(roomId).emit("card-purchase-action", {
         cardId,
         playerIndex,
-        gameState,
+        gameState: room.gameState,
       });
       console.log(
-        `💳 [CARD] Card ${cardId} purchased by player ${playerIndex} (${playerId}) | خریداری کارت`,
+        `ðŸ’³ [CARD] Card ${cardId} purchased by player ${playerIndex} (${playerId}) | Ø®Ø±ÛŒØ¯Ø§Ø±ÛŒ Ú©Ø§Ø±Øª`,
       );
     }
   });
 
   // Token action
   socket.on("tokens-taken", (data) => {
-    const { roomId, gems, playerIndex, playerId, gameState } = data;
+    if (!data || typeof data !== "object") return;
+    const { roomId, gems, playerIndex, playerId } = data;
     const room = rooms.get(roomId);
-    if (room && gameState && assertCanPublishState(socket, room, playerId)) {
-      room.gameState = gameState;
+    if (room?.status === "playing" && Array.isArray(gems) && gems.length <= 3 &&
+      assertCanPublishState(socket, room, playerId) &&
+      room.turn.playersInGame[playerIndex]?.id === playerId) {
       io.to(roomId).emit("tokens-action", {
         gems,
         playerIndex,
-        gameState,
+        gameState: room.gameState,
       });
       console.log(
-        `🪙 [TOKEN] Tokens ${gems.join(",")} taken by player ${playerIndex} (${playerId}) | گرفتن سکه‌ها`,
+        `ðŸª™ [TOKEN] Tokens ${gems.join(",")} taken by player ${playerIndex} (${playerId}) | Ú¯Ø±ÙØªÙ† Ø³Ú©Ù‡â€ŒÙ‡Ø§`,
       );
     }
   });
 
   // Chat message
   socket.on("send-chat-message", (data) => {
+    if (!data || typeof data !== "object") return;
     const { roomId, message } = data;
     const room = rooms.get(roomId);
-    if (room && socket.rooms.has(roomId)) {
+    if (room && socket.rooms.has(roomId) && typeof message?.message === "string" &&
+      message.message.length <= 500) {
       // Broadcast message to all in room
-      io.to(roomId).emit("chat-message", message);
+      io.to(roomId).emit("chat-message", {
+        ...message,
+        playerName: socket.data.username,
+      });
       console.log(
-        `💬 [CHAT] Room ${roomId} - ${message.playerName}: ${message.message}`,
+        `ðŸ’¬ [CHAT] Room ${roomId} - ${message.playerName}: ${message.message}`,
       );
     }
   });
 
   // Microphone toggle
   socket.on("microphone-toggled", (data) => {
+    if (!data || typeof data !== "object") return;
     const { roomId, playerId, enabled } = data;
     const room = rooms.get(roomId);
-    if (room && socket.rooms.has(roomId)) {
+    if (room?.players.get(playerId)?.socketId === socket.id && typeof enabled === "boolean") {
       io.to(roomId).emit("player-microphone-toggled", {
         playerId,
         socketId: socket.id,
         enabled,
       });
-      const status = enabled ? "ON 🎤" : "OFF 🔇";
+      const status = enabled ? "ON ðŸŽ¤" : "OFF ðŸ”‡";
       console.log(
-        `🎤 [MIC] Microphone ${status} for ${playerId} in room ${roomId} | میکروفون ${enabled ? "روشن" : "خاموش"}`,
+        `ðŸŽ¤ [MIC] Microphone ${status} for ${playerId} in room ${roomId} | Ù…ÛŒÚ©Ø±ÙˆÙÙˆÙ† ${enabled ? "Ø±ÙˆØ´Ù†" : "Ø®Ø§Ù…ÙˆØ´"}`,
       );
     }
   });
 
+  function canSignalPeer(data) {
+    if (!data || typeof data !== "object" || typeof data.to !== "string" ||
+      typeof data.roomId !== "string") return false;
+    const room = rooms.get(data.roomId);
+    return Boolean(room && socket.rooms.has(data.roomId) &&
+      Array.from(room.players.values()).some((player) => player.socketId === socket.id) &&
+      Array.from(room.players.values()).some((player) => player.socketId === data.to));
+  }
+
   // Voice chat signaling (WebRTC)
   socket.on("voice-offer", (data) => {
+    if (!canSignalPeer(data)) return;
     const { to, offer, roomId } = data;
-    if (to && roomId && socket.rooms.has(roomId)) {
+    if (offer && typeof offer === "object") {
       io.to(to).emit("voice-offer", {
         from: socket.id,
         offer,
@@ -1664,8 +1897,9 @@ io.on("connection", (socket) => {
   });
 
   socket.on("voice-answer", (data) => {
+    if (!canSignalPeer(data)) return;
     const { to, answer, roomId } = data;
-    if (to && roomId && socket.rooms.has(roomId)) {
+    if (answer && typeof answer === "object") {
       io.to(to).emit("voice-answer", {
         from: socket.id,
         answer,
@@ -1675,8 +1909,9 @@ io.on("connection", (socket) => {
   });
 
   socket.on("voice-ice", (data) => {
+    if (!canSignalPeer(data)) return;
     const { to, candidate, roomId } = data;
-    if (to && roomId && socket.rooms.has(roomId)) {
+    if (candidate && typeof candidate === "object") {
       io.to(to).emit("voice-ice", {
         from: socket.id,
         candidate,
@@ -1686,8 +1921,11 @@ io.on("connection", (socket) => {
   });
 
   socket.on("voice-end", (data) => {
+    if (!data || typeof data !== "object") return;
     const { roomId } = data;
-    if (roomId) {
+    const room = rooms.get(roomId);
+    if (room && socket.rooms.has(roomId) &&
+      Array.from(room.players.values()).some((player) => player.socketId === socket.id)) {
       socket.to(roomId).emit("voice-end", {
         from: socket.id,
       });
@@ -1696,11 +1934,12 @@ io.on("connection", (socket) => {
 
   // End game
   socket.on("end-game", (data) => {
+    if (!data || typeof data !== "object") return;
     const { roomId } = data;
-    console.log(`🏁 [END-GAME] Ending game in room ${roomId} | پایان بازی`);
+    console.log(`ðŸ [END-GAME] Ending game in room ${roomId} | Ù¾Ø§ÛŒØ§Ù† Ø¨Ø§Ø²ÛŒ`);
 
     const room = rooms.get(roomId);
-    if (room) {
+    if (room?.status === "playing" && room.gameState?.gameOver && socket.rooms.has(roomId)) {
       room.status = "finished";
       room.gameState = null;
       room.rematch = null;
@@ -1709,18 +1948,21 @@ io.on("connection", (socket) => {
       io.to(roomId).emit("game-ended", {
         playersInRoom: getRoomPlayersArray(roomId),
       });
-      console.log(`✅ [END-GAME] Game ended | بازی پایان یافت`);
+      console.log(`âœ… [END-GAME] Game ended | Ø¨Ø§Ø²ÛŒ Ù¾Ø§ÛŒØ§Ù† ÛŒØ§ÙØª`);
     }
   });
 
   socket.on("post-game-action", (data) => {
+    if (!data || typeof data !== "object") return;
     const { roomId, playerId, action, initialGameState } = data;
     const room = rooms.get(roomId);
-    if (!room || !socket.rooms.has(roomId)) return;
+    const member = room?.players.get(playerId);
+    if (!room || !member || member.socketId !== socket.id || member.accountId !== socket.data.userId ||
+      !socket.rooms.has(roomId) || room.status !== "finished") return;
     if (action === "exit") return;
     if (action === "play-again") {
-      socket.emit("request-rematch", { roomId, playerId, initialGameState });
       if (!room.rematch) {
+        if (!isValidInitialRoomState(room, initialGameState)) return;
         room.rematch = {
           requestedBy: playerId,
           acceptedBy: new Set([playerId]),
@@ -1728,24 +1970,28 @@ io.on("connection", (socket) => {
         };
         socket.to(roomId).emit("rematch-requested", { playerId });
         io.to(roomId).emit("post-game-votes", {
-          votes: Array.from(room.rematch.acceptedBy),
+          playerIds: Array.from(room.rematch.acceptedBy),
         });
         return;
       }
       room.rematch.acceptedBy.add(playerId);
       io.to(roomId).emit("post-game-votes", {
-        votes: Array.from(room.rematch.acceptedBy),
+        playerIds: Array.from(room.rematch.acceptedBy),
       });
       if (room.rematch.acceptedBy.size >= room.players.size) {
-        socket.emit("respond-rematch", { roomId, playerId, accept: true });
+        startRematch(roomId, room);
       }
     }
   });
 
   socket.on("request-rematch", (data) => {
+    if (!data || typeof data !== "object") return;
     const { roomId, playerId, initialGameState } = data;
     const room = rooms.get(roomId);
-    if (!room || !initialGameState) return;
+    if (!room || room.status !== "finished" ||
+      room.players.get(playerId)?.socketId !== socket.id ||
+      room.players.get(playerId)?.accountId !== socket.data.userId ||
+      !isValidInitialRoomState(room, initialGameState)) return;
 
     room.rematch = {
       requestedBy: playerId,
@@ -1757,9 +2003,12 @@ io.on("connection", (socket) => {
   });
 
   socket.on("respond-rematch", (data) => {
+    if (!data || typeof data !== "object") return;
     const { roomId, playerId, accept } = data;
     const room = rooms.get(roomId);
-    if (!room || !room.rematch) return;
+    if (!room || !room.rematch || room.status !== "finished" ||
+      room.players.get(playerId)?.socketId !== socket.id ||
+      room.players.get(playerId)?.accountId !== socket.data.userId) return;
 
     if (!accept) {
       room.rematch = null;
@@ -1770,28 +2019,12 @@ io.on("connection", (socket) => {
     room.rematch.acceptedBy.add(playerId);
 
     if (room.rematch.acceptedBy.size >= room.players.size) {
-      room.status = "playing";
-      room.gameState = room.rematch.initialGameState;
-      const playersArray = Array.from(room.players.values()).sort((a, b) =>
-        a.socketId.localeCompare(b.socketId),
-      );
-      room.turn.playersInGame = playersArray;
-
-      const playerIndexMap = buildPlayerIndexMap(playersArray);
-
-      io.to(roomId).emit("rematch-result", { accepted: true });
-      io.to(roomId).emit("game-started", {
-        gameState: room.gameState,
-        playersInGame: playersArray,
-        playerIndexMap,
-      });
-      room.rematch = null;
-      startTurnTimer(roomId);
+      startRematch(roomId, room);
     }
   });
 
   socket.on("disconnect", () => {
-    console.log(`❌ [DISCONNECT] Player disconnected | قطع شده: ${socket.id}`);
+    console.log(`âŒ [DISCONNECT] Player disconnected | Ù‚Ø·Ø¹ Ø´Ø¯Ù‡: ${socket.id}`);
 
     Object.keys(matchmakingQueue).forEach((countKey) => {
       const playerCount = Number(countKey);
@@ -1827,24 +2060,31 @@ io.on("connection", (socket) => {
 
 const PORT = process.env.PORT || 3001;
 const databaseSyncRevision = userMutationRevision;
-void syncUsersWithDatabase(readSharedState().users || []).then((users) => {
-  if (databaseSyncRevision !== userMutationRevision || !Array.isArray(users)) return;
+async function startServer() {
+  if (process.env.NODE_ENV === "production" && !process.env.DATABASE_URL) {
+    throw new Error("DATABASE_URL is required in production.");
+  }
+  if (process.env.NODE_ENV === "production" && !process.env.CLIENT_ORIGINS?.trim()) {
+    throw new Error("CLIENT_ORIGINS is required in production (include the public HTTPS and native app origins).");
+  }
+  const fallbackState = normalizeSocialState(readSharedState());
+  const users = await syncUsersWithDatabase(fallbackState.users || []);
+  if (databaseSyncRevision !== userMutationRevision || !Array.isArray(users)) {
+    throw new Error("Could not initialize users before accepting connections.");
+  }
   databaseUsersSnapshot = users;
-  const state = normalizeSocialState(readSharedState());
+  const state = normalizeSocialState(process.env.NODE_ENV === "production"
+    ? await loadSharedStateFromDatabase(fallbackState)
+    : readSharedState());
   state.users = users;
-  writeSharedState(state);
-});
+  if (process.env.NODE_ENV === "production") sharedStateSnapshot = structuredClone(state);
+  await writeSharedState(state);
+  httpServer.listen(PORT, () => {
+    console.log(`Game server listening on port ${PORT}`);
+  });
+}
 
-httpServer.listen(PORT, () => {
-  console.log(
-    `\n🎮 [SERVER] Splendor Server running on http://localhost:${PORT}`,
-  );
-  console.log(`📡 [SERVER] سرور Splendor در حال کار است`);
-  console.log(
-    `\n📱 [MOBILE] For mobile/remote connection, use your laptop IP:`,
-  );
-  console.log(`   http://YOUR_LAPTOP_IP:${PORT}`);
-  console.log(
-    `\n💡 [TIP] Find your IP: Run 'ipconfig' and look for IPv4 Address\n`,
-  );
+startServer().catch((error) => {
+  console.error("Server startup failed:", error);
+  process.exitCode = 1;
 });

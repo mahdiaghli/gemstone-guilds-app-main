@@ -46,6 +46,7 @@ export default function OnlineGame() {
   const [isHost, setIsHost] = useState(false);
   const [playerCount, setPlayerCount] = useState(2);
   const [turnTime, setTurnTime] = useState(15);
+  const [targetScore, setTargetScore] = useState(15);
   const [gameStarted, setGameStarted] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [postGameNoticeDialog, setPostGameNoticeDialog] = useState<PostGameNoticeDialog | null>(null);
@@ -120,6 +121,9 @@ export default function OnlineGame() {
       }
       if ([15, 30, 45, 60].includes(data.turnTime)) {
         setTurnTime(data.turnTime);
+      }
+      if (Number.isInteger(data.targetScore) && data.targetScore >= 10 && data.targetScore <= 30) {
+        setTargetScore(data.targetScore);
       }
     } else {
       // Fallback: use logged-in username
@@ -228,8 +232,8 @@ export default function OnlineGame() {
       .filter(Boolean)
       .sort();
     if (isMatchmakingRoom && (!socket?.id || socketIds[0] !== socket.id)) return;
-    startGame(initialOnlineState as any, turnTime);
-  }, [actualPlayerCount, gameStarted, initialOnlineState, isHost, playerCount, roomId, roomPlayers, roomStatus, socket?.id, startGame, turnTime]);
+    startGame(initialOnlineState as any, turnTime, targetScore);
+  }, [actualPlayerCount, gameStarted, initialOnlineState, isHost, playerCount, roomId, roomPlayers, roomStatus, socket?.id, startGame, targetScore, turnTime]);
 
   const handleStartGame = async () => {
     if (!isHost) {
@@ -245,7 +249,7 @@ export default function OnlineGame() {
       );
       return;
     }
-    startGame(initialOnlineState as any, turnTime);
+    startGame(initialOnlineState as any, turnTime, targetScore);
   };
 
   const handleLeaveRoom = async () => {

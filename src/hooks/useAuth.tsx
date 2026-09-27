@@ -234,6 +234,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     authRequest("/auth/logout", { method: "POST" }).catch(() => {});
     setUser(null);
     clearSession();
+    localStorage.removeItem("splendor-social-store");
   };
 
   return (

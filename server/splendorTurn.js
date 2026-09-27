@@ -95,9 +95,35 @@ export function advanceSplendorTurn(state, targetScore = 15) {
 export function timeoutDeadMansDraw(state) {
   if (!state || typeof state !== "object") return state;
   const playerCount = Array.isArray(state.players) ? Math.max(1, state.players.length) : 1;
+  if (state.powerTargetSelection) {
+    const players = state.players.map((player) => ({ ...player }));
+    const selection = state.powerTargetSelection;
+    if (players[selection.playerIndex]) players[selection.playerIndex].markedOpponentIndex = selection.options[0] ?? null;
+    const nextSelector = players.findIndex((player) => player.ring === null);
+    return { ...state, players, powerTargetSelection: null,
+      ringSelectionIndex: nextSelector < 0 ? null : nextSelector,
+      currentPlayerIndex: nextSelector < 0 ? 0 : state.currentPlayerIndex,
+      lastAction: "Power target selected after timeout." };
+  }
+  if (Number.isInteger(state.ringSelectionIndex)) {
+    const players = state.players.map((player) => ({ ...player, ringOptions: [...player.ringOptions] }));
+    const choosing = players[state.ringSelectionIndex];
+    if (choosing && !choosing.ring && choosing.ringOptions.length) {
+      choosing.ring = choosing.ringOptions[0];
+      choosing.ringOptions = [choosing.ring];
+      if (choosing.ring === "madam-margot") {
+        choosing.markedOpponentIndex = players.findIndex((_, index) => index !== state.ringSelectionIndex);
+      }
+    }
+    const nextSelector = players.findIndex((player) => player.ring === null);
+    return { ...state, players, ringSelectionIndex: nextSelector < 0 ? null : nextSelector,
+      currentPlayerIndex: nextSelector < 0 ? 0 : state.currentPlayerIndex,
+      powerTargetSelection: null, lastAction: "Ring selected after timeout." };
+  }
   return {
     ...state,
     pendingEffect: null,
+    discardPile: [...(state.discardPile || []), ...(state.treasureArea || [])],
     treasureArea: [],
     forcedRevealRemaining: 0,
     currentPlayerIndex: ((state.currentPlayerIndex || 0) + 1) % playerCount,
