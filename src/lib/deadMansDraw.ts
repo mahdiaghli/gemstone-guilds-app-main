@@ -12,7 +12,6 @@ export type DeadMansDrawSuit =
 
 export type DeadMansDrawRing =
   | "le-corsaire"
-  | "madam-margot"
   | "ghallegar"
   | "scurvy-pete"
   | "zahara"
@@ -63,7 +62,7 @@ export type DeadMansDrawPendingEffect =
 
 export type DeadMansDrawPowerTargetSelection = {
   playerIndex: number;
-  power: "madam-margot";
+  power: string;
   options: number[];
 };
 
@@ -122,12 +121,6 @@ export const DEAD_MANS_DRAW_RING_CONFIG: Array<{
     name: "Le Corsaire",
     shortName: "Corsaire",
     description: "Plunder: Chest + Key bonus cards come from the top of opponents' suit stacks.",
-  },
-  {
-    id: "madam-margot",
-    name: "Madam Margot",
-    shortName: "Margot",
-    description: "Davy Jones's Locker: choose an opponent; when they bust, you bank their busted cards.",
   },
   {
     id: "ghallegar",
@@ -495,21 +488,10 @@ function handleBust(state: DeadMansDrawState) {
   const safeIds = new Set(safeCards.map((card) => card.id));
   let burned = state.treasureArea.filter((card) => !safeIds.has(card.id));
   
-  const madamOwnerIndex = state.players.findIndex((player, index) =>
-    index !== state.currentPlayerIndex
-    && player.ring === "madam-margot"
-    && player.markedOpponentIndex === state.currentPlayerIndex,
-  );
-
-  if (madamOwnerIndex !== -1 && burned.length) {
-    addCardsToCollected(state.players[madamOwnerIndex], burned);
-    state.lastAction = "Bust! Madam Margot banked the busted treasure.";
-  } else {
-    state.discardPile = shuffleCards([...state.discardPile, ...burned]);
-    state.lastAction = safeCards.length
-      ? "Bust! The Carpet saved part of the treasure."
-      : "Bust! Everything goes to the burn pile.";
-  }
+  state.discardPile = shuffleCards([...state.discardPile, ...burned]);
+  state.lastAction = safeCards.length
+    ? "Bust! The Carpet saved part of the treasure."
+    : "Bust! Everything goes to the burn pile.";
 
   state.treasureArea = [];
   state.pendingEffect = null;
@@ -911,30 +893,13 @@ export function selectDeadMansDrawRing(state: DeadMansDrawState, ring: DeadMansD
   player.ring = ring;
   player.ringOptions = [ring];
 
-  if (ring === "madam-margot") {
-    const targetOptions = nextState.players.map((_, index) => index).filter((index) => index !== selectingIndex);
-    if (targetOptions.length === 1) {
-      player.markedOpponentIndex = targetOptions[0];
-      nextState.lastAction = `Madam Margot marked Player ${targetOptions[0] + 1}.`;
-      return advanceRingSelection(nextState);
-    }
-
-    nextState.powerTargetSelection = {
-      playerIndex: selectingIndex,
-      power: "madam-margot",
-      options: targetOptions,
-    };
-    nextState.lastAction = `Player ${selectingIndex + 1}, choose which opponent Madam Margot watches.`;
-    return nextState;
-  }
-
   return advanceRingSelection(nextState);
 }
 
 export function selectDeadMansDrawPowerTarget(state: DeadMansDrawState, targetPlayerIndex: number) {
   const nextState = cloneDeadMansDrawState(state);
   const selection = nextState.powerTargetSelection;
-  if (!selection || selection.power !== "madam-margot") return nextState;
+  if (!selection) return nextState;
   if (!selection.options.includes(targetPlayerIndex)) return nextState;
 
   const player = nextState.players[selection.playerIndex];
@@ -942,6 +907,6 @@ export function selectDeadMansDrawPowerTarget(state: DeadMansDrawState, targetPl
 
   player.markedOpponentIndex = targetPlayerIndex;
   nextState.powerTargetSelection = null;
-  nextState.lastAction = `Madam Margot marked Player ${targetPlayerIndex + 1}.`;
+  nextState.lastAction = `Marked Player ${targetPlayerIndex + 1}.`;
   return advanceRingSelection(nextState);
 }

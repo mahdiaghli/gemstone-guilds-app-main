@@ -88,11 +88,6 @@ export const POWER_VISUALS: Record<DeadMansDrawRing, { power: string; character:
     character: chestKeyCharacter,
     label: "Le Corsaire",
   },
-  "madam-margot": {
-    power: bankOnesBustsPower,
-    character: bankOnesBustsCharacter,
-    label: "Madam Margot",
-  },
   ghallegar: {
     power: getHookPower,
     character: getHookCharacter,
@@ -154,8 +149,6 @@ export const getPowerAbilityKey = (ringId: DeadMansDrawRing) => {
   switch (ringId) {
     case "le-corsaire":
       return "deadMansDrawPowerLeCorsaireAbility";
-    case "madam-margot":
-      return "deadMansDrawPowerMadamMargotAbility";
     case "ghallegar":
       return "deadMansDrawPowerGhallegarAbility";
     case "scurvy-pete":

@@ -111,9 +111,6 @@ export function timeoutDeadMansDraw(state) {
     if (choosing && !choosing.ring && choosing.ringOptions.length) {
       choosing.ring = choosing.ringOptions[0];
       choosing.ringOptions = [choosing.ring];
-      if (choosing.ring === "madam-margot") {
-        choosing.markedOpponentIndex = players.findIndex((_, index) => index !== state.ringSelectionIndex);
-      }
     }
     const nextSelector = players.findIndex((player) => player.ring === null);
     return { ...state, players, ringSelectionIndex: nextSelector < 0 ? null : nextSelector,

@@ -45,7 +45,6 @@ const SCRIPTED = {
 
 const POWER_ORDER: DeadMansDrawRing[] = [
   "le-corsaire",
-  "madam-margot",
   "ghallegar",
   "scurvy-pete",
   "zahara",

@@ -183,7 +183,9 @@
       "phone": "09911161231",
       "createdAt": "2026-09-27T09:13:04.557Z",
       "salt": "ecca1d9515c3d633f27749335dd32d17",
-      "passwordHash": "9200addb826d68644e094c6633c139e4d3b70b614491bbccdab83857d895664c412bf14b6a367a52adcc0f3e3f42b45a95f2fc75be010ea7e8fa2b18de6709aa"
+      "passwordHash": "9200addb826d68644e094c6633c139e4d3b70b614491bbccdab83857d895664c412bf14b6a367a52adcc0f3e3f42b45a95f2fc75be010ea7e8fa2b18de6709aa",
+      "selectedAvatar": "/src/assets/avatar.webp",
+      "updatedAt": "2026-09-27T16:49:27.188Z"
     }
   ],
   "groups": [

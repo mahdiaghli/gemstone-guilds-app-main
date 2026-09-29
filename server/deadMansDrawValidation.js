@@ -1,5 +1,5 @@
 const suits = ["astrolabe", "pistol", "dagger", "carpet", "snake", "coin", "horseshoe", "map", "chest", "key"];
-const rings = new Set(["le-corsaire", "madam-margot", "ghallegar", "scurvy-pete", "zahara", "gunnie", "black-bonnie", "sir-lovesword", "seamus-quinn"]);
+const rings = new Set(["le-corsaire", "ghallegar", "scurvy-pete", "zahara", "gunnie", "black-bonnie", "sir-lovesword", "seamus-quinn"]);
 const cards = new Map();
 for (const suit of suits) {
   for (let offset = 0; offset < 6; offset++) {

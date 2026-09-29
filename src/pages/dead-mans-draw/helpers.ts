@@ -29,12 +29,6 @@ export function translateActionLabel(action: string, t: Translate) {
   const chooseRingMatch = action.match(/^Player (\d+), choose your ring power\.$/);
   if (chooseRingMatch) return t("deadMansDrawActionChooseRing", { player: chooseRingMatch[1] });
 
-  const chooseMadamMatch = action.match(/^Player (\d+), choose which opponent Madam Margot watches\.$/);
-  if (chooseMadamMatch) return t("deadMansDrawActionChooseMarkedOpponent", { player: chooseMadamMatch[1] });
-
-  const madamMarkedMatch = action.match(/^Madam Margot marked Player (\d+)\.$/);
-  if (madamMarkedMatch) return t("deadMansDrawActionMarkedOpponent", { player: madamMarkedMatch[1] });
-
   const snakeMatch = action.match(
     /^Snake revealed: draw (\d+) more card\(s\) before you can collect\.$/,
   );
@@ -55,7 +49,6 @@ export function translateActionLabel(action: string, t: Translate) {
     "Choose whether to reveal or collect.": "deadMansDrawActionRevealOrCollect",
     "Bust! The Carpet saved part of the treasure.": "deadMansDrawActionCarpetSaved",
     "Bust! Everything goes to the burn pile.": "deadMansDrawActionFullBust",
-    "Bust! Madam Margot banked the busted treasure.": "deadMansDrawActionMadamBust",
     "Astrolabe found nothing to inspect.": "deadMansDrawActionAstrolabeEmpty",
     "Astrolabe: inspect the top card(s), then reveal or collect.": "deadMansDrawActionAstrolabeInspect",
     "Pistol found no target.": "deadMansDrawActionPistolNoTarget",

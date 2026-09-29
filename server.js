@@ -19,7 +19,9 @@ import {
   syncUsersWithDatabase,
   saveUserToDatabase,
   loadSharedStateFromDatabase,
+  loadSocialStateFromDatabase,
   saveSharedStateToDatabase,
+  saveSocialStateToDatabase,
 } from "./server/database.js";
 import { isValidInitialSplendorState, isValidSplendorTransition } from "./server/splendorValidation.js";
 import { isValidDeadMansDrawState, isValidInitialDeadMansDrawState } from "./server/deadMansDrawValidation.js";
@@ -213,6 +215,7 @@ async function writeSharedState(state) {
     sharedStateWriteQueue = sharedStateWriteQueue.catch(() => {}).then(async () => {
       try {
         await saveSharedStateToDatabase(pendingState);
+        await saveSocialStateToDatabase(pendingState);
       } catch (error) {
         if (sharedStateRevision === revision) sharedStateSnapshot = previousState;
         throw error;
@@ -2074,7 +2077,7 @@ async function startServer() {
   }
   databaseUsersSnapshot = users;
   const state = normalizeSocialState(process.env.NODE_ENV === "production"
-    ? await loadSharedStateFromDatabase(fallbackState)
+    ? await loadSocialStateFromDatabase(await loadSharedStateFromDatabase(fallbackState))
     : readSharedState());
   state.users = users;
   if (process.env.NODE_ENV === "production") sharedStateSnapshot = structuredClone(state);

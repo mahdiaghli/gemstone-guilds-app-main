@@ -41,6 +41,27 @@ export async function initDatabase() {
       updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
     )
   `);
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS social_groups (
+      id TEXT PRIMARY KEY,
+      data JSONB NOT NULL,
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    )
+  `);
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS social_messages (
+      id TEXT PRIMARY KEY,
+      data JSONB NOT NULL,
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    )
+  `);
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS social_group_messages (
+      id TEXT PRIMARY KEY,
+      data JSONB NOT NULL,
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    )
+  `);
   initialized = true;
   return true;
 }
@@ -141,6 +162,66 @@ export async function loadSharedStateFromDatabase(fallbackState) {
   return inserted.rows[0].data;
 }
 
+export async function loadSocialStateFromDatabase(fallbackState = {}) {
+  if (!pool || databaseDisabled) return fallbackState;
+  await initDatabase();
+  const [groups, messages, groupMessages] = await Promise.all([
+    pool.query("SELECT data FROM social_groups ORDER BY updated_at ASC"),
+    pool.query("SELECT data FROM social_messages ORDER BY updated_at ASC"),
+    pool.query("SELECT data FROM social_group_messages ORDER BY updated_at ASC"),
+  ]);
+  const nextState = { ...fallbackState };
+  nextState.groups = groups.rows.map((row) => row.data);
+  nextState.messages = messages.rows.map((row) => row.data);
+  nextState.groupMessages = groupMessages.rows.map((row) => row.data);
+  if (!groups.rows.length && !messages.rows.length && !groupMessages.rows.length) {
+    await saveSocialStateToDatabase(fallbackState);
+    return { ...fallbackState };
+  }
+  return nextState;
+}
+
+export async function saveSocialStateToDatabase(state) {
+  if (!pool || databaseDisabled) return false;
+  await initDatabase();
+  const groups = Array.isArray(state.groups) ? state.groups : [];
+  const messages = Array.isArray(state.messages) ? state.messages : [];
+  const groupMessages = Array.isArray(state.groupMessages) ? state.groupMessages : [];
+
+  await Promise.all([
+    Promise.all(groups.map((group) => pool.query(
+      `INSERT INTO social_groups (id, data, updated_at) VALUES ($1, $2::jsonb, now())
+       ON CONFLICT (id) DO UPDATE SET data = EXCLUDED.data, updated_at = EXCLUDED.updated_at`,
+      [group.id, JSON.stringify(group)],
+    ))),
+    Promise.all(messages.map((message) => pool.query(
+      `INSERT INTO social_messages (id, data, updated_at) VALUES ($1, $2::jsonb, now())
+       ON CONFLICT (id) DO UPDATE SET data = EXCLUDED.data, updated_at = EXCLUDED.updated_at`,
+      [message.id, JSON.stringify(message)],
+    ))),
+    Promise.all(groupMessages.map((message) => pool.query(
+      `INSERT INTO social_group_messages (id, data, updated_at) VALUES ($1, $2::jsonb, now())
+       ON CONFLICT (id) DO UPDATE SET data = EXCLUDED.data, updated_at = EXCLUDED.updated_at`,
+      [message.id, JSON.stringify(message)],
+    ))),
+  ]);
+
+  await pool.query(
+    `DELETE FROM social_groups WHERE id NOT IN (${groups.map((_, index) => `$${index + 1}`).join(", ") || "NULL"})`,
+    groups.map((group) => group.id),
+  );
+  await pool.query(
+    `DELETE FROM social_messages WHERE id NOT IN (${messages.map((_, index) => `$${index + 1}`).join(", ") || "NULL"})`,
+    messages.map((message) => message.id),
+  );
+  await pool.query(
+    `DELETE FROM social_group_messages WHERE id NOT IN (${groupMessages.map((_, index) => `$${index + 1}`).join(", ") || "NULL"})`,
+    groupMessages.map((message) => message.id),
+  );
+
+  return true;
+}
+
 export async function saveSharedStateToDatabase(state) {
   if (!pool) return false;
   await initDatabase();
@@ -149,6 +230,7 @@ export async function saveSharedStateToDatabase(state) {
      ON CONFLICT (id) DO UPDATE SET data = EXCLUDED.data, updated_at = EXCLUDED.updated_at`,
     [JSON.stringify(state)],
   );
+  await saveSocialStateToDatabase(state);
   return true;
 }
 

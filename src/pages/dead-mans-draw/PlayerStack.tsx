@@ -92,7 +92,6 @@ export function PlayerStack({
           <div className="min-w-0">
             <p className="truncate font-cinzel text-sm text-white">{displayName}</p>
             {player.ring ? <p className="mt-0.5 text-[10px] leading-4 text-teal-100/75">{t(`deadMansDrawPowerLabel${player.ring}`)}</p> : null}
-            {player.ring === "madam-margot" && markedOpponentName ? <p className="text-[10px] leading-4 text-rose-100/80">{t("deadMansDrawMarkedOpponent", { player: markedOpponentName })}</p> : null}
           </div>
         </div>
 

@@ -6,6 +6,7 @@ import { join } from "node:path";
 import { createServer } from "node:net";
 import { io, type Socket } from "socket.io-client";
 import { initializeGame, performTakeTokens } from "@/lib/gameLogic";
+import { DEAD_MANS_DRAW_RING_CONFIG } from "@/lib/deadMansDraw";
 
 const serverUrl = () => `http://127.0.0.1:${port}`;
 const sockets: Socket[] = [];
@@ -98,6 +99,12 @@ afterAll(async () => {
     await exited;
   }
   if (dataDir) rmSync(dataDir, { recursive: true, force: true });
+});
+
+describe("Dead Man's Draw rules", () => {
+  it("removes the retired ring from the available pool", () => {
+    expect(DEAD_MANS_DRAW_RING_CONFIG.map((ring) => ring.id)).not.toContain("madam-margot");
+  });
 });
 
 describe("independent online matches", () => {
