@@ -1,15 +1,17 @@
 import { readFileSync } from "node:fs";
 import { isIP } from "node:net";
 
-let contents = "";
-try {
-  contents = readFileSync(".env.mobile", "utf8");
-} catch {
-  throw new Error("Create .env.mobile with VITE_SOCKET_URL=https://<public-server-ip-or-domain> before packaging the app.");
+let raw = process.env.VITE_SOCKET_URL?.trim();
+if (!raw) {
+  try {
+    const contents = readFileSync(".env", "utf8");
+    const line = contents.split(/\r?\n/).find((entry) => /^\s*VITE_SOCKET_URL\s*=/.test(entry));
+    raw = line?.split("=").slice(1).join("=").trim().replace(/^['"]|['"]$/g, "");
+  } catch {
+    // The explicit environment variable below is the preferred release path.
+  }
 }
-
-const line = contents.split(/\r?\n/).find((entry) => /^\s*VITE_SOCKET_URL\s*=/.test(entry));
-const raw = line?.split("=").slice(1).join("=").trim().replace(/^['"]|['"]$/g, "");
+if (!raw) throw new Error("Set VITE_SOCKET_URL=https://<public-server-ip-or-domain> when building the mobile app.");
 let url;
 try {
   url = new URL(raw);

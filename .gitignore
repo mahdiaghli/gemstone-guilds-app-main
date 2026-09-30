@@ -44,7 +44,17 @@ yarn-error.log*
 /android/
 docs/
 
+# Keep the production deployment runbook versioned while ignoring local docs.
+!docs/
+docs/*
+!docs/DEPLOY_EXPERT_GAMES_IR.md
+
+# The production example contains placeholders only; real env files remain ignored.
+!.env.production.example
+
 .gitignore
 SKILLS.md
 ios/
-.gitignore
+
+GemstoneGuilds-debug.apk
+.env.production.example

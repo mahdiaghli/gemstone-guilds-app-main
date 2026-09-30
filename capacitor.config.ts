@@ -6,7 +6,7 @@ const config: CapacitorConfig = {
   webDir: 'dist',
   ios: {
     contentInset: 'automatic',
-    scheme: 'Swift',
+    scheme: 'GemstoneGuilds',
   },
   plugins: {
     SplashScreen: {

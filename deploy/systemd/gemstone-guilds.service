@@ -1,0 +1,17 @@
+[Unit]
+Description=Expert Games online game server
+After=network.target
+
+[Service]
+Type=simple
+User=expertgames
+WorkingDirectory=/var/www/expert-games
+EnvironmentFile=/etc/expert-games/gemstone-guilds.env
+ExecStart=/usr/bin/node server.js
+Restart=always
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
